@@ -99,7 +99,7 @@ defmodule EdgeAgentWeb.Plugs.SecurityTest do
       # script-src must be exactly "'self'" with no unsafe additions
       assert policy =~ "script-src 'self'"
       refute policy =~ "'unsafe-eval'"
-      # Note: 'unsafe-inline' appears in style-src (always), so we check script-src specifically
+      # 'unsafe-inline' appears in style-src, so check script-src specifically.
       assert policy =~ "script-src 'self';"
     end
   end

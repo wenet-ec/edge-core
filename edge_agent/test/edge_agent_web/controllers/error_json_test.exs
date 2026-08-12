@@ -16,11 +16,9 @@ defmodule EdgeAgentWeb.Controllers.ErrorJSONTest do
     ErrorJSON.render(template, %{conn: fake_conn()})
   end
 
-  # ---------------------------------------------------------------------------
   # Per-status mappings — Phoenix dispatches on `<status>.json` template name.
   # The error code in the envelope is the canonical machine-readable handle
   # clients pattern-match on; the message is the human-readable companion.
-  # ---------------------------------------------------------------------------
 
   describe "per-status renders" do
     test "400.json → bad_request" do
@@ -60,11 +58,9 @@ defmodule EdgeAgentWeb.Controllers.ErrorJSONTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # Catch-all — security pin. Any unrecognised template (e.g. raised
   # exceptions Phoenix didn't have a specific render for) MUST surface as a
   # generic 500-class response with no exception details leaked.
-  # ---------------------------------------------------------------------------
 
   describe "catch-all" do
     test "unrecognised templates fall through to internal_server_error" do
@@ -79,10 +75,8 @@ defmodule EdgeAgentWeb.Controllers.ErrorJSONTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # Envelope shape — all renders go through ResponseEnvelope.error/3, so they
   # all share the documented top-level shape.
-  # ---------------------------------------------------------------------------
 
   describe "envelope shape" do
     test "all renders return a map with :error and :meta" do

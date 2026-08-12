@@ -3,12 +3,9 @@ defmodule EdgeAgent.SshServer.ConfigTest do
   use ExUnit.Case, async: true
 
   alias EdgeAgent.SshServer.Config
-
-  # ---------------------------------------------------------------------------
   # supported_host_key_types — pinned list of algorithms we have keys for.
   # Drift here would let SSH advertise a key type whose private key isn't on
   # disk; signature verification would silently fail.
-  # ---------------------------------------------------------------------------
 
   describe "supported_host_key_types/0" do
     test "is the documented set of algorithms we generate host keys for" do
@@ -20,11 +17,9 @@ defmodule EdgeAgent.SshServer.ConfigTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # ssh_algorithms — KEX, public_key, cipher, MAC algorithm allow-lists.
   # These are security-sensitive: a deletion that weakens crypto, or an
   # addition that re-enables a known-broken algorithm, must be visible.
-  # ---------------------------------------------------------------------------
 
   describe "ssh_algorithms/0" do
     test "exposes exactly the four algorithm categories" do
@@ -113,11 +108,9 @@ defmodule EdgeAgent.SshServer.ConfigTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # public_key list aligns with supported_host_key_types — the moduledoc
   # warns that drift here would advertise a key type whose private key isn't
   # on disk. Pin the alignment so a careless edit can't break it.
-  # ---------------------------------------------------------------------------
 
   describe "public_key alignment with supported_host_key_types" do
     test "every supported_host_key_type appears in the public_key allow-list" do

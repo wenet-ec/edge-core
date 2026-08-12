@@ -6,10 +6,7 @@ defmodule EdgeAgentWeb.Plugs.ApiTokenAuthTest do
   alias EdgeAgentWeb.Plugs.ApiTokenAuth
 
   defp call(conn), do: ApiTokenAuth.call(conn, ApiTokenAuth.init([]))
-
-  # -----------------------------------------------------------------------
   # No token stored in Settings
-  # -----------------------------------------------------------------------
 
   describe "call/2 — no token configured in Settings" do
     test "returns 401 when Settings has no api_token", %{conn: conn} do
@@ -26,9 +23,7 @@ defmodule EdgeAgentWeb.Plugs.ApiTokenAuthTest do
     end
   end
 
-  # -----------------------------------------------------------------------
   # Token stored, various header scenarios
-  # -----------------------------------------------------------------------
 
   describe "call/2 — token configured in Settings" do
     setup do

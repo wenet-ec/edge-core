@@ -3,10 +3,7 @@ defmodule EdgeAgent.SshServer.Authentication.KeyEncodingTest do
   use ExUnit.Case, async: true
 
   alias EdgeAgent.SshServer.Authentication.KeyEncoding, as: Authentication
-
-  # ---------------------------------------------------------------------------
   # ssh_string/1 — RFC 4251 §5 length-prefixed string
-  # ---------------------------------------------------------------------------
 
   describe "ssh_string/1" do
     test "prefixes a 4-byte big-endian length" do
@@ -29,9 +26,7 @@ defmodule EdgeAgent.SshServer.Authentication.KeyEncodingTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # ssh_mpint/1 — RFC 4251 §5 multi-precision integer
-  # ---------------------------------------------------------------------------
 
   describe "ssh_mpint/1" do
     test "0 → empty mpint (4-byte zero length, no body)" do
@@ -65,9 +60,7 @@ defmodule EdgeAgent.SshServer.Authentication.KeyEncodingTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # charlist_to_string/1
-  # ---------------------------------------------------------------------------
 
   describe "charlist_to_string/1" do
     test "known SSH key types short-circuit to canonical strings" do
@@ -88,11 +81,9 @@ defmodule EdgeAgent.SshServer.Authentication.KeyEncodingTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # format_public_key/1 — five input shapes from :public_key / :ssh_file.
   # The output string is what admin compares against its allow-list, so drift
   # here breaks SSH authentication.
-  # ---------------------------------------------------------------------------
 
   describe "format_public_key/1 — {key_type, key_data, comment} (ssh_file decode shape)" do
     test "renders as '<algorithm> <base64(key_data)>'" do

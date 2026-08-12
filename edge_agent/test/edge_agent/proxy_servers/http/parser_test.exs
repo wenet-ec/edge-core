@@ -3,10 +3,7 @@ defmodule EdgeAgent.ProxyServers.Http.ParserTest do
   use ExUnit.Case, async: true
 
   alias EdgeAgent.ProxyServers.Http.Parser
-
-  # ---------------------------------------------------------------------------
   # to_method/1 — atom (well-known) or binary (custom) → uppercase string
-  # ---------------------------------------------------------------------------
 
   describe "to_method/1" do
     test "uppercases atom methods returned by :erlang.decode_packet" do
@@ -23,9 +20,7 @@ defmodule EdgeAgent.ProxyServers.Http.ParserTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # to_uri/1 — five different shapes from :erlang.decode_packet
-  # ---------------------------------------------------------------------------
 
   describe "to_uri/1" do
     test "{:abs_path, path} → path string" do
@@ -57,9 +52,7 @@ defmodule EdgeAgent.ProxyServers.Http.ParserTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # stringify_uri/1 — the three tuple forms
-  # ---------------------------------------------------------------------------
 
   describe "stringify_uri/1" do
     test "absoluteURI without port omits the colon" do
@@ -77,9 +70,7 @@ defmodule EdgeAgent.ProxyServers.Http.ParserTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # to_header_name/1 — atom or binary → lowercase string
-  # ---------------------------------------------------------------------------
 
   describe "to_header_name/1" do
     test "lowercases atom header names returned by :erlang.decode_packet" do

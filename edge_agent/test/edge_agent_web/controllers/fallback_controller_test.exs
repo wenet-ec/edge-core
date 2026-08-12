@@ -19,9 +19,7 @@ defmodule EdgeAgentWeb.Controllers.FallbackControllerTest do
     |> validate_required([:name])
   end
 
-  # -----------------------------------------------------------------------
   # Clause 1: Ecto.Changeset → 422
-  # -----------------------------------------------------------------------
 
   describe "call/2 — changeset → 422" do
     test "returns 422 for changeset error", %{conn: conn} do
@@ -42,9 +40,7 @@ defmodule EdgeAgentWeb.Controllers.FallbackControllerTest do
     end
   end
 
-  # -----------------------------------------------------------------------
   # Clause 2: :not_found → 404
-  # -----------------------------------------------------------------------
 
   describe "call/2 — :not_found → 404" do
     test "returns 404", %{conn: conn} do
@@ -65,9 +61,7 @@ defmodule EdgeAgentWeb.Controllers.FallbackControllerTest do
     end
   end
 
-  # -----------------------------------------------------------------------
   # Clause 3: :forbidden → 403
-  # -----------------------------------------------------------------------
 
   describe "call/2 — :forbidden → 403" do
     test "returns 403", %{conn: conn} do
@@ -82,9 +76,7 @@ defmodule EdgeAgentWeb.Controllers.FallbackControllerTest do
     end
   end
 
-  # -----------------------------------------------------------------------
   # Clause 4: :unauthorized → 401
-  # -----------------------------------------------------------------------
 
   describe "call/2 — :unauthorized → 401" do
     test "returns 401", %{conn: conn} do
@@ -99,9 +91,7 @@ defmodule EdgeAgentWeb.Controllers.FallbackControllerTest do
     end
   end
 
-  # -----------------------------------------------------------------------
   # Clause 5: :conflict → 409
-  # -----------------------------------------------------------------------
 
   describe "call/2 — :conflict → 409" do
     test "returns 409", %{conn: conn} do
@@ -116,9 +106,7 @@ defmodule EdgeAgentWeb.Controllers.FallbackControllerTest do
     end
   end
 
-  # -----------------------------------------------------------------------
   # Clause 6: {:conflict, reason} → 409 with specific reason
-  # -----------------------------------------------------------------------
 
   describe "call/2 — {:conflict, reason} → 409 with reason" do
     test "returns 409", %{conn: conn} do
@@ -133,9 +121,7 @@ defmodule EdgeAgentWeb.Controllers.FallbackControllerTest do
     end
   end
 
-  # -----------------------------------------------------------------------
   # Clause 7: :service_unavailable → 503
-  # -----------------------------------------------------------------------
 
   describe "call/2 — :service_unavailable → 503" do
     test "returns 503", %{conn: conn} do
@@ -150,9 +136,7 @@ defmodule EdgeAgentWeb.Controllers.FallbackControllerTest do
     end
   end
 
-  # -----------------------------------------------------------------------
   # Clause 8: :bad_request → 400
-  # -----------------------------------------------------------------------
 
   describe "call/2 — :bad_request → 400" do
     test "returns 400", %{conn: conn} do
@@ -167,9 +151,7 @@ defmodule EdgeAgentWeb.Controllers.FallbackControllerTest do
     end
   end
 
-  # -----------------------------------------------------------------------
   # Clause 9: catch-all → 500
-  # -----------------------------------------------------------------------
 
   describe "call/2 — catch-all → 500" do
     test "unknown atom returns 500", %{conn: conn} do

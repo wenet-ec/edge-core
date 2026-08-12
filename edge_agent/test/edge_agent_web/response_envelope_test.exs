@@ -12,9 +12,7 @@ defmodule EdgeAgentWeb.ResponseEnvelopeTest do
     |> Plug.Conn.assign(:request_id, request_id)
   end
 
-  # ---------------------------------------------------------------------------
   # success/2 — single resource and collection both pass `data` through
-  # ---------------------------------------------------------------------------
 
   describe "success/2" do
     test "wraps a map payload in :data and adds :meta" do
@@ -65,9 +63,7 @@ defmodule EdgeAgentWeb.ResponseEnvelopeTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # error/3,4 — error envelope with optional details
-  # ---------------------------------------------------------------------------
 
   describe "error/3 — without details" do
     test "wraps {code, message} in :error and adds :meta" do

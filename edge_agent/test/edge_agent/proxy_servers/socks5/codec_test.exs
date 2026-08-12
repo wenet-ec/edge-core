@@ -3,11 +3,8 @@ defmodule EdgeAgent.ProxyServers.Socks5.CodecTest do
   use ExUnit.Case, async: true
 
   alias EdgeAgent.ProxyServers.Socks5.Codec
-
-  # ---------------------------------------------------------------------------
   # parse_greeting/1 — RFC 1928 §3 client greeting:
   #   VER (1) | NMETHODS (1) | METHODS (NMETHODS bytes)
-  # ---------------------------------------------------------------------------
 
   describe "parse_greeting/1" do
     test "decodes a complete greeting and returns the method list" do
@@ -37,10 +34,8 @@ defmodule EdgeAgent.ProxyServers.Socks5.CodecTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # parse_auth_request/1 — RFC 1929 username/password subnegotiation:
   #   VER=1 | ULEN | UNAME | PLEN | PASSWD
-  # ---------------------------------------------------------------------------
 
   describe "parse_auth_request/1" do
     test "decodes a complete auth request" do
@@ -74,10 +69,8 @@ defmodule EdgeAgent.ProxyServers.Socks5.CodecTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # parse_connect_request/1 — RFC 1928 §4:
   #   VER (1) | CMD (1) | RSV=0 (1) | ATYP (1) | DST.ADDR | DST.PORT (2)
-  # ---------------------------------------------------------------------------
 
   describe "parse_connect_request/1 — IPv4" do
     test "decodes a complete IPv4 CONNECT request" do
@@ -144,9 +137,7 @@ defmodule EdgeAgent.ProxyServers.Socks5.CodecTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # encode_reply/3 — server reply: VER | REP | RSV=0 | ATYP | BND.ADDR | BND.PORT
-  # ---------------------------------------------------------------------------
 
   describe "encode_reply/3" do
     test "encodes a successful IPv4 reply" do
@@ -188,9 +179,7 @@ defmodule EdgeAgent.ProxyServers.Socks5.CodecTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # encode_method_reply/1, encode_auth_reply/1
-  # ---------------------------------------------------------------------------
 
   describe "encode_method_reply/1" do
     test "wraps the method byte with the SOCKS5 version prefix" do

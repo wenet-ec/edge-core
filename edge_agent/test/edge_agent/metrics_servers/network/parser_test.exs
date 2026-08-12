@@ -3,11 +3,8 @@ defmodule EdgeAgent.MetricsServers.Network.ParserTest do
   use ExUnit.Case, async: true
 
   alias EdgeAgent.MetricsServers.Network.Parser
-
-  # ---------------------------------------------------------------------------
   # Realistic `ip addr show` output. Each interface block starts with
   # `<index>: <name>:`. Multi-line indented body follows.
-  # ---------------------------------------------------------------------------
 
   @ip_addr_show """
   1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
@@ -34,9 +31,7 @@ defmodule EdgeAgent.MetricsServers.Network.ParserTest do
       link/ether ee:ff:00:11:22:33 brd ff:ff:ff:ff:ff:ff
   """
 
-  # ---------------------------------------------------------------------------
   # split_into_interfaces/1
-  # ---------------------------------------------------------------------------
 
   describe "split_into_interfaces/1" do
     test "splits ip-addr-show output into one block per interface" do
@@ -69,9 +64,7 @@ defmodule EdgeAgent.MetricsServers.Network.ParserTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # excluded_interface?/1
-  # ---------------------------------------------------------------------------
 
   describe "excluded_interface?/1" do
     test "loopback is excluded" do
@@ -109,9 +102,7 @@ defmodule EdgeAgent.MetricsServers.Network.ParserTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # extract_ip_from_line/1 — only `scope global` IPv4, not loopback
-  # ---------------------------------------------------------------------------
 
   describe "extract_ip_from_line/1" do
     test "returns the IPv4 from a global-scope inet line" do
@@ -145,9 +136,7 @@ defmodule EdgeAgent.MetricsServers.Network.ParserTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # first_global_inet/1
-  # ---------------------------------------------------------------------------
 
   describe "first_global_inet/1" do
     test "returns the global-scope IPv4 from an interface block" do
@@ -182,9 +171,7 @@ defmodule EdgeAgent.MetricsServers.Network.ParserTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # Integration: filtering an `ip addr show` snapshot picks only the eth0 IP
-  # ---------------------------------------------------------------------------
 
   describe "filtering pipeline (split → reject → first_global_inet)" do
     test "selects the physical-interface IP from a realistic snapshot" do

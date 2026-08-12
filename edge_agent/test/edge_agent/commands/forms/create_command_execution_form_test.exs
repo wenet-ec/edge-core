@@ -25,9 +25,7 @@ defmodule EdgeAgent.Commands.Forms.CreateCommandExecutionFormTest do
     Ecto.Changeset.traverse_errors(changeset, fn {msg, _opts} -> msg end)
   end
 
-  # -----------------------------------------------------------------------
   # Happy path
-  # -----------------------------------------------------------------------
 
   describe "changeset/1 — valid inputs" do
     test "returns {:ok, map} for minimal valid attrs" do
@@ -117,9 +115,7 @@ defmodule EdgeAgent.Commands.Forms.CreateCommandExecutionFormTest do
     end
   end
 
-  # -----------------------------------------------------------------------
   # to_map — nil exclusion
-  # -----------------------------------------------------------------------
 
   describe "changeset/1 — to_map nil exclusion" do
     test "nil timeout is excluded from result" do
@@ -166,9 +162,7 @@ defmodule EdgeAgent.Commands.Forms.CreateCommandExecutionFormTest do
     end
   end
 
-  # -----------------------------------------------------------------------
   # Required fields
-  # -----------------------------------------------------------------------
 
   describe "changeset/1 — required fields" do
     for field <- ["id", "command_id", "node_id", "command_text", "status"] do
@@ -180,9 +174,7 @@ defmodule EdgeAgent.Commands.Forms.CreateCommandExecutionFormTest do
     end
   end
 
-  # -----------------------------------------------------------------------
   # UUID validation
-  # -----------------------------------------------------------------------
 
   describe "changeset/1 — UUID format validation" do
     test "non-UUID id is rejected" do
@@ -210,9 +202,7 @@ defmodule EdgeAgent.Commands.Forms.CreateCommandExecutionFormTest do
     end
   end
 
-  # -----------------------------------------------------------------------
   # command_text validation
-  # -----------------------------------------------------------------------
 
   describe "changeset/1 — command_text validation" do
     test "whitespace-only command_text is rejected (validate_required trims, treats as blank)" do
@@ -244,9 +234,7 @@ defmodule EdgeAgent.Commands.Forms.CreateCommandExecutionFormTest do
     end
   end
 
-  # -----------------------------------------------------------------------
   # status validation
-  # -----------------------------------------------------------------------
 
   describe "changeset/1 — status validation" do
     test "invalid status is rejected" do
@@ -283,9 +271,7 @@ defmodule EdgeAgent.Commands.Forms.CreateCommandExecutionFormTest do
     end
   end
 
-  # -----------------------------------------------------------------------
   # timeout validation
-  # -----------------------------------------------------------------------
 
   describe "changeset/1 — timeout validation" do
     test "zero timeout is rejected" do
@@ -309,9 +295,7 @@ defmodule EdgeAgent.Commands.Forms.CreateCommandExecutionFormTest do
     end
   end
 
-  # -----------------------------------------------------------------------
   # Non-map params
-  # -----------------------------------------------------------------------
 
   describe "changeset/1 — non-map params" do
     test "string params return a base error" do

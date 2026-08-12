@@ -5,12 +5,9 @@ defmodule EdgeAgent.Commands.CommandExecutionResultsTest do
   alias EdgeAgent.Commands.CommandExecutionOutput
   alias EdgeAgent.Commands.CommandExecutionResults
   alias EdgeAgent.Commands.Schemas.CommandExecution
-
-  # ---------------------------------------------------------------------------
   # categorize_exit_code/1 — exit code → domain category. The codes here are
   # contracts: 124 from `timeout(1)`, 143 from SIGTERM (128+15) used by the
   # cancel path. Drift would mis-classify timeouts as failures or vice versa.
-  # ---------------------------------------------------------------------------
 
   describe "categorize_exit_code/1" do
     test "0 → :success" do
@@ -45,9 +42,7 @@ defmodule EdgeAgent.Commands.CommandExecutionResultsTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # build_report_params/1 — wire payload sent back to admin
-  # ---------------------------------------------------------------------------
 
   describe "build_report_params/1" do
     test "produces the documented field set" do
@@ -115,10 +110,8 @@ defmodule EdgeAgent.Commands.CommandExecutionResultsTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # truncate_output/1 — caps output at 1 MB, keeping head + tail with marker.
   # Contract: nil passthrough, small passthrough, large → trimmed with marker.
-  # ---------------------------------------------------------------------------
 
   describe "truncate_output/1" do
     test "nil passthrough" do

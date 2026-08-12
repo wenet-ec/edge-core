@@ -3,12 +3,9 @@ defmodule EdgeAgent.Commands.Workers.ExecuteCommandWorkerTest do
   use ExUnit.Case, async: true
 
   alias EdgeAgent.Commands.Workers.ExecuteCommandWorker
-
-  # ---------------------------------------------------------------------------
   # expired?/1 — decides whether to skip execution. The boundary semantics
   # (equality counts as expired) match the Commands.expire_stale_executions
   # convention on the admin side.
-  # ---------------------------------------------------------------------------
 
   describe "expired?/1" do
     test "nil expires_at → not expired (no deadline configured)" do

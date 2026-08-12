@@ -12,9 +12,7 @@ defmodule EdgeAgent.EnrollmentTest do
     |> Base.encode64(padding: false)
   end
 
-  # -----------------------------------------------------------------------
   # ensure_verified/0 — short-circuit when enrollment_key_id is present
-  # -----------------------------------------------------------------------
 
   describe "ensure_verified/0 — already verified (idempotent short-circuit)" do
     test "returns :ok immediately when enrollment_key_id is present in Settings" do
@@ -140,7 +138,6 @@ defmodule EdgeAgent.EnrollmentTest do
     end
   end
 
-  # -----------------------------------------------------------------------
   # extract_from_response/1 — response-body extraction contract
   #
   # Promoted to def @doc false for testability per TESTING.md. The
@@ -148,7 +145,6 @@ defmodule EdgeAgent.EnrollmentTest do
   # PUBLIC_ENROLLMENT_KEY_PATHS: when none of the custom paths match a given
   # body, the built-in patterns must still get a fair shot. Otherwise a
   # multi-URL setup mixing edge-admin + third-party would silently break.
-  # -----------------------------------------------------------------------
 
   describe "extract_from_response/1 — custom PATH semantics" do
     setup do
@@ -268,9 +264,7 @@ defmodule EdgeAgent.EnrollmentTest do
     end
   end
 
-  # -----------------------------------------------------------------------
   # enrollment key blob format — pure Base64+JSON decode, no module call
-  # -----------------------------------------------------------------------
 
   describe "enrollment key blob format" do
     test "correctly formed blob decodes to its routing and cluster fields" do

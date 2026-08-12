@@ -3,12 +3,9 @@ defmodule EdgeAgent.SelfUpdatesTest do
   use ExUnit.Case, async: true
 
   alias EdgeAgent.SelfUpdates
-
-  # ---------------------------------------------------------------------------
   # should_trigger_update?/2 — safety-relevant. A wrong decision either
   # restart-loops the container (false positive) or skips a real self-update
   # (false negative).
-  # ---------------------------------------------------------------------------
 
   describe "should_trigger_update?/2" do
     test "nil inserted_at → false (refuses to act on bad/missing admin data)" do
@@ -46,10 +43,8 @@ defmodule EdgeAgent.SelfUpdatesTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # parse_datetime/1 — explicitly returns nil (not "now" or raise) on bad
   # input so the upstream decision can refuse rather than guess.
-  # ---------------------------------------------------------------------------
 
   describe "parse_datetime/1" do
     test "parses a valid ISO 8601 UTC datetime" do

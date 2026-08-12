@@ -6,12 +6,9 @@ defmodule EdgeAgent.MetricsServers.ConfigTest do
   use ExUnit.Case, async: false
 
   alias EdgeAgent.MetricsServers.Config
-
-  # ---------------------------------------------------------------------------
   # Constant getters — pinned values. These are operationally meaningful: the
   # binary paths must match what the container image installs; the listen
   # address must match what Prometheus scrapes.
-  # ---------------------------------------------------------------------------
 
   describe "constant getters" do
     test "listen_address is :: (dual-stack IPv6 wildcard on supported Linux hosts)" do
@@ -36,9 +33,7 @@ defmodule EdgeAgent.MetricsServers.ConfigTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # build_config/0 — snapshot map used by the GenServer
-  # ---------------------------------------------------------------------------
 
   describe "build_config/0" do
     test "produces every documented field" do
@@ -74,11 +69,9 @@ defmodule EdgeAgent.MetricsServers.ConfigTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # node_exporter_args/0 — operational pins. The collector exclusions and
   # path overrides are the contract: change one of these and `node_exporter`
   # silently emits the wrong metrics.
-  # ---------------------------------------------------------------------------
 
   describe "node_exporter_args/0" do
     setup do
@@ -128,10 +121,8 @@ defmodule EdgeAgent.MetricsServers.ConfigTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # wireguard_exporter_args/0 — IPv6 binding is intentional (dual-stack);
   # the four boolean flags drive what the exporter publishes per peer.
-  # ---------------------------------------------------------------------------
 
   describe "wireguard_exporter_args/0" do
     setup do
@@ -167,8 +158,6 @@ defmodule EdgeAgent.MetricsServers.ConfigTest do
       end
     end
   end
-
-  # ---------------------------------------------------------------------------
 
   defp restore(key, nil), do: Elixir.Application.delete_env(:edge_agent, key)
   defp restore(key, value), do: Elixir.Application.put_env(:edge_agent, key, value)

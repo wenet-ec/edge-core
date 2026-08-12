@@ -3,12 +3,9 @@ defmodule EdgeAgent.Vpn.DerpMapCacheTest do
   use ExUnit.Case, async: true
 
   alias EdgeAgent.Vpn.DerpMapCache
-
-  # ---------------------------------------------------------------------------
   # next_state/4 — pure interval-doubling decision separated from the impure
   # fetch path. Operationally meaningful: too aggressive spams the map
   # server, too slow starves the agent of map updates.
-  # ---------------------------------------------------------------------------
 
   describe "next_state/4 — failure (fetch returned nil)" do
     test "doubles the current interval, keeps the previous map" do
@@ -70,11 +67,9 @@ defmodule EdgeAgent.Vpn.DerpMapCacheTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # map_has_regions?/1 — what counts as a 'successful' DERP map. Empty or
   # missing Regions means the map server has nothing to overlay; treat as
   # failure so the warmup logic keeps retrying.
-  # ---------------------------------------------------------------------------
 
   describe "map_has_regions?/1" do
     test "true when Regions map has at least one entry" do

@@ -3,14 +3,11 @@ defmodule EdgeAgent.SshServer.Channel.PtyTest do
   use ExUnit.Case, async: true
 
   alias EdgeAgent.SshServer.Channel.Pty, as: Channel
-
-  # ---------------------------------------------------------------------------
   # pty_term/1 — normalises the `TERM` value coming out of the SSH pty-req.
   # The Erlang :ssh app delivers it as a charlist for well-formed clients,
   # but the spec also allows empty/missing values. erlexec wants a non-empty
   # charlist; an empty TERM reaches the child as `TERM=` and breaks anything
   # that consults terminfo (less, nano, top, …).
-  # ---------------------------------------------------------------------------
 
   describe "pty_term/1" do
     test "passes a non-empty charlist through unchanged" do
@@ -36,13 +33,11 @@ defmodule EdgeAgent.SshServer.Channel.PtyTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # nonzero_or/2 — RFC 4254 §6.2 says a zero in char_w/row_h means "use the
   # pixel dimensions instead." We don't honor pixel dimensions, so zero must
   # collapse to a sane default. A 0×0 pty reaches the child as a terminal
   # with no rows or columns and full-screen programs render to an invisible
   # buffer.
-  # ---------------------------------------------------------------------------
 
   describe "nonzero_or/2" do
     test "passes a positive integer through unchanged" do
@@ -61,7 +56,6 @@ defmodule EdgeAgent.SshServer.Channel.PtyTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # sanitize_pty_modes/1 — Erlang's :ssh app gives the pty-req termios opcodes
   # as `[{atom, integer}, ...]` for opcodes it knows about, and `[{byte, _},
   # ...]` for opcodes it doesn't. erlexec's strict validator rejects the
@@ -69,7 +63,6 @@ defmodule EdgeAgent.SshServer.Channel.PtyTest do
   # so we drop the unknown-opcode entries before passing through. Forgetting
   # this filter means a single unknown opcode (e.g. a new RFC extension)
   # makes shell startup fail entirely.
-  # ---------------------------------------------------------------------------
 
   describe "sanitize_pty_modes/1" do
     test "keeps {atom, integer} entries (known opcodes)" do
@@ -101,14 +94,12 @@ defmodule EdgeAgent.SshServer.Channel.PtyTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # exit_status_from_wait/1 — erlexec hands us the raw 16-bit status from
   # POSIX wait(2): the high byte is the exit code if the low 7 bits are
   # zero (normal exit), otherwise the low 7 bits are the signal number that
   # killed the process. SSH wants a plain 0..255. If we forgot the shift,
   # `exit 1` would surface to the SSH client as exit status 256 — which the
   # SSH protocol can't even represent.
-  # ---------------------------------------------------------------------------
 
   describe "exit_status_from_wait/1" do
     test "decodes a normal exit-with-status: high byte is the code" do
@@ -139,7 +130,6 @@ defmodule EdgeAgent.SshServer.Channel.PtyTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # build_shell_env/3 — the env we hand to host_pty_spawn when spawning the
   # SSH shell. The shell runs on the host (bash --login -i inside the host's
   # mount namespace), so the host's /etc/profile + ~/.bashrc set PATH, HOME,
@@ -149,7 +139,6 @@ defmodule EdgeAgent.SshServer.Channel.PtyTest do
   #   * `EDGE_NODE_ID` for any host-side prompt customisation
   # And explicitly override locale to keep the container's en_US.UTF-8 from
   # leaking onto a host that hasn't generated that locale.
-  # ---------------------------------------------------------------------------
 
   describe "build_shell_env/3" do
     test "forwards TERM from the pty-req and includes identity vars" do
@@ -188,13 +177,11 @@ defmodule EdgeAgent.SshServer.Channel.PtyTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # build_shell_run_opts/2 — the keyword list we hand to :exec.run/2. The
   # critical opts are :pty (real terminal — the whole reason this refactor
   # exists), {:winsz, {rows, cols}} (dimensions from the pty-req), and
   # :monitor (so we receive :DOWN when bash exits). A drift here is the bug
   # class that originally caused nano not to save.
-  # ---------------------------------------------------------------------------
 
   describe "build_shell_run_opts/2" do
     test "requests a real pty with the modes from pty-req" do

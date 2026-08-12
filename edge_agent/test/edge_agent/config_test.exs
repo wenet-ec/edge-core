@@ -25,9 +25,7 @@ defmodule EdgeAgent.ConfigTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # get_env/1 — soft read, default :string type
-  # ---------------------------------------------------------------------------
 
   describe "get_env/1" do
     test "returns the value when set" do
@@ -43,9 +41,7 @@ defmodule EdgeAgent.ConfigTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # get_env/2 — explicit type, no default
-  # ---------------------------------------------------------------------------
 
   describe "get_env/2 — :string" do
     test "returns the raw string when set" do
@@ -178,9 +174,7 @@ defmodule EdgeAgent.ConfigTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # get_env/3 — soft read with default
-  # ---------------------------------------------------------------------------
 
   describe "get_env/3" do
     test "uses the default when var is unset" do
@@ -213,9 +207,7 @@ defmodule EdgeAgent.ConfigTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # get_env!/1 and get_env!/2 — strict reads
-  # ---------------------------------------------------------------------------
 
   describe "get_env!/1" do
     test "returns the string when set" do

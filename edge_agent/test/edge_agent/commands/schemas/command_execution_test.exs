@@ -25,9 +25,7 @@ defmodule EdgeAgent.Commands.Schemas.CommandExecutionTest do
     end)
   end
 
-  # ---------------------------------------------------------------------------
   # Required fields
-  # ---------------------------------------------------------------------------
 
   describe "changeset/2 — required fields" do
     test "valid attrs produce a valid changeset" do
@@ -83,10 +81,8 @@ defmodule EdgeAgent.Commands.Schemas.CommandExecutionTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # id UUID handling — Uniq.UUID type at the cast layer rejects non-UUID
   # strings; no separate validator needed.
-  # ---------------------------------------------------------------------------
 
   describe "changeset/2 — id UUID handling" do
     test "accepts a valid UUID" do
@@ -116,9 +112,7 @@ defmodule EdgeAgent.Commands.Schemas.CommandExecutionTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # Status inclusion
-  # ---------------------------------------------------------------------------
 
   describe "changeset/2 — status inclusion" do
     test "accepts the four locally-tracked statuses" do
@@ -164,9 +158,7 @@ defmodule EdgeAgent.Commands.Schemas.CommandExecutionTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # Cast allowlist
-  # ---------------------------------------------------------------------------
 
   describe "changeset/2 — cast allowlist" do
     test "ignores unknown fields" do

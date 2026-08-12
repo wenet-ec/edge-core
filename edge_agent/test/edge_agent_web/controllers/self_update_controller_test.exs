@@ -50,7 +50,6 @@ defmodule EdgeAgentWeb.Controllers.SelfUpdateControllerTest do
       conn = post(authed(conn), ~p"/api/v1/self_updates/trigger")
       assert conn.status == 403
 
-      # restore
       Application.delete_env(:edge_agent, :self_update_enabled)
     end
   end

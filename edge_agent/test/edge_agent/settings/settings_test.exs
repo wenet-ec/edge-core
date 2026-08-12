@@ -3,10 +3,7 @@ defmodule EdgeAgent.SettingsTest do
   use EdgeAgent.DataCase
 
   alias EdgeAgent.Settings
-
-  # -----------------------------------------------------------------------
   # get_config/2 and set_config/2 — generic key-value (sqlite-backed)
-  # -----------------------------------------------------------------------
 
   describe "get_config/2 and set_config/2" do
     test "returns nil for missing key by default" do
@@ -73,9 +70,7 @@ defmodule EdgeAgent.SettingsTest do
     end
   end
 
-  # -----------------------------------------------------------------------
   # delete_config/1
-  # -----------------------------------------------------------------------
 
   describe "delete_config/1" do
     test "returns {:ok, nil} for nonexistent key" do
@@ -100,9 +95,7 @@ defmodule EdgeAgent.SettingsTest do
     end
   end
 
-  # -----------------------------------------------------------------------
   # has_config?/1
-  # -----------------------------------------------------------------------
 
   describe "has_config?/1" do
     test "returns false for missing key" do
@@ -121,9 +114,7 @@ defmodule EdgeAgent.SettingsTest do
     end
   end
 
-  # -----------------------------------------------------------------------
   # all_configs/0
-  # -----------------------------------------------------------------------
 
   describe "all_configs/0" do
     test "returns empty map when no settings exist" do
@@ -146,9 +137,7 @@ defmodule EdgeAgent.SettingsTest do
     end
   end
 
-  # -----------------------------------------------------------------------
   # get_secret/2 and set_secret/2 — generic key-value (persistent_term-backed)
-  # -----------------------------------------------------------------------
 
   describe "get_secret/2 and set_secret/2" do
     test "returns nil for missing key by default" do
@@ -206,9 +195,7 @@ defmodule EdgeAgent.SettingsTest do
     assert Settings.get_secret("shared") == "from_secret"
   end
 
-  # -----------------------------------------------------------------------
   # Typed accessors — Config
-  # -----------------------------------------------------------------------
 
   describe "node_id accessors" do
     test "get_node_id returns nil when not set" do
@@ -221,9 +208,7 @@ defmodule EdgeAgent.SettingsTest do
     end
   end
 
-  # -----------------------------------------------------------------------
   # Typed accessors — Credentials
-  # -----------------------------------------------------------------------
 
   describe "api_token accessors" do
     test "get_api_token returns nil when not set" do
@@ -259,9 +244,7 @@ defmodule EdgeAgent.SettingsTest do
     end
   end
 
-  # -----------------------------------------------------------------------
   # admin_urls — JSON encode/decode
-  # -----------------------------------------------------------------------
 
   describe "admin_urls accessors" do
     test "get_admin_urls returns empty list when not set" do
@@ -298,10 +281,7 @@ defmodule EdgeAgent.SettingsTest do
     end
   end
 
-  # -----------------------------------------------------------------------
-  # -----------------------------------------------------------------------
   # vpn_enrollment_key — plain string roundtrip
-  # -----------------------------------------------------------------------
 
   describe "vpn_enrollment_key accessors" do
     test "get_vpn_enrollment_key returns nil when not set" do
@@ -344,9 +324,7 @@ defmodule EdgeAgent.SettingsTest do
     end
   end
 
-  # -----------------------------------------------------------------------
   # admin_fallback_urls — JSON encode/decode (same as admin_urls)
-  # -----------------------------------------------------------------------
 
   describe "admin_fallback_urls accessors" do
     test "get_admin_fallback_urls returns empty list when not set" do
@@ -382,9 +360,7 @@ defmodule EdgeAgent.SettingsTest do
     end
   end
 
-  # -----------------------------------------------------------------------
   # core_derp_map_urls — JSON list
-  # -----------------------------------------------------------------------
 
   describe "core_derp_map_urls accessors" do
     test "get_core_derp_map_urls returns an empty list when not set" do
@@ -409,9 +385,7 @@ defmodule EdgeAgent.SettingsTest do
     end
   end
 
-  # -----------------------------------------------------------------------
   # last_check_self_update_at — ISO8601 encode/decode
-  # -----------------------------------------------------------------------
 
   describe "last_check_self_update_at accessors" do
     test "get_last_check_self_update_at returns nil when not set" do

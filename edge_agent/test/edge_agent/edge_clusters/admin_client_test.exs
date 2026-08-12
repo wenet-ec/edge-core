@@ -5,13 +5,10 @@ defmodule EdgeAgent.EdgeClusters.AdminClientTest do
   alias EdgeAgent.EdgeClusters.AdminClient
   alias EdgeAgent.EdgeClusters.AdminClient.Transport
   alias EdgeAgent.Settings
-
-  # ---------------------------------------------------------------------------
   # urls_to_try/2 — fallback URL priority logic
   #
   # URL ordering is pure and belongs to AdminClient.Transport. The surrounding
   # AdminClient cases retain coverage for Settings-backed failover behavior.
-  # ---------------------------------------------------------------------------
 
   describe "urls_to_try/2 — VPN admin URLs take priority" do
     setup do
@@ -104,14 +101,12 @@ defmodule EdgeAgent.EdgeClusters.AdminClientTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # verify_enrollment_key/2 — payload shape and fallback behaviour
   #
   # The function makes real HTTP calls. We can't easily mock Req here without
   # a bypass library. Instead we verify:
   # - All URLs fail → {:error, {:all_requests_failed, _}}
   # - Single bad URL → network failure, tried once
-  # ---------------------------------------------------------------------------
 
   describe "verify_enrollment_key/2" do
     test "empty admin_urls list → {:error, {:all_requests_failed, _}}" do

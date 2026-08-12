@@ -15,14 +15,8 @@ defmodule EdgeAgentWeb.ConnCase do
       import EdgeAgentWeb.ConnCase
       import Phoenix.ConnTest
       import Plug.Conn
-      # The default endpoint for testing
+
       @endpoint EdgeAgentWeb.Endpoint
-
-      # Add verified routes support - THIS WAS MISSING
-
-      # Import conveniences for testing with connections
-
-      # Add factory support for easier testing
     end
   end
 

@@ -14,19 +14,8 @@ defmodule EdgeAdmin.Vpn.Addressing do
     Integer.pow(2, 32 - prefix) - 1
   end
 
-  # IPv4/CIDR Parsing
-  # ===========================================================================
-
   @doc """
   Parses a CIDR string into IP tuple and prefix.
-
-  ## Examples
-
-      iex> EdgeAdmin.Vpn.Addressing.parse_cidr("10.0.0.0/24")
-      {:ok, {{10, 0, 0, 0}, 24}}
-
-      iex> EdgeAdmin.Vpn.Addressing.parse_cidr("invalid")
-      {:error, "invalid CIDR format"}
   """
   @spec parse_cidr(String.t()) :: {:ok, {:inet.ip4_address(), 0..32}} | {:error, String.t()}
   def parse_cidr(cidr) when is_binary(cidr) do
@@ -47,14 +36,6 @@ defmodule EdgeAdmin.Vpn.Addressing do
 
   @doc """
   Parses an IPv4 address string into a tuple.
-
-  ## Examples
-
-      iex> EdgeAdmin.Vpn.Addressing.parse_ipv4("192.168.1.1")
-      {:ok, {192, 168, 1, 1}}
-
-      iex> EdgeAdmin.Vpn.Addressing.parse_ipv4("invalid")
-      {:error, "invalid IPv4 address"}
   """
   @spec parse_ipv4(String.t()) :: {:ok, :inet.ip4_address()} | {:error, String.t()}
   def parse_ipv4(ip_str) when is_binary(ip_str) do
@@ -75,20 +56,11 @@ defmodule EdgeAdmin.Vpn.Addressing do
     end
   end
 
-  # ===========================================================================
-  # Subnet Generation
-  # ===========================================================================
-
   @doc """
   Generates the next available IPv4 range from configured pools.
 
   Uses :cluster_auto_generated_v4_ranges and :cluster_v4_subnet_prefix from config.
   Excludes any ranges in the provided list.
-
-  ## Examples
-
-      iex> EdgeAdmin.Vpn.Addressing.generate_next_subnet(["100.64.0.0/24"])
-      {:ok, "100.64.1.0/24"}
   """
   def generate_next_subnet(existing_ranges \\ []) do
     base_ranges = cluster_auto_generated_v4_ranges()
@@ -118,11 +90,6 @@ defmodule EdgeAdmin.Vpn.Addressing do
 
   @doc """
   Finds an available subnet within a base CIDR range.
-
-  ## Examples
-
-      iex> EdgeAdmin.Vpn.Addressing.find_available_subnet("100.64.0.0/10", 24, ["100.64.0.0/24"])
-      "100.64.1.0/24"
   """
   def find_available_subnet(base_cidr, target_prefix, existing_ranges) do
     case parse_cidr(base_cidr) do

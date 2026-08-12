@@ -4,54 +4,17 @@ defmodule EdgeAdmin.Vpn do
   VPN integration and Netmaker API wrapper for Edge Admin.
 
   This module provides a centralized interface for all VPN-related operations, including:
-  - **DNS/Hostname Building**: Construct DNS names and hostnames for nodes and admins
-  - **Network Management**: Create, delete, and validate Netmaker networks
-  - **IPv4/CIDR Utilities**: Parse and generate IP addresses and subnet ranges
-  - **Host Management**: Add/remove hosts from networks, manage host lifecycle
-  - **Enrollment Keys**: Create and manage network enrollment keys
-  - **DNS Entries**: Create custom DNS entries for nodes (aliases)
-  - **Error Normalization**: Most functions go through `normalize_netmaker_error/1`, which
-    collapses to `{:ok, _} | {:error, :not_found} | {:error, :service_unavailable}`.
-    Functions where the caller benefits from richer outcomes opt out and return a
-    wider tuple set (e.g. `create_network/2` distinguishes `:already_exists`,
-    `add_host_to_network/2` returns `:already_joined`, `network_has_capacity/1`
-    returns `{:network_full, info}`).
 
-  ## Key Concepts
+  - DNS and hostname construction for nodes and admins
+  - Netmaker network, host, enrollment key, and DNS entry operations
+  - IPv4/IPv6 CIDR parsing, overlap checks, and subnet allocation
+  - Error normalization around Nexmaker responses
 
-  - **Network**: A VPN network in Netmaker (e.g., `cluster-prod`, `admin-cluster-a`)
-  - **Host**: A physical/virtual machine running the Edge VPN CLI
-  - **Node**: A host's connection to a specific network
-  - **DNS Name**: Short hostname (e.g., `node-abc123`, `admin-xyz789`)
-  - **Hostname**: Fully qualified domain name (e.g., `node-abc123.cluster-prod.nm.internal`)
-  - **Enrollment Key**: Token used to join a network
-
-  ## Architecture
-
-  - **Thin Wrapper**: Wraps Nexmaker API client with error normalization
-  - **Stateless**: No state, all operations are direct API calls
-
-  ## Examples
-
-      # Create a network
-      iex> Vpn.create_network("cluster-prod", %{addressrange: "100.64.1.0/24"})
-      {:ok, %{"name" => "cluster-prod", ...}}
-
-      # Build a VPN hostname
-      iex> Vpn.build_vpn_hostname("node-abc", "cluster-prod")
-      "node-abc.cluster-prod.nm.internal"
-
-      # Get enrollment key
-      iex> Vpn.get_default_enrollment_key("cluster-prod")
-      {:ok, "TOKEN_VALUE"}
-
-      # Add host to network
-      iex> Vpn.add_host_to_network(host_id, "cluster-prod")
-      {:ok, %{body: ""}}
-
-      # If host is already in network (idempotent)
-      iex> Vpn.add_host_to_network(host_id, "cluster-prod")
-      {:ok, :already_joined}
+  Most Netmaker calls route through `normalize_netmaker_error/1`, collapsing
+  outcomes to `{:ok, _} | {:error, :not_found} | {:error, :service_unavailable}`.
+  Functions where callers need richer outcomes document their narrower
+  exceptions, such as `create_network/2`, `add_host_to_network/2`, and
+  `network_has_capacity/1`.
   """
 
   alias EdgeAdmin.Admins.Metadata
@@ -66,10 +29,6 @@ defmodule EdgeAdmin.Vpn do
   alias Nexmaker.Api.Superadmin
 
   require Logger
-
-  # ===========================================================================
-  # Config Accessors
-  # ===========================================================================
 
   @doc """
   Returns the default Netmaker DNS domain suffix.
@@ -112,6 +71,7 @@ defmodule EdgeAdmin.Vpn do
 
   @doc """
   Returns the number of IP slots reserved for admin gateway nodes.
+
   Should be tuned to match the total number of admin instances across all admin clusters per core.
   """
   def admin_slot_reservation do
@@ -119,10 +79,6 @@ defmodule EdgeAdmin.Vpn do
   end
 
   defdelegate usable_ipv4_capacity(prefix), to: VpnAddressing
-
-  # ===========================================================================
-  # Pure VPN naming and addressing facade
-  # ===========================================================================
 
   defdelegate build_vpn_name(name, opts \\ []), to: VpnNaming
   defdelegate build_network_name(name, opts \\ []), to: VpnNaming
@@ -143,12 +99,6 @@ defmodule EdgeAdmin.Vpn do
   defdelegate cidrs_overlap?(cidr, existing_ranges), to: VpnAddressing
   defdelegate generate_subnets(base_ip, base_prefix, target_prefix), to: VpnAddressing
 
-  # Error Normalization
-  # ===========================================================================
-
-  # Delegates to Nexmaker.Api.normalize/1, then collapses anything that isn't
-  # :ok / :not_found into :service_unavailable so callers get a clean two-outcome
-  # contract (same behaviour as the old private normalize_netmaker_error/1).
   @doc """
   Funnel for Netmaker API responses.
 
@@ -164,10 +114,6 @@ defmodule EdgeAdmin.Vpn do
       {:error, _} -> {:error, :service_unavailable}
     end
   end
-
-  # ===========================================================================
-  # Netmaker API Wrappers
-  # ===========================================================================
 
   @doc """
   Lists all Netmaker networks.
@@ -431,16 +377,6 @@ defmodule EdgeAdmin.Vpn do
   Removes a host from a Netmaker network.
 
   Returns `{:ok, response}` or `{:error, :service_unavailable}`.
-
-  ## Parameters
-
-  - `host_id` - Netmaker host ID (UUID)
-  - `network_name` - Network name to remove from
-
-  ## Examples
-
-      iex> Vpn.remove_host_from_network("f272e703-...", "cluster-prod")
-      {:ok, %{}}
   """
   @spec remove_host_from_network(String.t(), String.t()) :: {:ok, map()} | {:error, :service_unavailable}
   def remove_host_from_network(host_id, network_name) do
@@ -470,25 +406,14 @@ defmodule EdgeAdmin.Vpn do
   end
 
   @doc """
-  Get the Netmaker host ID using hostname.
+  Gets the Netmaker host ID for a hostname.
 
   Optionally filter by network for better performance when there are many hosts.
 
-  ## Returns
-
-  - `{:ok, host_id}` — host found
-  - `{:error, :host_not_found}` — host listing succeeded but no host had a matching
-    name. Note: this atom is `:host_not_found`, not the module-wide `:not_found`,
-    so callers pattern-matching on `:not_found` will miss it.
-  - `{:error, :service_unavailable}` — Netmaker host listing failed
-
-  ## Examples
-
-      iex> Vpn.get_host_id("admin-abc123")
-      {:ok, "f272e703-b48f-4b61-b4c1-bfe4fffde62b"}
-
-      iex> Vpn.get_host_id("node-def456", network_name: "cluster-prod")
-      {:ok, "a1b2c3d4-..."}
+  Returns `{:ok, host_id}`, `{:error, :host_not_found}` when listing succeeds
+  but no host name matches, or `{:error, :service_unavailable}` when Netmaker
+  cannot be queried. `:host_not_found` is intentionally distinct from the
+  module-wide `:not_found` result.
   """
   def get_host_id(hostname, opts \\ []) do
     network_name = Keyword.get(opts, :network_name)
@@ -696,7 +621,7 @@ defmodule EdgeAdmin.Vpn do
 
   Returns `{:ok, result}` or `{:error, reason}`.
 
-  Note: This is a CLI operation, not an API call, so errors are not normalized.
+  This is a CLI operation, not an API call, so errors are not normalized.
   """
   def join_network(opts) do
     Nexmaker.Cli.join_network(opts)
@@ -742,6 +667,7 @@ defmodule EdgeAdmin.Vpn do
   Checks Netmaker server health via status endpoint.
 
   ## Options
+
     - `:retries` - Number of retry attempts (default: 0)
     - `:retry_delay` - Delay between retries in milliseconds (default: 100)
 
@@ -876,18 +802,8 @@ defmodule EdgeAdmin.Vpn do
   Deletes hosts whose nodes in the admin-cluster haven't checked in for
   the configured threshold. Protects nodes that are in our ETS metadata.
 
-  ## Configuration
-
-  - ZOMBIE_ADMIN_CHECKIN_THRESHOLD_MINUTES: Minutes since last checkin (default: 120)
-
-  ## Returns
-
-  - `{:ok, deleted_count}` - Number of hosts deleted
-  - `{:error, reason}` - Error occurred
-
-  ## Examples
-
-      {:ok, 3} = Vpn.cleanup_zombie_admins()
+  `ZOMBIE_ADMIN_CHECKIN_THRESHOLD_MINUTES` controls the stale check-in
+  threshold and defaults to 120 minutes.
   """
   @spec cleanup_zombie_admins() :: {:ok, non_neg_integer()} | {:error, term()}
   def cleanup_zombie_admins do
@@ -989,12 +905,9 @@ defmodule EdgeAdmin.Vpn do
     )
   end
 
-  # Get protected host IDs from metadata (admin_cluster topology)
   defp get_protected_host_ids do
     admin_cluster = Metadata.get_admin_cluster()
 
-    # Extract vpn_host_id from each admin in topology
-    # Topology structure: [%{name: "admin-abc123", vpn_host_id: "...", ...}, ...]
     admin_cluster
     |> Map.get(:topology, [])
     |> Enum.map(fn admin_data ->
@@ -1011,21 +924,7 @@ defmodule EdgeAdmin.Vpn do
   Finds a node by host ID in a network.
 
   Queries the network's nodes and finds the one matching the given host_id.
-  Returns the full node map for accessing any node property (id, address, etc).
-
-  ## Parameters
-    - network_name: String - Network name
-    - host_id: String - Netmaker host ID (UUID)
-
-  ## Returns
-    - `{:ok, node}` - Found node map
-    - `{:error, :not_found}` - Node with this host_id not found in network
-    - `{:error, :service_unavailable}` - Netmaker unavailable
-
-  ## Examples
-
-      iex> Vpn.find_node_by_host("cluster-test", "host-uuid-123")
-      {:ok, %{"id" => "node-uuid-456", "hostid" => "host-uuid-123", "address" => "100.64.0.1/24", ...}}
+  Returns the full node map so callers can access any Netmaker node property.
   """
   @spec find_node_by_host(String.t(), String.t()) :: {:ok, map()} | {:error, :not_found | :service_unavailable}
   def find_node_by_host(network_name, host_id) do
@@ -1045,20 +944,6 @@ defmodule EdgeAdmin.Vpn do
   Finds a node's Netmaker node ID by host ID.
 
   Convenience wrapper around `find_node_by_host/2` that returns only the node ID.
-
-  ## Parameters
-    - network_name: String - Network name
-    - host_id: String - Netmaker host ID (UUID)
-
-  ## Returns
-    - `{:ok, node_id}` - Found node ID
-    - `{:error, :not_found}` - Node with this host_id not found in network
-    - `{:error, :service_unavailable}` - Netmaker unavailable
-
-  ## Examples
-
-      iex> Vpn.find_node_id_by_host("cluster-test", "host-uuid-123")
-      {:ok, "node-uuid-456"}
   """
   @spec find_node_id_by_host(String.t(), String.t()) :: {:ok, String.t()} | {:error, :not_found | :service_unavailable}
   def find_node_id_by_host(network_name, host_id) do

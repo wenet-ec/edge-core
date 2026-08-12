@@ -6,27 +6,10 @@ defmodule EdgeAdmin.Vpn.Naming do
 
   def default_domain, do: Application.get_env(:edge_admin, :edge_vpn_default_domain, "nm.internal")
 
-  # DNS/Hostname Building
-  # ===========================================================================
-
   @doc """
   Builds a VPN name with a prefix.
-  Format: {prefix}-{name}
 
-  ## Options
-    - `:node` - Prefix with "node-" (default)
-    - `:admin` - Prefix with "admin-"
-
-  ## Examples
-
-      iex> EdgeAdmin.Vpn.Naming.build_vpn_name("abc123")
-      "node-abc123"
-
-      iex> EdgeAdmin.Vpn.Naming.build_vpn_name("abc123", prefix: :node)
-      "node-abc123"
-
-      iex> EdgeAdmin.Vpn.Naming.build_vpn_name("k7m3n2p9", prefix: :admin)
-      "admin-k7m3n2p9"
+  Prefixes with `node-` by default or `admin-` with `prefix: :admin`.
   """
   @spec build_vpn_name(String.t(), keyword()) :: String.t()
   def build_vpn_name(name, opts \\ []) when is_binary(name) do
@@ -40,22 +23,9 @@ defmodule EdgeAdmin.Vpn.Naming do
 
   @doc """
   Builds a network name with a prefix.
-  Format: cluster-{name} or admin-cluster-{name}
 
-  ## Options
-    - `:node` - Prefix with "cluster-" (default)
-    - `:admin` - Prefix with "admin-cluster-" and validate
-
-  ## Examples
-
-      iex> EdgeAdmin.Vpn.Naming.build_network_name("prod-east")
-      "cluster-prod-east"
-
-      iex> EdgeAdmin.Vpn.Naming.build_network_name("prod-east", prefix: :node)
-      "cluster-prod-east"
-
-      iex> EdgeAdmin.Vpn.Naming.build_network_name("prod", prefix: :admin)
-      "admin-cluster-prod"
+  Prefixes with `cluster-` by default or `admin-cluster-` with
+  `prefix: :admin`. Admin cluster suffixes are validated before construction.
   """
   @spec build_network_name(String.t(), keyword()) :: String.t()
   def build_network_name(name, opts \\ []) when is_binary(name) do
@@ -73,6 +43,7 @@ defmodule EdgeAdmin.Vpn.Naming do
 
   @doc """
   Validates admin cluster name suffix.
+
   Raises ArgumentError if invalid.
 
   Rules:
@@ -108,11 +79,6 @@ defmodule EdgeAdmin.Vpn.Naming do
 
   @doc """
   Builds a VPN domain from network name.
-
-  ## Examples
-
-      iex> EdgeAdmin.Vpn.Naming.build_vpn_domain("cluster-xyz")
-      "cluster-xyz.nm.internal"
   """
   @spec build_vpn_domain(String.t(), String.t() | nil) :: String.t()
   def build_vpn_domain(network, domain \\ nil) do
@@ -126,17 +92,6 @@ defmodule EdgeAdmin.Vpn.Naming do
 
   @doc """
   Builds a VPN hostname from components.
-
-  ## Examples
-
-      iex> EdgeAdmin.Vpn.Naming.build_vpn_hostname("node-abc", "cluster-xyz")
-      "node-abc.cluster-xyz.nm.internal"
-
-      iex> EdgeAdmin.Vpn.Naming.build_vpn_hostname("node-abc", "cluster-xyz", "custom.domain")
-      "node-abc.cluster-xyz.custom.domain"
-
-      iex> EdgeAdmin.Vpn.Naming.build_vpn_hostname("node-abc", "cluster-xyz", "")
-      "node-abc.cluster-xyz"
   """
   @spec build_vpn_hostname(String.t(), String.t(), String.t() | nil) :: String.t()
   def build_vpn_hostname(host, network, domain \\ nil) do
@@ -145,11 +100,6 @@ defmodule EdgeAdmin.Vpn.Naming do
 
   @doc """
   Builds an admin erlang node name from dns hostname.
-
-  ## Examples
-
-      iex> EdgeAdmin.Vpn.Naming.build_admin_erlang_node_name("node-abc.cluster-xyz.nm.internal")
-      :"admin@node-abc.cluster-xyz.nm.internal"
   """
   def build_admin_erlang_node_name(hostname) do
     :"admin@#{hostname}"
@@ -157,8 +107,6 @@ defmodule EdgeAdmin.Vpn.Naming do
 
   @doc """
   Validates a network name for Netmaker compatibility.
-
-  Returns :ok or {:error, reason}
 
   Validates:
   - Max 32 characters

@@ -3,8 +3,8 @@ defmodule EdgeAdmin.Ssh.Forms.VerifySshCredentialsForm do
   @moduledoc """
   Form for validating SSH credentials verification requests from agents.
 
-  Validates that username is provided along with either a password OR a public key
-  (but not both). This unified form supports both password and public key authentication.
+  Validates that username is provided with either a password or a public key,
+  but not both.
   """
   use EdgeAdmin.Form
 
@@ -17,15 +17,7 @@ defmodule EdgeAdmin.Ssh.Forms.VerifySshCredentialsForm do
   @doc """
   Validates SSH credentials verification parameters.
 
-  ## Validations
-  - `username` - Required
-  - `password` - Optional (mutually exclusive with public_key)
-  - `public_key` - Optional (mutually exclusive with password)
-  - At least one of password or public_key must be provided
-
-  ## Returns
-  - `{:ok, attrs}` - Validated attributes as a map with string keys
-  - `{:error, changeset}` - Validation errors
+  Exactly one credential field must be present.
   """
   def changeset(attrs, opts \\ [])
 

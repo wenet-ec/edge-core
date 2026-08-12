@@ -3,8 +3,7 @@ defmodule EdgeAdmin.Ssh.Forms.CreateSshPublicKeyForm do
   @moduledoc """
   Form for validating SSH public key creation inputs.
 
-  Handles input validation for creating an SSH public key.
-  This form validates external API inputs before passing to the domain layer.
+  Validates external API input before passing it to the domain layer.
   """
   use EdgeAdmin.Form
 
@@ -18,20 +17,11 @@ defmodule EdgeAdmin.Ssh.Forms.CreateSshPublicKeyForm do
   @doc """
   Validates and normalizes SSH public key creation parameters.
 
-  Handles both:
+  Accepts both shapes:
   - Nested in SSH username creation: `%{"key_name" => ..., "public_key" => ...}`
   - Standalone endpoint: `%{"ssh_public_key" => %{"key_name" => ..., "public_key" => ...}}`
-
-  ## Validations
-  - `key_name` - Required, human-readable name for the key
-  - `public_key` - Required, must be valid SSH public key format
-
-  ## Returns
-  - `{:ok, attrs}` - Validated and normalized attributes as a map with string keys
-  - `{:error, changeset}` - Validation errors
   """
   def changeset(attrs) when is_map(attrs) do
-    # Nested in SSH username or already unwrapped
     %__MODULE__{}
     |> cast(attrs, [:key_name, :public_key])
     |> validate_required([:key_name, :public_key])

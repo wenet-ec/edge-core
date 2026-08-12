@@ -35,16 +35,13 @@ defmodule EdgeAdmin.Ssh.Schemas.SshUsername do
     field(:password_hash, :string)
     field(:has_password, :boolean, virtual: true)
 
-    # Associations
     belongs_to(:node, Node)
     has_many(:ssh_public_keys, SshPublicKey, on_delete: :delete_all)
 
     timestamps()
   end
 
-  @doc """
-  Returns whether this SSH username has a password configured.
-  """
+  @doc "Returns whether this SSH username has a password configured."
   @spec has_password?(t()) :: boolean()
   def has_password?(%__MODULE__{password_hash: nil}), do: false
   def has_password?(%__MODULE__{password_hash: _hash}), do: true

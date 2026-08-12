@@ -17,7 +17,6 @@ defmodule EdgeAdmin.Ssh.Schemas.SshPublicKey do
           updated_at: DateTime.t() | nil
         }
 
-  # Supported SSH key algorithms
   @supported_algorithms [
     "ssh-ed25519",
     "ecdsa-sha2-nistp256",
@@ -45,7 +44,6 @@ defmodule EdgeAdmin.Ssh.Schemas.SshPublicKey do
     field(:public_key, :string)
     field(:key_name, :string)
 
-    # Associations
     belongs_to(:ssh_username, SshUsername)
 
     timestamps()
@@ -64,8 +62,6 @@ defmodule EdgeAdmin.Ssh.Schemas.SshPublicKey do
     |> unique_constraint([:key_name, :ssh_username_id], name: :ssh_public_keys_ssh_username_id_key_name_index)
     |> foreign_key_constraint(:ssh_username_id)
   end
-
-  # Validation functions
 
   defp validate_ssh_public_key_format(changeset) do
     validate_change(changeset, :public_key, fn :public_key, public_key ->
@@ -114,8 +110,6 @@ defmodule EdgeAdmin.Ssh.Schemas.SshPublicKey do
     end)
   end
 
-  # Helper functions
-
   defp extract_algorithm(public_key) do
     case Regex.run(@ssh_key_regex, String.trim(public_key)) do
       [_full, algorithm, _key_data, _comment] -> {:ok, algorithm}
@@ -132,16 +126,11 @@ defmodule EdgeAdmin.Ssh.Schemas.SshPublicKey do
     end
   end
 
-  @doc """
-  Returns the list of supported SSH key algorithms.
-  """
+  @doc "Returns the list of supported SSH key algorithms."
   @spec supported_algorithms() :: [String.t()]
   def supported_algorithms, do: @supported_algorithms
 
-  @doc """
-  Validates if a public key string has valid format and algorithm.
-  Returns {:ok, algorithm} or {:error, reason}.
-  """
+  @doc "Validates a public key string's format, algorithm, and base64 data."
   @spec validate_key_format(String.t()) :: {:ok, String.t()} | {:error, String.t()}
   def validate_key_format(public_key) when is_binary(public_key) do
     trimmed_key = String.trim(public_key)

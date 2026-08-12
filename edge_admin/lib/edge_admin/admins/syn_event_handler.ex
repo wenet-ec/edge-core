@@ -38,8 +38,6 @@ defmodule EdgeAdmin.Admins.SynEventHandler do
 
   require Logger
 
-  # Called on every node when a process joins a group.
-  # We only act on :admin_scope — gateway registrations in :cluster_scope are ignored.
   @impl true
   def on_process_joined(:admin_scope, _group, _pid, metadata, reason) do
     admin_name = Map.get(metadata, :name, "unknown")
@@ -49,8 +47,6 @@ defmodule EdgeAdmin.Admins.SynEventHandler do
 
   def on_process_joined(_scope, _group, _pid, _metadata, _reason), do: :ok
 
-  # Called on every node when a process leaves a group (graceful or crash).
-  # reason is :normal for graceful leave, or the crash reason (e.g. :noconnection) for failures.
   @impl true
   def on_process_left(:admin_scope, _group, _pid, metadata, reason) do
     admin_name = Map.get(metadata, :name, "unknown")
@@ -60,8 +56,8 @@ defmodule EdgeAdmin.Admins.SynEventHandler do
 
   def on_process_left(_scope, _group, _pid, _metadata, _reason), do: :ok
 
-  # Send a recomputation request to the local Metadata process.
-  # Guards against the race where Metadata hasn't started yet (e.g. during bootstrap).
+  # Metadata may not be started yet during bootstrap; the periodic scheduler is
+  # the fallback if this early notification is skipped.
   defp notify_metadata(trigger) do
     case Process.whereis(EdgeAdmin.Admins.Metadata) do
       nil ->

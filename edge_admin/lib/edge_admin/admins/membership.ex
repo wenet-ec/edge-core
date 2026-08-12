@@ -9,12 +9,6 @@ defmodule EdgeAdmin.Admins.Membership do
   the admin is a participating member of the cluster; until it does, the rest
   of the supervision tree is intentionally held back.
 
-  ## Key Concepts
-
-  - **Admin Cluster**: VPN network connecting all admin instances for HA coordination
-  - **Erlang Distribution**: Enables inter-admin RPC, syn registry, and clustering
-  - **Peer Discovery**: Finds other admins in the cluster via Edge VPN API
-
   ## Responsibilities
 
   1. **VPN Network Join** (step 1)
@@ -83,10 +77,6 @@ defmodule EdgeAdmin.Admins.Membership do
 
   require Logger
 
-  # =============================================================================
-  # Public API
-  # =============================================================================
-
   @doc """
   Starts the Membership GenServer.
   """
@@ -112,10 +102,6 @@ defmodule EdgeAdmin.Admins.Membership do
     end
   end
 
-  # =============================================================================
-  # GenServer Callbacks
-  # =============================================================================
-
   @impl true
   def init(_opts) do
     Logger.info("Membership startup beginning...")
@@ -136,10 +122,6 @@ defmodule EdgeAdmin.Admins.Membership do
     {:reply, Map.get(state, :initialized, false), state}
   end
 
-  # =============================================================================
-  # Config Helpers
-  # =============================================================================
-
   defp admin_name, do: Application.get_env(:edge_admin, :admin_name)
   defp admin_cluster_name, do: Application.get_env(:edge_admin, :admin_cluster_name)
   defp admin_cluster_v4_subnet, do: Application.get_env(:edge_admin, :admin_cluster_v4_subnet)
@@ -147,10 +129,6 @@ defmodule EdgeAdmin.Admins.Membership do
   defp max_wireguard_peers, do: Application.get_env(:edge_admin, :admin_max_wireguard_peers)
   defp vpn_cluster_cookie, do: Application.get_env(:edge_admin, :vpn_cluster_cookie)
   defp admin_wireguard_port, do: Application.get_env(:edge_admin, :admin_wireguard_port)
-
-  # =============================================================================
-  # Membership Flow
-  # =============================================================================
 
   defp do_establish_membership do
     start_time = System.monotonic_time(:millisecond)
@@ -185,9 +163,7 @@ defmodule EdgeAdmin.Admins.Membership do
     result
   end
 
-  # =============================================================================
   # Step 1: VPN Network Join
-  # =============================================================================
 
   # Bounded waits prevent silent hangs when Edge VPN/Edge VPN CLI never produce a
   # result we expect. The total per-step budget is `:join_timeout_seconds`
@@ -207,7 +183,6 @@ defmodule EdgeAdmin.Admins.Membership do
 
     start_time = System.monotonic_time(:millisecond)
 
-    # Build join options, adding static port if configured
     join_opts = build_join_opts(admin_name)
 
     max_attempts = join_max_attempts()
@@ -275,7 +250,6 @@ defmodule EdgeAdmin.Admins.Membership do
   end
 
   defp ensure_network_exists(network_name) do
-    # Get admin cluster subnet from env or generate from pool
     subnet =
       case admin_cluster_v4_subnet() do
         nil ->
@@ -294,8 +268,6 @@ defmodule EdgeAdmin.Admins.Membership do
   defp build_join_opts(admin_name) do
     base_opts = [name: admin_name]
 
-    # Add static port if ADMIN_WIREGUARD_PORT is configured
-    # This ensures the admin listens on a predictable port for external agent connectivity
     case admin_wireguard_port() do
       nil ->
         Logger.info("No ADMIN_WIREGUARD_PORT configured, using dynamic port assignment")
@@ -384,9 +356,7 @@ defmodule EdgeAdmin.Admins.Membership do
     end
   end
 
-  # =============================================================================
   # Step 2: Erlang Distribution
-  # =============================================================================
 
   # Erlang distribution startup can fail transiently (epmd not yet up,
   # VPN hostname not yet resolvable). Retry a few times before giving up —
@@ -467,9 +437,7 @@ defmodule EdgeAdmin.Admins.Membership do
     e -> {:error, e}
   end
 
-  # =============================================================================
   # Step 3: Syn Registry
-  # =============================================================================
 
   defp step_3_initialize_syn do
     Logger.info("Step 3: Initializing syn registry")
@@ -480,7 +448,6 @@ defmodule EdgeAdmin.Admins.Membership do
 
     {:ok, vpn_host_id} = Vpn.get_host_id(admin_name())
 
-    # Join the admin cluster group with metadata
     metadata = %{
       name: admin_name(),
       max_wireguard_peers: max_wireguard_peers(),
@@ -503,9 +470,7 @@ defmodule EdgeAdmin.Admins.Membership do
     :ok
   end
 
-  # =============================================================================
   # Step 4: Peer Discovery
-  # =============================================================================
 
   defp step_4_discover_peers do
     Logger.info("Step 4: Discovering peer admins")

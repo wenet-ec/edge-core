@@ -3,12 +3,10 @@ defmodule EdgeAdmin.Admins.Metadata.Algorithm do
   @moduledoc """
   Pure algorithm for one-admin-per-cluster assignments.
 
-  Core features:
-  - Deterministic consensus (same inputs → same outputs)
-  - Degraded mode support (tracks unassigned nodes when capacity exceeded)
-  - Empty cluster bootstrap (pre-assignment before first node joins)
-  - Smart load balancing (prefers admins with fewer clusters, then higher remaining capacity)
-  - Stable hash affinity (breaks exact ties without local mutable state)
+  The algorithm is deterministic: the same admins and clusters produce the same
+  owner map on every admin instance. It recomputes assignments from scratch,
+  tracks unassigned clusters when capacity is exceeded, and uses stable hash
+  affinity only as a final load-balancing tiebreaker.
 
   ## Capacity model
 
@@ -81,16 +79,12 @@ defmodule EdgeAdmin.Admins.Metadata.Algorithm do
       }
   """
   def compute_assignments(admins, clusters) do
-    # Build cluster lookup map (cluster_name => nodes)
     cluster_nodes_map = Map.new(clusters, fn cluster -> {cluster.name, cluster.nodes} end)
 
-    # Total nodes in the system (all clusters, assigned or orphaned)
     total_nodes = Enum.reduce(clusters, 0, fn cluster, acc -> acc + length(cluster.nodes) end)
 
-    # Total edge capacity across all admins in this admin cluster
     total_edge_capacity = Enum.reduce(admins, 0, fn {_name, admin}, acc -> acc + admin.edge_node_capacity end)
 
-    # Start with empty assignments
     initial_state = %{
       cluster_assignments: %{},
       admin_node_counts: Map.new(admins, fn {admin_name, _} -> {admin_name, 0} end),
@@ -104,7 +98,6 @@ defmodule EdgeAdmin.Admins.Metadata.Algorithm do
     # large one) and ensures deterministic output regardless of DB/map iteration order.
     sorted_clusters = Enum.sort_by(clusters, fn c -> {-length(c.nodes), c.name} end)
 
-    # Assign each cluster
     intermediate_result =
       Enum.reduce(sorted_clusters, initial_state, fn cluster, state ->
         cluster_size = length(cluster.nodes)
@@ -117,7 +110,6 @@ defmodule EdgeAdmin.Admins.Metadata.Algorithm do
                cluster.name
              ) do
           {:ok, best_admin} ->
-            # Assign cluster to admin
             %{
               cluster_assignments: Map.put(state.cluster_assignments, cluster.name, best_admin),
               admin_node_counts: Map.update!(state.admin_node_counts, best_admin, &(&1 + cluster_size)),
@@ -125,7 +117,6 @@ defmodule EdgeAdmin.Admins.Metadata.Algorithm do
             }
 
           {:error, :no_capacity} ->
-            # Cluster couldn't be assigned - add to orphaned clusters
             %{
               state
               | orphaned_clusters: Map.put(state.orphaned_clusters, cluster.name, cluster.nodes)
@@ -133,7 +124,6 @@ defmodule EdgeAdmin.Admins.Metadata.Algorithm do
         end
       end)
 
-    # Transform to ETS format: %{admin_name => %{cluster_name => [node_names]}}
     edge_clusters =
       build_edge_clusters_map(
         intermediate_result.cluster_assignments,
@@ -177,7 +167,6 @@ defmodule EdgeAdmin.Admins.Metadata.Algorithm do
       {:ok, "admin-1"}
   """
   def bootstrap_empty_cluster(admins, current_assignments, cluster_name) do
-    # Check if already assigned (search in edge_clusters)
     existing_owner =
       Enum.find_value(current_assignments.edge_clusters, fn {admin_name, clusters} ->
         if Map.has_key?(clusters, cluster_name), do: admin_name
@@ -185,7 +174,6 @@ defmodule EdgeAdmin.Admins.Metadata.Algorithm do
 
     case existing_owner do
       nil ->
-        # Extract cluster_assignments from edge_clusters for algorithm
         cluster_assignments = extract_cluster_assignments(current_assignments.edge_clusters)
         admin_node_counts = calculate_admin_node_counts(current_assignments.edge_clusters)
 
@@ -197,10 +185,7 @@ defmodule EdgeAdmin.Admins.Metadata.Algorithm do
     end
   end
 
-  # Private helpers
-
   defp find_best_admin_for_cluster(admins, cluster_assignments, admin_node_counts, cluster_size, cluster_name) do
-    # Filter admins that can handle this cluster
     available_admins =
       admins
       |> Enum.filter(fn {admin_name, admin} ->
@@ -231,15 +216,11 @@ defmodule EdgeAdmin.Admins.Metadata.Algorithm do
   end
 
   defp admin_score(admin_name, admins, cluster_assignments, admin_node_counts) do
-    # How many clusters is this admin currently managing?
     clusters_managed =
       Enum.count(cluster_assignments, fn {_cluster_name, assigned_admin} -> assigned_admin == admin_name end)
 
-    # How much remaining capacity does this admin have?
     remaining_capacity = admins[admin_name].edge_node_capacity - admin_node_counts[admin_name]
 
-    # Return tuple: (clusters_managed, -remaining_capacity)
-    # Lower is better: prefer fewer clusters, then higher remaining capacity
     {clusters_managed, -remaining_capacity}
   end
 
@@ -260,10 +241,8 @@ defmodule EdgeAdmin.Admins.Metadata.Algorithm do
   end
 
   defp build_edge_clusters_map(cluster_assignments, cluster_nodes_map, admins) do
-    # Initialize all admins with empty maps
     initial_map = Map.new(admins, fn {admin_name, _} -> {admin_name, %{}} end)
 
-    # Group clusters by admin
     Enum.reduce(cluster_assignments, initial_map, fn {cluster_name, admin_name}, acc ->
       cluster_nodes = Map.get(cluster_nodes_map, cluster_name, [])
 
@@ -280,7 +259,6 @@ defmodule EdgeAdmin.Admins.Metadata.Algorithm do
   Used internally and for testing.
   """
   def extract_cluster_assignments(edge_clusters) do
-    # Flatten edge_clusters back to %{cluster_name => admin_name}
     edge_clusters
     |> Enum.flat_map(fn {admin_name, clusters} ->
       Enum.map(clusters, fn {cluster_name, _nodes} -> {cluster_name, admin_name} end)
@@ -295,7 +273,6 @@ defmodule EdgeAdmin.Admins.Metadata.Algorithm do
   Used internally and for testing.
   """
   def calculate_admin_node_counts(edge_clusters) do
-    # Count total nodes per admin
     Map.new(edge_clusters, fn {admin_name, clusters} ->
       node_count = clusters |> Map.values() |> Enum.flat_map(& &1) |> length()
       {admin_name, node_count}

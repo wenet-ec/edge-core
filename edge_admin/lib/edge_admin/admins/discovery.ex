@@ -3,15 +3,9 @@ defmodule EdgeAdmin.Admins.Discovery do
   @moduledoc """
   Peer admin discovery and Erlang node connection.
 
-  This module handles discovering other admin instances in the admin cluster and
-  establishing Erlang distribution connections to enable distributed coordination.
-
-  ## Key Concepts
-
-  - **Peer Admin**: Another admin instance in the same admin cluster
-  - **Erlang Node**: Distributed Erlang runtime identified by name (e.g., `admin@host`)
-  - **Discovery**: Finding peers via Edge VPN API (no hardcoded addresses)
-  - **Connection**: Establishing distributed Erlang connection via `Node.connect/1`
+  Peers are discovered from the admin cluster VPN network rather than static
+  host lists. Online peer hostnames are converted to Erlang node names and
+  connected with `Node.connect/1`.
 
   ## Discovery Process
 
@@ -27,10 +21,8 @@ defmodule EdgeAdmin.Admins.Discovery do
 
   ## DNS Retry Logic
 
-  Handles timing issues when VPN just joined:
-  - DNS entries may not be propagated yet
-  - Retries DNS resolution with exponential backoff
-  - Skips connection if DNS fails after retries
+  VPN DNS may lag immediately after a peer joins. Discovery retries name
+  resolution briefly, then lets the next scheduled scan try again.
 
   ## Connection States
 
@@ -38,19 +30,12 @@ defmodule EdgeAdmin.Admins.Discovery do
   - `false` - Connection failed (DNS ok, node unreachable)
   - `:ignored` - Already connected to this node
 
-  ## Used By
-
-  - `Membership` - Initial peer discovery during admin-cluster join (step 4)
-  - `EdgeAdmin.LocalScheduler` - Periodic rediscovery (default: every 5min,
-    `ADMIN_DISCOVERY_SCHEDULE`)
-
   ## Examples
 
       # Called during membership startup and on the discovery cron
       iex> Discovery.scan_and_connect_admins()
       :ok
 
-      # Result: Connected to peer admins
       iex> Node.list()
       [:"admin@admin-def456.admin-cluster-a.nm.internal"]
   """
@@ -171,8 +156,8 @@ defmodule EdgeAdmin.Admins.Discovery do
     )
   end
 
-  # Wait for DNS resolution with retry logic
-  # This handles timing issues when a peer just joined the VPN and DNS hasn't propagated yet
+  # VPN DNS can lag just after a peer joins; a failed scan is retried by the
+  # next discovery cycle.
   defp wait_for_dns_resolution(hostname, max_attempts, delay_ms) do
     Enum.reduce_while(1..max_attempts, {:error, :nxdomain}, fn attempt, _acc ->
       case :inet.gethostbyname(String.to_charlist(hostname)) do

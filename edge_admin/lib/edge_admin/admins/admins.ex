@@ -58,10 +58,6 @@ defmodule EdgeAdmin.Admins do
     end
   end
 
-  # ===========================================================================
-  # Normalisation
-  # ===========================================================================
-
   @doc """
   Normalises a single raw `list_admin_cluster_networks/0` entry into the
   admin-domain shape returned by `list_admin_clusters/0`.

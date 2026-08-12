@@ -8,20 +8,12 @@ defmodule EdgeAdmin.Admins.Metadata do
   independently recomputes the same snapshot from the shared database and cluster
   events; ETS is not a replicated source of truth.
 
-  ## Key Concepts
-
-  - **Metadata**: Local ETS state recomputed independently by each Admin
-  - **Admin Topology**: Which admins exist, their capacity, and health status
-  - **Cluster Assignments**: Which admin owns which edge clusters
-  - **Recomputation**: Algorithm that redistributes clusters when topology changes
-  - **Anti-Thrashing**: Flag pattern prevents rapid recomputation cycles
-
   ## Responsibilities
 
   1. **ETS Table Management**
      - Create and own `:metadata` ETS table
      - Provide public read API for queries
-     - Update table atomically during recomputations
+     - Replace the snapshot atomically during recomputations
 
   2. **Event Subscription**
      - Syn: Admin join/leave events via `SynEventHandler` callback bridge
@@ -129,15 +121,6 @@ defmodule EdgeAdmin.Admins.Metadata do
   - When done, check flag and recompute again if needed
   - No locks, timers, or debouncing - just flags
 
-  ## Public API
-
-  All query functions are safe to call from any process (ETS reads are concurrent):
-  - `get_admin/0` - This admin's info
-  - `get_admin_cluster/0` - Full topology
-  - `get_my_clusters/0` - Clusters assigned to this admin
-  - `get_cluster_owner/1` - Which admin owns a cluster
-  - `find_node_cluster/1` - Which cluster contains a node
-
   ## Examples
 
       # Query metadata (from any process)
@@ -147,7 +130,7 @@ defmodule EdgeAdmin.Admins.Metadata do
       # Trigger recomputation (from PubSub event)
       send(Metadata, :cluster_created)
 
-      # Result: Algorithm runs, assignments updated, broadcast sent
+      # Algorithm runs, assignments update, local subscribers are notified
   """
 
   use GenServer
@@ -163,8 +146,6 @@ defmodule EdgeAdmin.Admins.Metadata do
 
   @table :metadata
   @snapshot_key :snapshot
-
-  # === Lifecycle ===
 
   @doc """
   Starts the Metadata GenServer.
@@ -183,14 +164,11 @@ defmodule EdgeAdmin.Admins.Metadata do
 
     Logger.info("Metadata initializing for admin #{admin_name}")
 
-    # Create ETS table
     :ets.new(@table, [:set, :public, :named_table, read_concurrency: true])
 
-    # Compute derived values
     vpn_hostname = Vpn.build_vpn_hostname(admin_name, admin_cluster_name)
     erlang_node_name = node()
 
-    # Fetch VPN host ID
     {:ok, vpn_host_id} = Vpn.get_host_id(admin_name)
     Logger.info("Fetched VPN host ID: #{vpn_host_id}")
 
@@ -230,10 +208,8 @@ defmodule EdgeAdmin.Admins.Metadata do
       node_index: %{}
     })
 
-    # Subscribe to PubSub events (cluster/node CRUD from this admin cluster)
     Events.subscribe()
 
-    # Initial state with flags
     initial_state = %{
       admin_id: admin_id,
       admin_cluster_name: admin_cluster_name,
@@ -244,15 +220,12 @@ defmodule EdgeAdmin.Admins.Metadata do
       initialized: false
     }
 
-    # Trigger first recomputation
     spawn_recomputation_task(initial_state, :initialization)
 
     Logger.info("Metadata initialization complete for #{admin_name}")
 
     {:ok, %{initial_state | recomputing?: true, initialized: true}}
   end
-
-  # === Public API (Queries) ===
 
   @doc """
   Returns one internally consistent metadata snapshot.
@@ -397,8 +370,6 @@ defmodule EdgeAdmin.Admins.Metadata do
     GenServer.call(__MODULE__, {:recompute_now, :manual}, 10_000)
   end
 
-  # === GenServer Callbacks ===
-
   @impl true
   def handle_call(:initialized?, _from, state) do
     {:reply, Map.get(state, :initialized, false), state}
@@ -414,16 +385,13 @@ defmodule EdgeAdmin.Admins.Metadata do
     {:reply, :ok, new_state}
   end
 
-  # === Event Handlers ===
-
-  # Syn events - Admin topology changes (forwarded by SynEventHandler callback)
+  # Admin topology changes forwarded by SynEventHandler.
   @impl true
   def handle_info({:syn_admin_topology_changed, trigger}, state) do
     Logger.info("Metadata: admin topology changed (#{trigger}), requesting recomputation")
     request_recomputation(state, trigger)
   end
 
-  # PostgreSQL events - Cluster structure changes
   @impl true
   def handle_info(:cluster_created, state) do
     Logger.debug("Cluster created, requesting recomputation")
@@ -436,7 +404,6 @@ defmodule EdgeAdmin.Admins.Metadata do
     request_recomputation(state, :cluster_deleted)
   end
 
-  # PostgreSQL events - Node changes
   @impl true
   def handle_info(:node_created, state) do
     Logger.debug("Node created, requesting recomputation")
@@ -455,18 +422,15 @@ defmodule EdgeAdmin.Admins.Metadata do
     request_recomputation(state, :node_updated)
   end
 
-  # Recomputation completion/failure
   @impl true
   def handle_info({:recomputation_finished, trigger, duration, :ok}, state) do
     if state.pending_recompute do
-      # Something changed while we worked - do it again
       Logger.debug("Metadata: Pending recomputation triggered")
       spawn_recomputation_task(state, :pending)
       {:noreply, %{state | recomputing?: true, pending_recompute: false, last_recompute_error: nil}}
     else
       Logger.debug("Metadata: Recomputation complete, idle")
 
-      # Emit recomputation telemetry
       emit_recomputation_telemetry(trigger, duration)
 
       {:noreply, %{state | recomputing?: false, last_recompute_error: nil}}
@@ -491,15 +455,11 @@ defmodule EdgeAdmin.Admins.Metadata do
     end
   end
 
-  # === Private Helpers ===
-
   defp request_recomputation(state, trigger) do
     if state.recomputing? do
-      # Already working - mark that we need to do it again
       Logger.debug("Metadata: Already recomputing, marked pending")
       {:noreply, %{state | pending_recompute: true}}
     else
-      # Start recomputation
       spawn_recomputation_task(state, trigger)
       Logger.debug("Metadata: Starting recomputation")
       {:noreply, %{state | recomputing?: true}}
@@ -530,7 +490,6 @@ defmodule EdgeAdmin.Admins.Metadata do
   defp perform_recomputation(_state) do
     Logger.debug("Performing metadata recomputation")
 
-    # Read inputs from syn and PostgreSQL (already transformed to names)
     all_admins = read_admins_from_syn()
     clusters_with_names = read_clusters_from_db()
 
@@ -544,10 +503,8 @@ defmodule EdgeAdmin.Admins.Metadata do
     # same owner map.
     result = Algorithm.compute_assignments(enriched_admins, clusters_with_names)
 
-    # Result already has names - ready for ETS!
     update_ets(result, enriched_admins)
 
-    # Emit local event (only this admin's processes receive it)
     Events.publish_local(:metadata_recomputed)
 
     Logger.debug("Metadata recomputation complete")
@@ -556,7 +513,6 @@ defmodule EdgeAdmin.Admins.Metadata do
   end
 
   defp read_admins_from_syn do
-    # Get all admins from syn process group
     # :syn.members/2 returns list of {pid, metadata} tuples
     # Metadata contains: %{name: admin_name, max_wireguard_peers: int,
     #   erlang_node_name: ..., vpn_hostname: ..., vpn_host_id: ...}
@@ -599,7 +555,6 @@ defmodule EdgeAdmin.Admins.Metadata do
     previous = snapshot()
     admin_cluster = previous.admin_cluster
 
-    # Extract metadata values
     topology = Map.values(all_admins)
 
     updated_admin_cluster = %{
@@ -641,7 +596,6 @@ defmodule EdgeAdmin.Admins.Metadata do
     admin = metadata.admin
     admin_cluster = metadata.admin_cluster
 
-    # Count assigned clusters for this admin
     assigned_clusters =
       case Map.get(edge_clusters, admin.name) do
         nil -> 0

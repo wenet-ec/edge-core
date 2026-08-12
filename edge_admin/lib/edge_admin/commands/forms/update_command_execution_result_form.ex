@@ -3,9 +3,8 @@ defmodule EdgeAdmin.Commands.Forms.UpdateCommandExecutionResultForm do
   @moduledoc """
   Form for validating command execution result update inputs from agents.
 
-  Handles input validation for updating command execution results received from edge agents.
-  State preconditions (status, exit_code) are enforced by CommandExecutionAcceptsResultCheck before
-  this form is called.
+  State preconditions are enforced by
+  `CommandExecutionAcceptsResultCheck` before this form is called.
   """
   use EdgeAdmin.Form
 
@@ -20,22 +19,7 @@ defmodule EdgeAdmin.Commands.Forms.UpdateCommandExecutionResultForm do
     field(:completed_at, :utc_datetime)
   end
 
-  @doc """
-  Validates and normalizes command execution update parameters.
-
-  ## Parameters
-  - `attrs` - Map containing execution result attributes
-
-  ## Validations
-  - `status` - Required, must be `"completed"` or `"expired"` on the wire (cast to atom)
-  - `output` - Optional, command output text
-  - `exit_code` - Optional, must be integer if present
-  - `completed_at` - Optional, must be valid ISO8601 datetime if present, defaults to now
-
-  ## Returns
-  - `{:ok, attrs}` - Validated and normalized attributes as a map (status is an atom)
-  - `{:error, changeset}` - Validation errors
-  """
+  @doc "Validates and normalizes command execution result parameters."
   def changeset(attrs) when is_map(attrs) do
     %__MODULE__{}
     |> cast(attrs, [:status, :output, :exit_code, :completed_at])

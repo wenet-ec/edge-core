@@ -3,8 +3,8 @@ defmodule EdgeAdmin.Commands.Forms.CreateCommandForm do
   @moduledoc """
   Form for validating command creation inputs.
 
-  Handles input validation for creating commands with flexible targeting options.
-  This form validates external API inputs before passing to the domain layer.
+  Accepts the external nested `targeting` shape, validates it contextually, and
+  returns the normalized command attributes expected by the domain layer.
   """
   use EdgeAdmin.Form
 
@@ -32,16 +32,11 @@ defmodule EdgeAdmin.Commands.Forms.CreateCommandForm do
   - `{:error, changeset}` - Validation errors
   """
   def changeset(attrs) when is_map(attrs) do
-    # Normalize to string keys so Ecto never sees a mixed-key map
+    # OpenApiSpex may produce atom keys; normalize both levels before casting.
     attrs = Map.new(attrs, fn {k, v} -> {to_string(k), v} end)
-
-    # Extract targeting nested map if present (now always string keys)
     targeting = Map.get(attrs, "targeting", %{})
-
-    # Normalize targeting keys too (may come in with atom keys from OpenApiSpex)
     targeting = Map.new(targeting, fn {k, v} -> {to_string(k), v} end)
 
-    # Flatten targeting into top-level fields for validation
     flattened_attrs =
       attrs
       |> Map.put("targeting_type", Map.get(targeting, "type"))
@@ -118,7 +113,6 @@ defmodule EdgeAdmin.Commands.Forms.CreateCommandForm do
   end
 
   defp to_map(%__MODULE__{} = form, original_attrs) do
-    # Build the base command attrs
     base_attrs =
       %{
         "command_text" => form.command_text,
@@ -128,10 +122,8 @@ defmodule EdgeAdmin.Commands.Forms.CreateCommandForm do
       |> Enum.reject(fn {_k, v} -> is_nil(v) end)
       |> Map.new()
 
-    # original_attrs is already normalized to string keys by changeset/1
     original_targeting = Map.get(original_attrs, "targeting", %{})
 
-    # Build base targeting with validated fields
     base_targeting =
       case form.targeting_type do
         "all" ->
@@ -144,7 +136,7 @@ defmodule EdgeAdmin.Commands.Forms.CreateCommandForm do
           %{"type" => "clusters", "cluster_names" => form.cluster_names}
       end
 
-    # Merge original targeting with base targeting (base targeting takes precedence for validated fields)
+    # Preserve optional targeting filters while replacing fields this form validates.
     targeting = Map.merge(original_targeting, base_targeting)
 
     Map.put(base_attrs, "targeting", targeting)

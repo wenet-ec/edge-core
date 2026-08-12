@@ -26,15 +26,10 @@ defmodule EdgeAdmin.Commands.Checks.CommandExecutionAcceptsResultCheck do
 
   @doc "Checks whether an execution may accept a result from an Agent."
   @spec check(CommandExecution.t()) :: :ok | {:error, {:conflict, String.t()}}
-  # Normal case: execution is in :sent status
   def check(%CommandExecution{status: :sent}), do: :ok
 
-  # Race condition: pending execution was cancelled by admin, but agent already
-  # picked it up and ran it - allow the agent to overwrite with actual results
   def check(%CommandExecution{status: :cancelled, exit_code: nil}), do: :ok
 
-  # Race condition: admin expired the execution, but agent already picked it up
-  # and ran it - accept the result; agent is the source of truth for what ran
   def check(%CommandExecution{status: :expired, exit_code: nil}), do: :ok
 
   # A dropped execution belongs to a deleted node. It must never accept a

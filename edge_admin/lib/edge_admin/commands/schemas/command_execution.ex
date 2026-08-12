@@ -64,7 +64,6 @@ defmodule EdgeAdmin.Commands.Schemas.CommandExecution do
   }
 
   schema "command_executions" do
-    # "output" will be mapped to TEXT in database
     field(:output, :string)
     field(:status, Ecto.Enum, values: @statuses)
     field(:exit_code, :integer)
@@ -78,7 +77,6 @@ defmodule EdgeAdmin.Commands.Schemas.CommandExecution do
     field(:cluster_name, :string, virtual: true)
     field(:expires_at, :utc_datetime, virtual: true)
 
-    # Associations
     belongs_to(:command, Command)
     belongs_to(:node, Node)
     belongs_to(:cluster, Cluster)
@@ -147,9 +145,7 @@ defmodule EdgeAdmin.Commands.Schemas.CommandExecution do
   def expires_at(%__MODULE__{command: %{expires_at: expires_at}}), do: expires_at
   def expires_at(%__MODULE__{}), do: nil
 
-  # ---------------------------------------------------------------------------
   # Status registry
-  # ---------------------------------------------------------------------------
 
   @doc "All lifecycle statuses, in canonical order."
   @spec statuses() :: [status()]

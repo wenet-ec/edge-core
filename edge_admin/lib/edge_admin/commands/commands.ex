@@ -3,23 +3,9 @@ defmodule EdgeAdmin.Commands do
   @moduledoc """
   The Commands context handles distributed command execution across edge nodes.
 
-  This module provides the core functionality for creating commands, managing their
-  execution lifecycle, and delivering them to target nodes. Commands are executed
-  asynchronously with status tracking.
-
-  ## Key Concepts
-
-  - **Command**: A shell command to be executed (e.g., `"uptime"`, `"systemctl restart nginx"`)
-  - **Command Execution**: A single instance of a command targeted at a specific node
-  - **Targeting**: Specification of which nodes should execute a command (all/specific nodes/clusters)
-  - **Delivery**: Process of sending pending executions to healthy nodes via HTTP
-  - **Status Lifecycle**: `pending` → `sent` → `completed`
-    - Terminal states: `completed` | `cancelled` | `expired` | `dropped`
-    - From `pending` or `sent`: admin can cancel; scheduler can mark `expired`
-      when the command's `expires_at` passes
-    - Race-window detail: `cancelled` / `expired` rows with `nil exit_code`
-      can still be overwritten by a late agent report
-      (see `Checks.CommandExecutionAcceptsResultCheck`)
+  A command is the requested shell text plus targeting. A command execution is
+  the per-node row that moves through `pending -> sent -> completed`, or one of
+  the terminal states `cancelled`, `expired`, or `dropped`.
 
   ## Concurrency model
 
@@ -38,44 +24,8 @@ defmodule EdgeAdmin.Commands do
   left the expected source status. Check modules (`Checks.Execution*`) remain
   as early 409 gates but the DB is authoritative.
 
-  ## Architecture
-
-  ### Async Execution Flow
-  1. Command created with targeting specification
-  2. Background worker creates execution records for targeted nodes
-  3. Scheduler delivers pending executions to healthy nodes (every minute,
-     `EXECUTION_DELIVERY_SCHEDULE`, default `* * * * *`)
-  4. Nodes execute commands and report results back
-  5. Executions marked as completed with output and exit code
-
-  ### Distributed Ownership
-  - Commands are globally visible (all admins can see them)
-  - Execution delivery is distributed (each admin delivers to its owned clusters)
-  - Uses Metadata ETS to determine cluster ownership
-
-  ## Examples
-
-      # Create a command for all nodes
-      iex> create_command_and_executions(%{
-      ...>   "command_text" => "uptime",
-      ...>   "targeting" => %{"type" => "all"}
-      ...> })
-      {:ok, %Command{}}
-
-      # Create a command for specific nodes
-      iex> create_command_and_executions(%{
-      ...>   "command_text" => "systemctl restart nginx",
-      ...>   "targeting" => %{"type" => "nodes", "node_ids" => ["abc-123", "def-456"]}
-      ...> })
-      {:ok, %Command{}}
-
-      # List executions for a command
-      iex> list_command_executions(%{"command_id" => command.id})
-      {:ok, {[%CommandExecution{}, ...], %Flop.Meta{}}}
-
-      # Cancel a pending execution
-      iex> cancel_command_execution(execution)
-      {:ok, {:cancelled, %CommandExecution{}}}
+  Commands are globally visible, but delivery is local to the clusters this
+  Admin owns according to `EdgeAdmin.Admins.Metadata`.
   """
 
   alias EdgeAdmin.Commands.Resources.CommandExecutions, as: CommandExecutionResource
@@ -86,74 +36,23 @@ defmodule EdgeAdmin.Commands do
   alias EdgeAdmin.Commands.Workflows.Delivery
   alias EdgeAdmin.Commands.Workflows.Retention
 
-  @doc """
-  Gets a single command by ID.
-
-  ## Parameters
-  - `id` - The command's UUID
-
-  ## Returns
-  - `{:ok, command}` - Command found
-  - `{:error, :not_found}` - Command doesn't exist or invalid UUID
-
-  ## Examples
-
-      iex> get_command(command_id)
-      {:ok, %Command{command_text: "uptime"}}
-  """
+  @doc "Gets a single command by ID."
   @spec get_command(String.t()) :: {:ok, Command.t()} | {:error, :not_found}
   defdelegate get_command(id), to: CommandResource, as: :get
 
-  @doc """
-  Creates a new command.
-
-  ## Parameters
-  - `attrs` - Map of command attributes
-
-  ## Returns
-  - `{:ok, command}` - Command created successfully
-  - `{:error, changeset}` - Validation failed
-  """
+  @doc "Creates a new command."
   @spec create_command(map()) :: {:ok, Command.t()} | {:error, Ecto.Changeset.t()}
   defdelegate create_command(attrs \\ %{}), to: CommandResource, as: :create
 
-  @doc """
-  Updates a command.
-
-  ## Parameters
-  - `command` - The command struct to update
-  - `attrs` - Map of attributes to update
-
-  ## Returns
-  - `{:ok, command}` - Update succeeded
-  - `{:error, changeset}` - Validation failed
-  """
+  @doc "Updates a command."
   @spec update_command(Command.t(), map()) :: {:ok, Command.t()} | {:error, Ecto.Changeset.t()}
   defdelegate update_command(command, attrs), to: CommandResource, as: :update
 
-  @doc """
-  Deletes a command.
-
-  Validates that command has no associated executions before deletion.
-
-  ## Parameters
-  - `command` - The command struct to delete
-
-  ## Returns
-  - `{:ok, command}` - Deletion succeeded
-  - `{:error, {:conflict, reason}}` - Command has non-terminal executions
-  """
+  @doc "Deletes a command after checking that it has no pending or in-flight executions."
   @spec delete_command(Command.t()) :: {:ok, Command.t()} | {:error, {:conflict, String.t()}}
   defdelegate delete_command(command), to: CommandResource, as: :delete
 
-  @doc """
-  Returns a changeset for tracking command changes (for forms).
-
-  ## Examples
-
-      iex> change_command(command)
-      %Ecto.Changeset{data: %Command{}}
-  """
+  @doc "Returns a changeset for command edits."
   @spec change_command(Command.t(), map()) :: Ecto.Changeset.t()
   defdelegate change_command(command, attrs \\ %{}), to: CommandResource, as: :change
 
@@ -176,71 +75,25 @@ defmodule EdgeAdmin.Commands do
   @spec list_commands(map()) :: {:ok, {[Command.t()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
   defdelegate list_commands(params \\ %{}), to: CommandResource, as: :list
 
-  @doc """
-  Gets a single command execution by ID.
-
-  ## Parameters
-  - `id` - The execution's UUID
-
-  ## Returns
-  - `{:ok, execution}` - Execution found (with command preloaded)
-  - `{:error, :not_found}` - Execution doesn't exist or invalid UUID
-  """
+  @doc "Gets a single command execution by ID with its command preloaded."
   @spec get_command_execution(String.t()) :: {:ok, CommandExecution.t()} | {:error, :not_found}
   defdelegate get_command_execution(id), to: CommandExecutionResource, as: :get
 
-  @doc """
-  Creates a new command execution.
-
-  ## Parameters
-  - `attrs` - Map of execution attributes
-
-  ## Returns
-  - `{:ok, execution}` - Execution created successfully
-  - `{:error, changeset}` - Validation failed
-  """
+  @doc "Creates a new command execution."
   @spec create_command_execution(map()) :: {:ok, CommandExecution.t()} | {:error, Ecto.Changeset.t()}
   defdelegate create_command_execution(attrs \\ %{}), to: CommandExecutionResource, as: :create
 
-  @doc """
-  Updates a command execution.
-
-  ## Parameters
-  - `command_execution` - The execution struct to update
-  - `attrs` - Map of attributes to update
-
-  ## Returns
-  - `{:ok, execution}` - Update succeeded
-  - `{:error, changeset}` - Validation failed
-  """
+  @doc "Updates a command execution."
   @spec update_command_execution(CommandExecution.t(), map()) ::
           {:ok, CommandExecution.t()} | {:error, Ecto.Changeset.t()}
   defdelegate update_command_execution(command_execution, attrs), to: CommandExecutionResource, as: :update
 
-  @doc """
-  Deletes a command execution.
-
-  Validates that execution is in a deletable state.
-
-  ## Parameters
-  - `command_execution` - The execution struct to delete
-
-  ## Returns
-  - `{:ok, execution}` - Deletion succeeded
-  - `{:error, {:conflict, reason}}` - Execution is not completed
-  """
+  @doc "Deletes a command execution after checking that it is terminal."
   @spec delete_command_execution(CommandExecution.t()) ::
           {:ok, CommandExecution.t()} | {:error, {:conflict, String.t()}}
   defdelegate delete_command_execution(command_execution), to: CommandExecutionResource, as: :delete
 
-  @doc """
-  Returns a changeset for tracking execution changes (for forms).
-
-  ## Examples
-
-      iex> change_command_execution(execution)
-      %Ecto.Changeset{data: %CommandExecution{}}
-  """
+  @doc "Returns a changeset for command-execution edits."
   @spec change_command_execution(CommandExecution.t(), map()) :: Ecto.Changeset.t()
   defdelegate change_command_execution(command_execution, attrs \\ %{}), to: CommandExecutionResource, as: :change
 

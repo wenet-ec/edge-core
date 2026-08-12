@@ -146,25 +146,12 @@ defmodule EdgeAdmin.Commands.Workflows.CommandExecutionLifecycle do
   - `{:ok, execution}` - Update succeeded
   - `{:error, changeset}` - Validation failed
   - `{:error, {:conflict, reason}}` - Execution not in a state that accepts a result
-
-  ## Examples
-
-      iex> update_command_execution_result(execution, %{
-      ...>   "status" => "completed",
-      ...>   "output" => "Command output",
-      ...>   "exit_code" => 0
-      ...> })
-      {:ok, %CommandExecution{status: :completed, exit_code: 0}}
   """
   @spec update_command_execution_result(CommandExecution.t(), map()) ::
           {:ok, CommandExecution.t()} | {:error, Ecto.Changeset.t()}
   def update_command_execution_result(execution, params) do
     with :ok <- Checks.CommandExecutionAcceptsResultCheck.check(execution),
          {:ok, attrs} <- Forms.UpdateCommandExecutionResultForm.changeset(params) do
-      # Agent is the source of truth for terminal status.
-      # exit_code 143 (SIGTERM) means the agent honoured a cancellation request — override to :cancelled.
-      # :expired means agent detected expiry before running — trust it.
-      # Everything else is recorded as :completed.
       terminal_status =
         cond do
           attrs["exit_code"] == 143 -> :cancelled
@@ -179,10 +166,8 @@ defmodule EdgeAdmin.Commands.Workflows.CommandExecutionLifecycle do
       # both succeed and clobber each other.
       result = transition_to_result(execution, build_result_set(attrs, terminal_status))
 
-      # Emit completion telemetry
       case result do
         {:ok, updated_execution} ->
-          # Calculate duration from sent_at to now
           duration_ms =
             if execution.sent_at do
               DateTime.diff(DateTime.utc_now(), execution.sent_at, :millisecond)
@@ -190,7 +175,6 @@ defmodule EdgeAdmin.Commands.Workflows.CommandExecutionLifecycle do
               0
             end
 
-          # Categorize exit code
           exit_code_category =
             cond do
               updated_execution.exit_code == 0 -> :success
@@ -302,7 +286,6 @@ defmodule EdgeAdmin.Commands.Workflows.CommandExecutionLifecycle do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # Conditional status transitions
   #
   # Every status transition on a CommandExecution flows through one of the two
@@ -316,7 +299,6 @@ defmodule EdgeAdmin.Commands.Workflows.CommandExecutionLifecycle do
   # admin whose HTTP round trip is slow enough for the agent to round-trip a
   # result back) can clobber a terminal row back to :sent / :expired. See the
   # incident write-up in the changelog.
-  # ---------------------------------------------------------------------------
 
   @doc "Conditionally transitions an execution from one of the allowed statuses."
   @spec transition_status(CommandExecution.t(), [CommandExecution.status()], keyword()) ::
@@ -394,15 +376,10 @@ defmodule EdgeAdmin.Commands.Workflows.CommandExecutionLifecycle do
 
   @doc "Sends a best-effort cancellation request to the owning agent."
   def send_cancel_to_agent(execution) do
-    # Get node to send cancellation request
     with {:ok, node} <- Nodes.get_node(execution.node_id),
-         # Build node name for ETS lookup
          node_name = Node.node_name(node),
-         # Lookup cluster name from ETS metadata
          {:ok, cluster_name, _admin_name} <- Metadata.find_node_cluster(node_name),
-         # Lookup gateway via ETS metadata
          {:ok, gateway_pid} <- Gateway.lookup(cluster_name),
-         # Send cancellation request via Gateway
          :ok <- Gateway.cancel_execution(gateway_pid, node, execution.id) do
       Logger.info("Successfully sent cancellation request to agent for execution #{execution.id}")
 

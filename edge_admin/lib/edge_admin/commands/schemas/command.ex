@@ -30,13 +30,11 @@ defmodule EdgeAdmin.Commands.Schemas.Command do
   }
 
   schema "commands" do
-    # Maps to TEXT in database
     field(:command_text, :string)
     field(:timeout, :integer)
     field(:expires_at, :utc_datetime)
     field(:targeting, :map)
 
-    # Associations
     has_many(:command_executions, CommandExecution, on_delete: :delete_all)
     has_many(:nodes, through: [:command_executions, :node])
 
@@ -72,7 +70,6 @@ defmodule EdgeAdmin.Commands.Schemas.Command do
     validate_change(changeset, :timeout, fn :timeout, timeout ->
       cond do
         is_nil(timeout) ->
-          # Timeout is optional - nil is valid
           []
 
         timeout <= 0 ->

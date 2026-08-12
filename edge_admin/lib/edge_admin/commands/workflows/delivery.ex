@@ -27,25 +27,8 @@ defmodule EdgeAdmin.Commands.Workflows.Delivery do
   @doc """
   Creates a command and enqueues execution creation job.
 
-  Takes command attributes including targeting specification and creates
-  the command record, then enqueues a background job to create executions
-  for the targeted nodes.
-
-  ## Parameters
-
-  - `attrs` - Map containing:
-    - `command_text` - The command to execute
-    - `targeting` - Targeting specification:
-      - `type` - One of "all", "nodes", or "clusters"
-      - `node_ids` - List of node IDs (required for "nodes" type)
-      - `cluster_names` - List of cluster names (required for "clusters" type)
-      - `node_filters` - Optional filters (map)
-      - `cluster_filters` - Optional filters for "all"/"clusters" types (map)
-
-  ## Returns
-
-  - `{:ok, command}` - Command created successfully
-  - `{:error, changeset}` - Validation failed
+  The request is persisted first; per-node execution rows are created
+  asynchronously by `CreateCommandExecutionsWorker`.
   """
   @spec create_command_and_executions(map()) :: {:ok, Command.t()} | {:error, Ecto.Changeset.t()}
   def create_command_and_executions(params) do
@@ -121,25 +104,8 @@ defmodule EdgeAdmin.Commands.Workflows.Delivery do
   @doc """
   Creates command executions based on targeting args.
 
-  Unified function that handles "all", "nodes", and "clusters" targeting types.
-  All validation and filtering happens here - the worker just passes args.
-
-  ## Args Structure
-
-  - `command_id` - The command ID
-  - `targeting_type` - Either "all", "nodes", or "clusters"
-  - `node_filters` - Optional filters for nodes (status, version, self_update_enabled)
-  - `cluster_filters` - Optional filters for clusters (name, ipv4_range, node_count)
-  - `node_ids` - Required for "nodes" type, list of specific node IDs
-  - `cluster_names` - Required for "clusters" type, list of cluster names
-
-  ## Behavior
-
-  - Creates executions for ALL matching nodes (regardless of health status)
-  - Delivery will only happen to healthy nodes (filtered during delivery phase)
-  - All executions created with status `:pending`
-  - Uses bulk insert for efficiency
-  - Returns {:ok, executions} or {:error, reason}
+  Handles "all", "nodes", and "clusters" targeting. Rows are created for all
+  matching nodes regardless of health; health is checked later at delivery time.
   """
   @spec create_command_executions(map()) :: {:ok, [CommandExecution.t()]} | {:error, String.t()}
   def create_command_executions(args) do
@@ -150,7 +116,6 @@ defmodule EdgeAdmin.Commands.Workflows.Delivery do
 
     case CommandResource.get(command_id) do
       {:ok, command} ->
-        # Get nodes based on targeting type
         {nodes, cluster_id} =
           case targeting_type do
             "all" ->
@@ -213,7 +178,6 @@ defmodule EdgeAdmin.Commands.Workflows.Delivery do
 
       Logger.info("Successfully created #{count} command executions")
 
-      # Emit telemetry for each execution created
       Enum.each(1..count, fn _ ->
         :telemetry.execute(
           [:edge_admin, :commands, :execution, :created],
@@ -222,7 +186,6 @@ defmodule EdgeAdmin.Commands.Workflows.Delivery do
         )
       end)
 
-      # Publish execution.created events — nodes already have cluster preloaded
       cluster_name_by_node_id = Map.new(nodes, fn node -> {node.id, node.cluster && node.cluster.name} end)
 
       Enum.each(inserted_executions, fn execution ->
@@ -264,7 +227,6 @@ defmodule EdgeAdmin.Commands.Workflows.Delivery do
   """
   @spec deliver_local_command_executions() :: :ok
   def deliver_local_command_executions do
-    # Get clusters owned by this admin from metadata (ETS)
     my_clusters = Metadata.get_my_clusters()
     my_cluster_network_names = Map.keys(my_clusters)
 
@@ -275,7 +237,6 @@ defmodule EdgeAdmin.Commands.Workflows.Delivery do
     if Enum.empty?(my_cluster_network_names) do
       Logger.debug("No clusters assigned to this admin, skipping execution delivery")
 
-      # Emit telemetry
       :telemetry.execute(
         [:edge_admin, :commands, :delivery],
         %{delivered_count: 0},
@@ -284,7 +245,6 @@ defmodule EdgeAdmin.Commands.Workflows.Delivery do
 
       :ok
     else
-      # Strip "cluster-" prefix to get DB cluster names
       my_cluster_names =
         Enum.map(my_cluster_network_names, fn network_name ->
           String.replace_prefix(network_name, "cluster-", "")
@@ -292,7 +252,6 @@ defmodule EdgeAdmin.Commands.Workflows.Delivery do
 
       Logger.debug("Querying pending executions for clusters: #{inspect(my_cluster_names)}")
 
-      # Query pending executions for MY nodes only
       pending_executions = get_pending_executions_for_my_clusters(my_cluster_names)
 
       Logger.debug("Found #{length(pending_executions)} pending executions")
@@ -300,7 +259,6 @@ defmodule EdgeAdmin.Commands.Workflows.Delivery do
       if Enum.empty?(pending_executions) do
         Logger.debug("No pending executions to deliver")
 
-        # Emit telemetry
         :telemetry.execute(
           [:edge_admin, :commands, :delivery],
           %{delivered_count: 0},
@@ -309,14 +267,12 @@ defmodule EdgeAdmin.Commands.Workflows.Delivery do
 
         :ok
       else
-        # Group by node for FIFO processing
         executions_by_node = Enum.group_by(pending_executions, & &1.node_id)
 
         Logger.info(
           "Delivering #{length(pending_executions)} pending executions across #{map_size(executions_by_node)} nodes"
         )
 
-        # Process nodes in parallel
         executions_by_node
         |> Task.async_stream(
           fn {_node_id, executions} ->
@@ -331,7 +287,6 @@ defmodule EdgeAdmin.Commands.Workflows.Delivery do
 
         Logger.info("Completed execution delivery")
 
-        # Emit telemetry
         :telemetry.execute(
           [:edge_admin, :commands, :delivery],
           %{delivered_count: length(pending_executions)},
@@ -362,7 +317,6 @@ defmodule EdgeAdmin.Commands.Workflows.Delivery do
   end
 
   defp deliver_executions_to_node(node, executions) do
-    # Deliver all executions - don't stop on failures
     Logger.info("Delivering #{length(executions)} executions to node #{node.id}")
 
     Enum.each(executions, fn execution ->

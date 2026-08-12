@@ -5,5 +5,4 @@ set -o errexit
 set -o pipefail
 set -o nounset
 
-# Run migrations only, without starting the server
 exec mix ecto.migrate

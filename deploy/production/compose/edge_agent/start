@@ -5,7 +5,6 @@ set -o errexit
 set -o pipefail
 set -o nounset
 
-# Cleanup function to be called on container shutdown
 cleanup() {
     echo "Received shutdown signal, cleaning up..."
 
@@ -18,7 +17,6 @@ cleanup() {
         echo "Stopping Edge VPN CLI (netclient) daemon (PID: $NETCLIENT_PID)..."
         kill -TERM "$NETCLIENT_PID" 2>/dev/null || true
 
-        # Wait for it to exit gracefully (max 5 seconds)
         for _ in {1..5}; do
             if ! kill -0 "$NETCLIENT_PID" 2>/dev/null; then
                 echo "Edge VPN CLI (netclient) daemon stopped gracefully"
@@ -27,7 +25,6 @@ cleanup() {
             sleep 1
         done
 
-        # Force kill if still running
         if kill -0 "$NETCLIENT_PID" 2>/dev/null; then
             echo "Force killing Edge VPN CLI (netclient) daemon (PID: $NETCLIENT_PID)"
             kill -9 "$NETCLIENT_PID" 2>/dev/null || true
@@ -36,13 +33,12 @@ cleanup() {
         echo "No Edge VPN CLI (netclient) daemon to stop"
     fi
 
-    # Clean up routing policy rules (netclient creates these with priorities 3000, 2500, 2000)
+    # Netclient creates these routing policy rules with priorities 3000, 2500, 2000.
     echo "Cleaning up routing policy rules..."
     ip rule delete pref 3000 2>/dev/null || true
     ip rule delete pref 2500 2>/dev/null || true
     ip rule delete pref 2000 2>/dev/null || true
 
-    # Remove WireGuard interface from host
     if ip link show netmaker &>/dev/null; then
         echo "Removing netmaker WireGuard interface..."
         ip link delete netmaker 2>/dev/null || true
@@ -51,7 +47,6 @@ cleanup() {
     echo "Cleanup complete"
 }
 
-# Trap EXIT, INT, and TERM signals
 trap cleanup EXIT INT TERM
 
 echo "Running migrations..."
@@ -92,7 +87,6 @@ if [ "${WG_QUICK_USERSPACE_IMPLEMENTATION:-}" = "wireguard-go" ]; then
     fi
 fi
 
-# Clean up any stale WireGuard interface from previous run
 echo "Cleaning up stale WireGuard interface..."
 ip link delete netmaker 2>/dev/null || true
 
@@ -102,9 +96,8 @@ ip link delete netmaker 2>/dev/null || true
 # (either first boot or after a clean shutdown) we pre-seed it so the daemon
 # can start cleanly.
 #
-# If resolv.conf already has the netclient header (leftover from a prior run),
-# we strip the netclient lines when seeding the backup — otherwise the backup
-# would contain the netclient header itself, which defeats its purpose.
+# If resolv.conf already has the netclient header from a prior run, strip the
+# netclient lines before seeding the backup so the backup stays clean.
 RESOLV_TARGET=$(readlink -f /etc/resolv.conf 2>/dev/null || echo /etc/resolv.conf)
 BACKUP=/etc/netmaker-resolv.backup.conf
 if [ ! -f "$BACKUP" ]; then
@@ -121,13 +114,11 @@ if [ -n "${EDGE_VPN_API_SCHEME:-}" ]; then
 fi
 export DERP_MAP_URLS="http://localhost:${API_PORT:-44000}/api/v1/derp_map"
 
-# Start netclient daemon in the background
 echo "Starting Edge VPN CLI (netclient) daemon..."
 netclient daemon &
 NETCLIENT_PID=$!
 echo "Edge VPN CLI (netclient) daemon started with PID: $NETCLIENT_PID"
 
-# Give netclient a head start to initialize
 echo "Waiting for Edge VPN CLI (netclient) to initialize..."
 sleep 5
 
@@ -135,5 +126,4 @@ echo "Starting server..."
 /app/bin/server &
 SERVER_PID=$!
 
-# Wait for server to exit
 wait $SERVER_PID

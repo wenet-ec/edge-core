@@ -5,7 +5,6 @@ set -o errexit
 set -o pipefail
 set -o nounset
 
-# Run migrations only, without starting the server
 mix deps.get
 mix compile
 exec mix run --no-start -e "EdgeAdmin.Release.migrate()"

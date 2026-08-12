@@ -1,25 +1,8 @@
 # deploy/local/compose/edge_admin/Dockerfile
 
-# Stage 0a: Pull pre-built netclient (DERP fork)
-# The fork's CI publishes a new image on every v*-derp tag push.
 ARG NETCLIENT_VERSION=v1.6.0-derp
 FROM ghcr.io/wenet-ec/netclient:${NETCLIENT_VERSION} AS netclient-builder
 
-# Debug alternative: build from source in-Dockerfile. Uncomment this block (and
-# comment out the two lines above) when iterating on the netclient fork locally,
-# so you don't need a tag push + CI round-trip per fix. Pair with --no-cache:
-#   docker compose -f deploy/local/cloud.yml build --no-cache edge_admin_a1
-#
-# ARG NETCLIENT_VERSION=v1.6.0-derp
-# FROM golang:1.26-bookworm AS netclient-builder
-# ARG NETCLIENT_VERSION
-# RUN apt-get update && apt-get install --no-install-recommends -y git ca-certificates && rm -rf /var/lib/apt/lists/*
-# WORKDIR /build
-# RUN git clone --depth 1 --branch "${NETCLIENT_VERSION}" https://github.com/wenet-ec/netclient.git . && \
-#     echo "netclient cloned at $(git rev-parse HEAD)"
-# RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /netclient -ldflags="-s -w" .
-
-# Stage 1: Devcontainer (live reload, source bind-mounted at runtime)
 FROM elixir:1.20.2-otp-29-slim AS elixir-dev-stage
 
 ARG APP_HOME=/app
@@ -27,7 +10,6 @@ ENV MIX_ENV=dev
 
 WORKDIR ${APP_HOME}
 
-# Install apt packages in single layer
 RUN apt-get update && apt-get install --no-install-recommends -y \
   # Erlang runtime dependencies
   libstdc++6 \
@@ -61,18 +43,14 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
   netcat-openbsd \
   tcpdump \
   iptables \
-  # PID 1 zombie reaper for the BEAM (matches production for parity)
+  # PID 1 zombie reaper for the BEAM
   tini && \
-  # Set locale in same layer
   sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && locale-gen && \
-  # Create dummies to suppress netclient init system detection errors
-  # Netclient checks init type for service installation, not needed in containers
+  # Netclient checks init type for service installation, which containers do not use.
   mkdir -p /sbin /bin && ln -s /bin/true /sbin/init && ln -s /bin/true /bin/busybox && \
-  # Clean up in same layer to reduce image size
   apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false && \
   rm -rf /var/lib/apt/lists/*
 
-# Set locale environment variables
 ENV LANG=en_US.UTF-8
 ENV LANGUAGE=en_US:en
 ENV LC_ALL=en_US.UTF-8
@@ -94,23 +72,19 @@ ENV ERL_EPMD_PORT=44369
 # `quicer` build (compiles Microsoft's msquic from source) is pure overhead.
 ENV BUILD_WITHOUT_QUIC=1
 
-# Copy netclient binary from builder stage
 COPY --from=netclient-builder /netclient /usr/local/bin/netclient
 RUN chmod +x /usr/local/bin/netclient && \
     mkdir -p /etc/netclient && \
     chmod 0775 /etc/netclient
 
-# Create devcontainer user and add it to sudoers
 RUN groupadd --gid 1000 dev-user \
   && useradd --uid 1000 --gid dev-user --shell /bin/bash --create-home dev-user \
   && echo dev-user ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/dev-user \
   && chmod 0440 /etc/sudoers.d/dev-user
 
-# Install Hex and Rebar
 RUN mix local.hex --force && \
     mix local.rebar --force
 
-# Copy entrypoint and utility scripts
 COPY ./deploy/local/compose/edge_admin/entrypoint /entrypoint
 COPY ./deploy/local/compose/edge_admin/start /start
 COPY ./deploy/local/compose/edge_admin/migrate /migrate

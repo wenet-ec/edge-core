@@ -7,11 +7,9 @@
 # The container mounts the host root at /host, so /host/proc/1 is the real
 # host PID 1 (systemd), not the container's PID 1.
 #
-# NOTE: snap-installed tools (docker, kubectl via snap, etc.) cannot be called
-# via nsenter due to snap strict confinement requiring DBus + cgroup scope creation.
-# These tools should be installed natively (not via snap) on the host for remote
-# command execution to work. Alternatively, add "pid: host" to the agent's compose
-# service — combined with this hostscript, snap tools will work correctly.
+# Snap-installed tools (docker, kubectl via snap, etc.) cannot be called via
+# nsenter because snap strict confinement needs DBus and cgroup scope creation.
+# Install those tools natively on the host for remote command execution.
 
 HOST_NS_ARGS=(
     "--mount=/host/proc/1/ns/mnt"

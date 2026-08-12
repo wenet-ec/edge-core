@@ -1,14 +1,12 @@
 # deploy/local/.envs/.edge_admin
 
-# =============================================================================
 # Database
-# =============================================================================
 # DB_ADAPTER selects the engine at runtime — no rebuild needed.
 #   postgres (default) — required for multi-admin Erlang clustering
 #   sqlite             — single-instance only, no external DB needed
 DB_ADAPTER=postgres
 
-# --- PostgreSQL connection (DB_ADAPTER=postgres) ---
+# PostgreSQL connection (DB_ADAPTER=postgres).
 # Use either fragment form (the DB_* vars below) or URL form (DATABASE_URL).
 # All-or-nothing per repo: when DATABASE_URL is set, every DB_* fragment is
 # ignored. DB_POOL_SIZE / DB_SSL / DB_IPV6 always apply, regardless of form.
@@ -24,10 +22,10 @@ DB_POOL_SIZE=5
 DB_SSL=false
 # DB_IPV6=false
 
-# --- SQLite connection (DB_ADAPTER=sqlite) ---
+# SQLite connection (DB_ADAPTER=sqlite).
 # SQLITE_DB_PATH=/app/data/edge/edge_admin.db  # default if unset
 
-# --- Migrations (postgres only) ---
+# Migrations (postgres only).
 # Lock strategy. Default: pg_advisory_lock.
 #   pg_advisory_lock  — Default. Needs a session-mode DB connection (does NOT
 #                       work through PgBouncer transaction pooling — point
@@ -35,7 +33,7 @@ DB_SSL=false
 #   disabled          — No DB-level lock. Migrate sidecar serializes admins.
 # DB_MIGRATION_LOCK=pg_advisory_lock
 
-# --- Oban notifier (postgres only) ---
+# Oban notifier (postgres only).
 # Oban uses LISTEN/NOTIFY for cross-admin wake-ups, which session-pinned
 # poolers (PgBouncer transaction mode, CNPG -pooler, Supabase pgbouncer)
 # break. Set these to point at the primary directly when the main connection
@@ -45,9 +43,7 @@ DB_SSL=false
 # DB_NOTIFIER_HOST=edge-admin-db-rw
 # DB_NOTIFIER_PORT=5432
 
-# =============================================================================
 # Phoenix / Web Server
-# =============================================================================
 API_PORT=44000
 SECRET_KEY_BASE=zsIbO5eGH9IJ1p+E6M1a1VL4bIGrwLeTS8W7q8QDAOE/o3Ucy0si768bJxmF4A1Q
 CORS_ALLOWED_ORIGINS=*
@@ -56,9 +52,7 @@ CORS_ALLOWED_ORIGINS=*
 # Defaults to: authorization,content-type,x-request-id
 # CORS_ALLOWED_HEADERS=authorization,content-type,x-request-id
 
-# =============================================================================
 # Basic Authentication
-# =============================================================================
 # Protects /admin/debug with HTTP Basic Auth.
 # When BASIC_AUTH_ENABLED=true, both username and password must be set or the
 # admin will raise at boot.
@@ -67,9 +61,7 @@ BASIC_AUTH_ENABLED=false
 # BASIC_AUTH_USERNAME=admin
 # BASIC_AUTH_PASSWORD=admin
 
-# =============================================================================
-# Development & Debugging Tools
-# =============================================================================
+# Development and debugging.
 ADMIN_DEBUG_ENABLED=true
 
 # Enables SwaggerUI (/swaggerui), ReDoc (/redoc), AsyncAPI viewer (/asyncdoc),
@@ -77,9 +69,7 @@ ADMIN_DEBUG_ENABLED=true
 # Set to false to test production behavior locally.
 # API_DOCS_ENABLED=true
 
-# =============================================================================
 # Authentication & Authorization
-# =============================================================================
 AUTH_ENABLED=true
 
 # Full admin access — required. Grants access to all management API endpoints.
@@ -91,13 +81,10 @@ MASTER_KEY=supersecretkey123456789
 # PROXY_KEY=    # Proxy tunnel endpoints
 # MCP_KEY=      # MCP server endpoint
 
-# =============================================================================
 # Encryption at rest for sensitive Ecto columns
-# =============================================================================
 # ENCRYPTION_KEY: 32 bytes of base64 (generate with: openssl rand -base64 32)
-# ENCRYPTION_TAG: identifier paired with ENCRYPTION_KEY, prepended to every ciphertext
-#                 so the encryption library can find the right cipher on decrypt. Convention is
-#            AES.GCM.V<N>; bump <N> on each rotation.
+# ENCRYPTION_TAG: short identifier paired with ENCRYPTION_KEY and prepended to
+# every ciphertext. Convention: AES.GCM.V<N>; bump <N> on each rotation.
 # Both required at boot. If ENCRYPTION_KEY is lost, every encrypted row is
 # unrecoverable — back it up alongside MASTER_KEY / SECRET_KEY_BASE.
 ENCRYPTION_KEY=X24vg+X8/B2AGUEUFccMjbcvy8TOK2czAhR7rCXjMJo=
@@ -113,9 +100,7 @@ ENCRYPTION_TAG=AES.GCM.V1
 # ROTATE_NEW_ENCRYPTION_KEY=
 # ROTATE_NEW_ENCRYPTION_TAG=
 
-# =============================================================================
 # Proxy Servers
-# =============================================================================
 HTTP_PROXY_PORT=43128
 SOCKS5_PROXY_PORT=41080
 
@@ -128,19 +113,17 @@ SOCKS5_PROXY_PORT=41080
 # PROXY_DRAIN_GRACE_TIMEOUT_MS=30000      # Grace window for tunnels during graceful drain on shutdown (default: 30s)
 # PROXY_NUM_ACCEPTORS=100                 # Ranch acceptor processes per listener (default: 100)
 
-# =============================================================================
 # Observability
-# =============================================================================
 # Admin's own Prometheus metrics scrape target (host:port, no scheme).
 METRICS_BASE_URL=edge_admin_a1:44000
 
 # SENTRY_DSN=https://...@sentry.io/...
 SENTRY_ENVIRONMENT_NAME=local
 
-# --- PromEx Metrics Collection ---
+# PromEx metrics collection.
 # ADMIN_METRICS_ENABLED=true   # Set to false to disable all admin metrics collection (default: true)
 
-# --- Grafana Dashboard Upload (optional) ---
+# Grafana dashboard upload (optional).
 # When GRAFANA_HOST is set, PromEx uploads all dashboards to Grafana on startup.
 # Unset (default) → dashboards stay in priv/grafana_dashboards/ for manual import.
 #
@@ -155,29 +138,24 @@ SENTRY_ENVIRONMENT_NAME=local
 # GRAFANA_UPLOAD_ON_START=true           # Upload dashboards on each boot (default: true)
 # GRAFANA_ANNOTATE_LIFECYCLE=false       # Annotate app start/stop events (default: false)
 
-# =============================================================================
 # Edge VPN
-# =============================================================================
 
-# --- Edge VPN API Client ---
+# Edge VPN API client.
 EDGE_VPN_API_URL=http://edge_vpn:8081
 EDGE_VPN_MASTER_KEY=supersecretkey123456789
 
-# --- Edge VPN bootstrap account ---
 # Bootstraps the VPN control-plane admin account on first run.
 EDGE_VPN_BOOTSTRAP_USERNAME=admin
 EDGE_VPN_BOOTSTRAP_PASSWORD=admin
 
-# --- Edge VPN CLI ---
 # Scheme used by the Edge VPN CLI to reach the Edge VPN server.
 EDGE_VPN_API_SCHEME=http
 
-# --- Edge VPN DNS Domain ---
 # Appended to all admin/node hostnames (e.g. admin-abc123.nm.internal).
 # Cannot be changed after nodes have enrolled — pick once.
 # EDGE_VPN_DEFAULT_DOMAIN=nm.internal
 
-# --- Edge Cluster Network Allocation ---
+# Edge cluster network allocation.
 # IPv4 subnet prefix length for auto-generated cluster networks (24 = /24 = 254 usable hosts).
 # CLUSTER_V4_SUBNET_PREFIX=24
 
@@ -207,18 +185,15 @@ PUBLIC_ENROLLMENT_KEY_ENABLED=true
 # Comma-separated list of full URLs (scheme required). Agents try each in order.
 ADMIN_URLS=http://localhost:4000,http://localhost:4001,http://localhost:4002
 
-# DERP map server URL. Optional — leave unset to skip DERP overlay (Tailscale fallback).
-# This is the map server that describes relay locations, NOT the relay server itself.
 # Ordered mirror / hostname-migration URLs for one canonical Core DERP map.
-# The first usable URL wins; every URL must serve the same complete map.
+# These are map sources, not relay servers. The first usable URL wins; every URL
+# must serve the same complete map. If unset, netclient uses its fallback map.
 # CORE_DERP_MAP_URLS=http://localhost:47713/derpmap/default
 
-# =============================================================================
 # Admin Cluster & Erlang Distribution
-# =============================================================================
 # Admins form an Erlang cluster over the VPN for HA coordination:
 #   - syn distributed registry for cross-admin request routing
-#   - Oban Global peer leader election (Cron/Lifeline run on leader only)
+#   - Oban peer coordination for Cron/Lifeline jobs
 #   - periodic peer discovery and reconnection
 # A single-instance setup still boots correctly with these set.
 
@@ -273,9 +248,7 @@ VPN_CLUSTER_PORT=49125
 ADMIN_DISCOVERY_PORT=44000
 
 
-# =============================================================================
 # Event delivery (shared by broker + webhook channels)
-# =============================================================================
 
 # CORE_NAME=                            # included in every envelope; defaults to "default"
 # EVENT_DELIVERY_MAX_AGE_SECONDS=3600   # drop publish/delivery jobs older than N seconds; 0 disables (default: 3600)
@@ -284,9 +257,7 @@ ADMIN_DISCOVERY_PORT=44000
 # WEBHOOK_MAX_ATTEMPTS=3                 # total HTTP delivery attempts per event before drop (default: 3)
 WEBHOOK_ALLOW_PRIVATE_IPS=true        # set true ONLY for homelab/dev — disables SSRF deny list (default: false)
 
-# =============================================================================
 # Event Broker
-# =============================================================================
 
 # EVENT_BROKER_ENABLED=true
 
@@ -346,11 +317,9 @@ WEBHOOK_ALLOW_PRIVATE_IPS=true        # set true ONLY for homelab/dev — disabl
 # EVENT_BROKER_GOOGLE_PUBSUB_EMULATOR_HOST=edge_event_broker_google_pubsub:8085   # leave UNSET in prod
 # GOOGLE_APPLICATION_CREDENTIALS=                             # service-account JSON path, real GCP only
 
-# =============================================================================
 # Background Workers & Schedulers
-# =============================================================================
 
-# --- Quantum LocalScheduler (runs on every instance) ---
+# Quantum LocalScheduler runs on every admin instance.
 # ADMIN_DISCOVERY_SCHEDULE=*/5 * * * *        # Scan VPN for other admin peers (default: every 5min)
 # METADATA_RECOMPUTATION_SCHEDULE=* * * * *   # Recompute cluster ownership assignments (default: every 1min)
 # NODE_HEALTH_CHECK_SCHEDULE=* * * * *           # Ping owned nodes to detect unhealthy status (default: every 1min)
@@ -373,7 +342,7 @@ WEBHOOK_ALLOW_PRIVATE_IPS=true        # set true ONLY for homelab/dev — disabl
 # the admin VPN network." Bump up if the VPN control plane is slow.
 # MEMBERSHIP_JOIN_TIMEOUT_SECONDS=60
 
-# --- Oban Cron (job inserted by leader; any instance competes to execute) ---
+# Oban Cron inserts jobs through the configured peer; any instance may execute.
 
 # Cluster Reconciliation: heals drift between DB and the Edge VPN
 # CLUSTER_RECONCILIATION_ENABLED=true
@@ -392,7 +361,7 @@ WEBHOOK_ALLOW_PRIVATE_IPS=true        # set true ONLY for homelab/dev — disabl
 # EXECUTION_PRUNING_SCHEDULE=0 0 * * *   # default: daily at 00:00
 # EXECUTION_RETENTION_DAYS=30            # default: 30 days
 
-# --- HTTP Timeouts for Agent Communication ---
+# HTTP timeouts for Admin to Agent calls.
 # HEALTH_CHECK_TIMEOUT_MS=5000        # Health check pings (every minute, all owned nodes; geo-friendly)
 # METRICS_SCRAPE_TIMEOUT_MS=10000     # Metrics scraping from agent exporters
 # COMMAND_DELIVERY_TIMEOUT_MS=10000   # Command delivery to agents

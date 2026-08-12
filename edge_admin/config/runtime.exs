@@ -7,7 +7,6 @@ alias EdgeAdmin.Repo.Postgres
 alias EdgeAdmin.Repo.Postgres.Notifier
 alias EdgeAdmin.Repo.SQLite
 
-###
 # Database adapter selection at RUNTIME via DB_ADAPTER. The same compiled
 # binary supports both modes — both EdgeAdmin.Repo.Postgres and
 # EdgeAdmin.Repo.SQLite are baked in. We pick the impl module here, set
@@ -22,9 +21,7 @@ alias EdgeAdmin.Repo.SQLite
 #
 #   sqlite             — single-instance only, no external DB. Uses
 #                        SQLITE_DB_PATH (default: /app/data/edge/edge_admin.db).
-###
 
-###
 # Encryption at rest for sensitive Ecto columns.
 #
 # ENCRYPTION_KEY: 32 bytes of base64. Generate with: openssl rand -base64 32
@@ -43,7 +40,6 @@ alias EdgeAdmin.Repo.SQLite
 # ROTATE_NEW_ENCRYPTION_KEY / ROTATE_NEW_ENCRYPTION_TAG env vars; the active
 # ENCRYPTION_KEY/ENCRYPTION_TAG below
 # describes only the currently-active cipher.
-###
 encryption_key =
   case Base.decode64(get_env!("ENCRYPTION_KEY")) do
     {:ok, bytes} when byte_size(bytes) == 32 ->
@@ -89,7 +85,6 @@ case db_adapter do
       pool_size: get_env("DB_POOL_SIZE", :integer, 5)
 
   :postgres ->
-    ###
     # Postgres has two configuration styles, all-or-nothing per repo:
     #
     #   1. URL form — set DATABASE_URL (and DATABASE_NOTIFIER_URL for the notifier).
@@ -104,7 +99,6 @@ case db_adapter do
     # does NOT cascade to the notifier. This is intentional: in prod the main
     # repo points at PgBouncer and the notifier needs a direct primary connection,
     # so they must be configured separately.
-    ###
 
     # When DATABASE_URL is set for the main repo, DATABASE_NOTIFIER_URL must be
     # set too. In URL mode the fragment env vars (DB_HOST, etc.) are not
@@ -285,11 +279,7 @@ end
 
 admin_id = Random.string(12)
 
-# =============================================================================
 # Background Job Schedules
-# =============================================================================
-
-# --- Quantum (LocalScheduler) ---
 admin_discovery_schedule = get_env("ADMIN_DISCOVERY_SCHEDULE", :string, "*/5 * * * *")
 metadata_recomputation_schedule = get_env("METADATA_RECOMPUTATION_SCHEDULE", :string, "* * * * *")
 node_health_check_schedule = get_env("NODE_HEALTH_CHECK_SCHEDULE", :string, "* * * * *")
@@ -299,13 +289,12 @@ vpn_config_sync_schedule = get_env("VPN_CONFIG_SYNC_SCHEDULE", :string, "*/5 * *
 zombie_admin_cleanup_schedule = get_env("ZOMBIE_ADMIN_CLEANUP_SCHEDULE", :string, "*/30 * * * *")
 zombie_admin_checkin_threshold_minutes = get_env("ZOMBIE_ADMIN_CHECKIN_THRESHOLD_MINUTES", :integer, 120)
 
-# --- Oban Cron ---
 cluster_reconciliation_schedule = get_env("CLUSTER_RECONCILIATION_SCHEDULE", :string, "0 */6 * * *")
 execution_pruning_enabled = get_env("EXECUTION_PRUNING_ENABLED", :boolean, false)
 execution_pruning_schedule = get_env("EXECUTION_PRUNING_SCHEDULE", :string, "0 0 * * *")
 execution_retention_days = get_env("EXECUTION_RETENTION_DAYS", :integer, 30)
 
-# --- Prom Ex Configurations and Grafana Integration ---
+# PromEx Grafana integration.
 grafana_config =
   case System.get_env("GRAFANA_HOST") do
     nil ->
@@ -327,7 +316,6 @@ grafana_config =
       ] ++ auth
   end
 
-# --- Oban engine + peer + notifier (DB-adapter dependent) ---
 # SQLite uses Oban.Engines.Lite + Oban.Peers.Isolated (in-memory Agent — no
 # oban_peers table) + Oban.Notifiers.PG (Erlang :pg, no LISTEN/NOTIFY).
 # Postgres keeps Database engine + Database peer + dedicated Notifier repo for
@@ -349,8 +337,6 @@ oban_notifier =
     :sqlite -> Oban.Notifiers.PG
     _ -> {Oban.Notifiers.Postgres, repo: Notifier}
   end
-
-# --- LocalScheduler  ---
 
 config :edge_admin, EdgeAdmin.LocalScheduler,
   jobs: [
@@ -444,21 +430,17 @@ config :edge_admin, :proxy_timeouts,
   drain_grace: get_env("PROXY_DRAIN_GRACE_TIMEOUT_MS", :integer, 30_000)
 
 config :edge_admin,
-  # === Admin Identity ===
   admin_id: admin_id,
   admin_name: EdgeAdmin.Vpn.build_vpn_name(admin_id, prefix: :admin),
   admin_max_wireguard_peers: get_env!("ADMIN_MAX_WIREGUARD_PEERS", :positive_integer),
-  # === Admin Cluster (VPN network for multi-admin coordination) ===
+  # VPN network for multi-admin coordination.
   admin_cluster_name: EdgeAdmin.Vpn.build_network_name(get_env!("ADMIN_CLUSTER_NAME"), prefix: :admin),
   admin_cluster_v4_subnet: get_env!("ADMIN_CLUSTER_V4_SUBNET"),
   admin_cluster_v6_subnet: get_env!("ADMIN_CLUSTER_V6_SUBNET"),
-  # === WireGuard Configuration ===
   # Static port for WireGuard (must match UDP port mapping in docker-compose for external connectivity)
   admin_wireguard_port: get_env("ADMIN_WIREGUARD_PORT", :integer),
-  # === Erlang Distribution (for multi-admin clustering) ===
   vpn_cluster_cookie: get_env("VPN_CLUSTER_COOKIE", :atom, :edge_admin_default_cookie),
   admin_discovery_port: get_env("ADMIN_DISCOVERY_PORT", :integer, 44_000),
-  # === VPN & Cluster Configuration ===
   # IPv4 subnet size for auto-generated clusters (e.g., 24 = /24 = 254 hosts)
   cluster_v4_subnet_prefix: get_env("CLUSTER_V4_SUBNET_PREFIX", :integer, 24),
   # IPv4 CIDR ranges to use for auto-generated cluster subnets (CGNAT space)
@@ -483,7 +465,6 @@ config :edge_admin,
   core_derp_map_urls: core_derp_map_urls,
   # Edge VPN DNS domain suffix (used for hostname construction)
   edge_vpn_default_domain: get_env("EDGE_VPN_DEFAULT_DOMAIN", :string, "nm.internal"),
-  # === Background Job Schedules ===
   admin_discovery_schedule: admin_discovery_schedule,
   metadata_recomputation_schedule: metadata_recomputation_schedule,
   node_health_check_schedule: node_health_check_schedule,
@@ -497,36 +478,28 @@ config :edge_admin,
   cluster_reconciliation_schedule: cluster_reconciliation_schedule,
   zombie_admin_cleanup_schedule: zombie_admin_cleanup_schedule,
   zombie_admin_checkin_threshold_minutes: zombie_admin_checkin_threshold_minutes,
-  # === Admin-cluster membership startup ===
   # Per-step timeout for membership join waits (Netmaker host registration,
   # netclient network join). Pre-flight + bounded waits replace the silent hang
   # that used to occur when CIDR was exhausted; tune up for slow Netmaker.
   join_timeout_seconds: get_env("MEMBERSHIP_JOIN_TIMEOUT_SECONDS", :integer, 60),
-  # === VPN Sync Configuration ===
   # Disable periodic VPN config sync on severely resource-starved machines (default: true)
   vpn_config_sync_enabled: get_env("VPN_CONFIG_SYNC_ENABLED", :boolean, true),
   # Delete unrecognized hosts from cluster networks during reconciliation (default: true).
   evict_rogue_hosts: get_env("EVICT_ROGUE_HOSTS", :boolean, true),
-  # === HTTP Request Timeouts (admin → agent) ===
   # Health checks run every minute across all owned nodes — keep tight; geo-friendly.
   health_check_timeout: get_env("HEALTH_CHECK_TIMEOUT_MS", :integer, 5_000),
   # Metrics scraping — allow a little more for slow exporters.
   metrics_scrape_timeout: get_env("METRICS_SCRAPE_TIMEOUT_MS", :integer, 10_000),
   # Command delivery — agent may be busy, allow a bit more time.
   command_delivery_timeout: get_env("COMMAND_DELIVERY_TIMEOUT_MS", :integer, 10_000),
-  # === Node Health Check ===
   node_health_check_concurrency: get_env("NODE_HEALTH_CHECK_CONCURRENCY", :integer, 100),
-  # === Proxy Server Ports ===
   http_proxy_port: get_env("HTTP_PROXY_PORT", :integer, 43_128),
   socks5_proxy_port: get_env("SOCKS5_PROXY_PORT", :integer, 41_080),
-  # === External Services ===
   metrics_base_url: get_env!("METRICS_BASE_URL"),
   edge_vpn_bootstrap_username: get_env!("EDGE_VPN_BOOTSTRAP_USERNAME"),
   edge_vpn_bootstrap_password: get_env!("EDGE_VPN_BOOTSTRAP_PASSWORD")
 
-# =============================================================================
 # Event delivery — applies to both broker and webhook channels
-# =============================================================================
 # CORE_NAME stamps every envelope with the publishing instance's identity.
 # EVENT_DELIVERY_MAX_AGE_SECONDS caps how long a delivery worker will keep
 # retrying a single event. WEBHOOK_MAX_ATTEMPTS sets the per-event retry
@@ -558,9 +531,7 @@ config :sentry,
   client: EdgeAdmin.Sentry.ReqClient,
   before_send: {EdgeAdmin.Sentry, :before_send}
 
-# =============================================================================
 # Event Broker
-# =============================================================================
 # Disabled by default; publish calls are no-ops. Enable with EVENT_BROKER_ENABLED=true,
 # pick one EVENT_BROKER_ADAPTER, and set the adapter's vars (see deploy/.../.envs/.edge_admin
 # for the per-adapter env var lists). Endpoint vars use _URLS (plural) for adapters that

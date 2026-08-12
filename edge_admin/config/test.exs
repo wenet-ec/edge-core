@@ -40,14 +40,14 @@ test_repo_impl =
     :postgres -> Postgres
   end
 
-# This config is to output keys instead of translated message in test
+# Return gettext keys in tests instead of translated messages.
 config :edge_admin, EdgeAdmin.Gettext, priv: "priv/null", interpolation: EdgeAdmin.GettextInterpolation
 
-# Disable Quantum during tests:
+# Disable Quantum during tests.
 config :edge_admin, EdgeAdmin.LocalScheduler, jobs: []
 config :edge_admin, EdgeAdminWeb.Endpoint, server: false
 
-# Disable Oban during tests:
+# Keep Oban jobs explicit in tests.
 config :edge_admin, Oban, testing: :manual
 
 case test_db_adapter do
@@ -70,15 +70,13 @@ end
 
 config :edge_admin, :db_adapter, test_db_adapter
 
-# Use mock for Metadata module in tests
+# Injectable modules used by unit tests.
 config :edge_admin, :metadata_module, EdgeAdmin.MetadataMock
-
-# Use mock for Nodes module in tests
 config :edge_admin, :nodes_module, EdgeAdmin.NodesMock
 config :edge_admin, :repo_impl, test_repo_impl
 config :edge_admin, ecto_repos: [test_repo_impl]
 
-# Disable admin clustering during tests
+# Static admin identity for tests; bootstrapping is disabled.
 config :edge_admin,
   run_bootstrap: false,
   admin_id: "test123456",

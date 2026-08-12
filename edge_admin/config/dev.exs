@@ -18,20 +18,20 @@ config :edge_admin, EdgeAdminWeb.Endpoint,
 
 config :edge_admin, EdgeAdminWeb.Plugs.Security, allow_unsafe_scripts: true
 
-# Enable dev routes for dashboard and mailbox
+# Phoenix-only development routes.
 config :edge_admin, dev_routes: true
 
 config :file_system,
   backend: :fs_inotify,
   executable_file: System.find_executable("inotifywait") || "/usr/bin/inotifywait"
 
-# Do not include metadata nor timestamps in development logs
+# Keep development logs short.
 config :logger, :console, format: "[$level] $message\n"
 
-# Disable OpenApiSpex caching in development for live spec updates
+# Regenerate OpenAPI output on each request in development.
 config :open_api_spex, :cache_adapter, OpenApiSpex.Plug.NoneCache
 
-# Initialize plugs at runtime for faster development compilation
+# Defer plug initialization for faster recompilation.
 config :phoenix, :plug_init_mode, :runtime
 
 # Set a higher stacktrace during development. Avoid configuring such

@@ -1,10 +1,4 @@
 # edge_admin/config/config.exs
-# This file is responsible for configuring your application
-# and its dependencies with the aid of the Config module.
-#
-# This configuration file is loaded before any dependency and
-# is restricted to this project.
-
 import Config
 
 version = Mix.Project.config()[:version]
@@ -20,8 +14,8 @@ config :edge_admin, EdgeAdmin.Repo.Postgres,
   priv: "priv/repo",
   start_apps_before_migration: [:ssl]
 
-# Connection-only repo for Oban.Notifiers.Postgres — not in :ecto_repos so
-# migrations don't run against it. Bypasses PgBouncer in prod.
+# Connection-only repo for Oban.Notifiers.Postgres. It stays out of :ecto_repos
+# so migrations never run against the notifier connection.
 config :edge_admin, EdgeAdmin.Repo.Postgres.Notifier,
   priv: "priv/repo",
   start_apps_before_migration: [:ssl]
@@ -50,9 +44,8 @@ config :edge_admin,
   generators: [timestamp_type: :utc_datetime, binary_id: true],
   version: version
 
-# The active Ecto.Repo implementation is selected at runtime from DB_ADAPTER
-# and configured in runtime.exs. Test configuration selects its implementation
-# separately in test.exs; the dispatcher facade is never an ecto_repo.
+# The active Repo implementation is selected at runtime from DB_ADAPTER and
+# configured in runtime.exs. Tests select their implementation in test.exs.
 
 config :flop, repo: EdgeAdmin.Repo
 

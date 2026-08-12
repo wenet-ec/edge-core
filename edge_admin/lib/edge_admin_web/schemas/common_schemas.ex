@@ -13,10 +13,6 @@ defmodule EdgeAdminWeb.Schemas.CommonSchemas do
 
   alias OpenApiSpex.Schema
 
-  # ---------------------------------------------------------------------------
-  # Meta schemas
-  # ---------------------------------------------------------------------------
-
   defmodule MetaSchema do
     @moduledoc false
 
@@ -96,10 +92,6 @@ defmodule EdgeAdminWeb.Schemas.CommonSchemas do
       required: [:request_id, :timestamp, :pagination]
     })
   end
-
-  # ---------------------------------------------------------------------------
-  # Unified error response
-  # ---------------------------------------------------------------------------
 
   defmodule ErrorResponse do
     @moduledoc false
@@ -398,21 +390,7 @@ defmodule EdgeAdminWeb.Schemas.CommonSchemas do
     })
   end
 
-  # ---------------------------------------------------------------------------
-  # Helper — builds a paginated response schema for any resource schema.
-  # Used by *PaginatedResponse modules in each resource schema file.
-  # ---------------------------------------------------------------------------
-
-  @doc """
-  Builds a paginated response schema wrapping `data_schema` items.
-
-  ## Example
-
-      defmodule NodePaginatedResponse do
-        use EdgeAdminWeb.Schema
-        schema(CommonSchemas.paginated_response(NodeResponse, "NodePaginatedResponse", "Paginated nodes"))
-      end
-  """
+  @doc "Builds a paginated response schema wrapping `data_schema` items."
   @spec paginated_response(term(), String.t(), String.t()) :: map()
   def paginated_response(data_schema, title, description) do
     %{
@@ -427,16 +405,7 @@ defmodule EdgeAdminWeb.Schemas.CommonSchemas do
     }
   end
 
-  @doc """
-  Builds a single-resource response schema wrapping `data_schema`.
-
-  ## Example
-
-      defmodule NodeSingleResponse do
-        use EdgeAdminWeb.Schema
-        schema(CommonSchemas.single_response(NodeResponse, "NodeSingleResponse", "Single node"))
-      end
-  """
+  @doc "Builds a single-resource response schema wrapping `data_schema`."
   @spec single_response(term(), String.t(), String.t()) :: map()
   def single_response(data_schema, title, description) do
     %{

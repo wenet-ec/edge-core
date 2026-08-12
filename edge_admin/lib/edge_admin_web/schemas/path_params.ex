@@ -7,16 +7,6 @@ defmodule EdgeAdminWeb.Schemas.PathParams do
   enrollment keys, etc.) or by a name with a small DNS-style charset (clusters,
   ssh usernames). Centralising the schemas keeps validation consistent across
   the codebase and makes future format changes a single edit.
-
-  ## Usage
-
-      operation(:show,
-        parameters: [
-          PathParams.uuid(:id, "Node ID"),
-          PathParams.cluster_name(:name, "Cluster name")
-        ],
-        ...
-      )
   """
 
   alias EdgeAdmin.Naming

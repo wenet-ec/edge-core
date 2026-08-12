@@ -7,23 +7,6 @@ defmodule EdgeAdminWeb.Schemas.QueryParams do
   small set of repeated filter shapes (`field`, `field__gte`, `field__lte`,
   `has_field`). This module captures them so semantics stay consistent.
 
-  ## Usage
-
-      operation(:index,
-        parameters:
-          QueryParams.pagination() ++
-            QueryParams.sort(example: "-inserted_at,name") ++
-            [
-              QueryParams.string_filter(:name, description: "Filter by cluster name"),
-              QueryParams.int_range_filter(:node_count),
-              QueryParams.boolean_filter(:has_node_limit, description: "..."),
-              QueryParams.datetime_range_filter(:inserted_at)
-            ],
-        responses: %{...}
-      )
-
-  ## Convention
-
   All helpers return a keyword-list slice that can be appended via `++`. Names
   are atoms — OpenApiSpex serialises them to strings.
 
@@ -36,10 +19,6 @@ defmodule EdgeAdminWeb.Schemas.QueryParams do
 
   alias EdgeAdmin.Sort
   alias OpenApiSpex.Schema
-
-  # ---------------------------------------------------------------------------
-  # Pagination + sort — included on every list endpoint
-  # ---------------------------------------------------------------------------
 
   @doc """
   Pagination parameters: `page`, `page_size`.
@@ -90,10 +69,6 @@ defmodule EdgeAdminWeb.Schemas.QueryParams do
       ]
     ]
   end
-
-  # ---------------------------------------------------------------------------
-  # Filter helpers — one keyword pair per filter
-  # ---------------------------------------------------------------------------
 
   @doc """
   String exact-match or wildcard filter: `name` accepts `"prod-east"`,

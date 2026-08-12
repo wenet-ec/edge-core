@@ -20,7 +20,6 @@ defmodule EdgeAgentHealth do
 
   @health_check_error_code 503
 
-  @doc "Returns the health checks used by the Agent readiness endpoints."
   @spec checks() :: [map()]
   def checks do
     [
@@ -33,11 +32,9 @@ defmodule EdgeAgentHealth do
     ]
   end
 
-  @doc "Returns the HTTP error code used when an Agent health check fails."
   @spec error_code() :: pos_integer()
   def error_code, do: @health_check_error_code
 
-  @doc "Checks whether the Agent SQLite repository is responding."
   @spec database_health() :: :ok | {:error, String.t()}
   def database_health do
     case EdgeAgent.Repo.query("SELECT 1", []) do
@@ -46,7 +43,6 @@ defmodule EdgeAgentHealth do
     end
   end
 
-  @doc "Checks whether Agent bootstrap has completed successfully."
   @spec bootstrap_health() :: :ok | {:error, String.t()}
   def bootstrap_health do
     if EdgeAgent.Bootstrap.initialized?() do
@@ -56,7 +52,6 @@ defmodule EdgeAgentHealth do
     end
   end
 
-  @doc "Checks the Edge VPN CLI and WireGuard health state."
   @spec edge_vpn_cli_health() :: :ok | {:error, String.t()}
   def edge_vpn_cli_health do
     case EdgeAgent.Vpn.edge_vpn_cli_health_check() do
@@ -81,7 +76,6 @@ defmodule EdgeAgentHealth do
       {:error, "Health check exception"}
   end
 
-  @doc "Checks whether the embedded SSH server is running."
   @spec ssh_server_health() :: :ok | {:error, String.t()}
   def ssh_server_health do
     case EdgeAgent.SshServer.server_status() do
@@ -103,7 +97,6 @@ defmodule EdgeAgentHealth do
       {:error, "Health check exception"}
   end
 
-  @doc "Checks whether the Agent metrics exporters are running."
   @spec metrics_servers_health() :: :ok | {:error, String.t()}
   def metrics_servers_health do
     case EdgeAgent.MetricsServers.servers_status() do
@@ -128,7 +121,6 @@ defmodule EdgeAgentHealth do
       {:error, "Health check exception"}
   end
 
-  @doc "Checks whether the Agent HTTP and SOCKS5 proxy servers are running."
   @spec proxy_servers_health() :: :ok | {:error, String.t()}
   def proxy_servers_health do
     case EdgeAgent.ProxyServers.status() do

@@ -1939,16 +1939,20 @@
               "uptime_seconds": 1404
             },
             "commands": {
-              "delivery_delivered_count": 0,
-              "delivery_total": 48,
+              "delivery_last_delivered_count": 0,
+              "delivery_runs_total": 48,
               "execution_completed_total": 21,
               "execution_delivered_total": 23,
               "execution_dropped_total": 1,
-              "expiration_total": 2,
-              "pruning_deleted_count": 76,
-              "pruning_total": 4
+              "expiration_last_expired_count": 0,
+              "expiration_runs_total": 2,
+              "expired_total": 5,
+              "pruned_total": 120,
+              "pruning_last_deleted_count": 76,
+              "pruning_runs_total": 4
             },
             "discovery": {
+              "connected_peers": 2,
               "dns_resolutions_total": 12,
               "peer_connections_total": 3,
               "scans_total": 144
@@ -2025,16 +2029,30 @@
               "jobs_executed_total": 156
             },
             "reconciliation": {
-              "errors": 0,
-              "nodes_added": 1,
-              "nodes_deleted": 0,
-              "nodes_removed": 0,
-              "total": 12
+              "aliases_cleaned_total": 4,
+              "aliases_repaired_total": 5,
+              "errors_total": 0,
+              "ghost_aliases_cleaned_total": 1,
+              "last_aliases_cleaned": 0,
+              "last_aliases_repaired": 0,
+              "last_errors": 0,
+              "last_ghost_aliases_cleaned": 0,
+              "last_nodes_added": 1,
+              "last_nodes_deleted": 0,
+              "last_nodes_removed": 0,
+              "nodes_added_total": 14,
+              "nodes_deleted_total": 3,
+              "nodes_removed_total": 2,
+              "runs_total": 12
             },
             "self_updates": {
               "completed_total": 3,
-              "failed": 0,
-              "triggered": 4
+              "failed_total": 1,
+              "last_failed_count": 0,
+              "last_target_count": 4,
+              "last_triggered_count": 4,
+              "targets_total": 12,
+              "triggered_total": 11
             },
             "ssh": { "verifications_failed": 1, "verifications_total": 34 },
             "timestamp": "2025-12-26T15:30:00Z",
@@ -2155,12 +2173,12 @@
               "commands": {
                 "description": "Command execution and delivery metrics",
                 "properties": {
-                  "delivery_delivered_count": {
+                  "delivery_last_delivered_count": {
                     "description": "Number of executions queued for delivery in last batch run",
                     "nullable": true,
                     "type": "integer"
                   },
-                  "delivery_total": {
+                  "delivery_runs_total": {
                     "description": "Total delivery batch runs (Quantum scheduler cycles)",
                     "nullable": true,
                     "type": "integer"
@@ -2180,17 +2198,32 @@
                     "nullable": true,
                     "type": "integer"
                   },
-                  "expiration_total": {
+                  "expiration_last_expired_count": {
+                    "description": "Executions expired in the most recent expiration sweep",
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "expiration_runs_total": {
                     "description": "Total stale execution expiration sweeps",
                     "nullable": true,
                     "type": "integer"
                   },
-                  "pruning_deleted_count": {
+                  "expired_total": {
+                    "description": "Cumulative executions expired by expiration sweeps",
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "pruned_total": {
+                    "description": "Cumulative command-execution rows deleted by pruning sweeps",
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "pruning_last_deleted_count": {
                     "description": "Command-execution rows deleted in the most recent pruning sweep",
                     "nullable": true,
                     "type": "integer"
                   },
-                  "pruning_total": {
+                  "pruning_runs_total": {
                     "description": "Total command-execution pruning sweeps",
                     "nullable": true,
                     "type": "integer"
@@ -2201,6 +2234,11 @@
               "discovery": {
                 "description": "Peer admin discovery metrics",
                 "properties": {
+                  "connected_peers": {
+                    "description": "Connected Erlang peer admins after the most recent discovery scan",
+                    "nullable": true,
+                    "type": "integer"
+                  },
                   "dns_resolutions_total": {
                     "description": "Total DNS resolution attempts during peer discovery",
                     "nullable": true,
@@ -2495,27 +2533,77 @@
               "reconciliation": {
                 "description": "Cluster reconciliation metrics (Edge VPN ↔ DB sync)",
                 "properties": {
-                  "errors": {
+                  "aliases_cleaned_total": {
+                    "description": "Cumulative alias records removed by reconciliation runs",
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "aliases_repaired_total": {
+                    "description": "Cumulative alias records repaired by reconciliation runs",
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "errors_total": {
+                    "description": "Cumulative errors across reconciliation runs",
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "ghost_aliases_cleaned_total": {
+                    "description": "Cumulative ghost VPN aliases removed by reconciliation runs",
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "last_aliases_cleaned": {
+                    "description": "Alias records removed in the most recent reconciliation run",
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "last_aliases_repaired": {
+                    "description": "Alias records repaired in the most recent reconciliation run",
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "last_errors": {
                     "description": "Number of errors in last reconciliation run",
                     "nullable": true,
                     "type": "integer"
                   },
-                  "nodes_added": {
+                  "last_ghost_aliases_cleaned": {
+                    "description": "Ghost VPN aliases removed in the most recent reconciliation run",
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "last_nodes_added": {
                     "description": "Nodes added to Edge VPN in the most recent reconciliation run",
                     "nullable": true,
                     "type": "integer"
                   },
-                  "nodes_deleted": {
+                  "last_nodes_deleted": {
                     "description": "Orphaned database node records deleted in the most recent reconciliation run",
                     "nullable": true,
                     "type": "integer"
                   },
-                  "nodes_removed": {
+                  "last_nodes_removed": {
                     "description": "Nodes removed from Edge VPN in the most recent reconciliation run",
                     "nullable": true,
                     "type": "integer"
                   },
-                  "total": {
+                  "nodes_added_total": {
+                    "description": "Cumulative nodes added to Edge VPN by reconciliation runs",
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "nodes_deleted_total": {
+                    "description": "Cumulative orphaned database node records deleted by reconciliation runs",
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "nodes_removed_total": {
+                    "description": "Cumulative nodes removed from Edge VPN by reconciliation runs",
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "runs_total": {
                     "description": "Total cluster reconciliation runs",
                     "nullable": true,
                     "type": "integer"
@@ -2531,13 +2619,33 @@
                     "nullable": true,
                     "type": "integer"
                   },
-                  "failed": {
+                  "failed_total": {
+                    "description": "Cumulative nodes that failed during completed self-update requests",
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "last_failed_count": {
                     "description": "Nodes that failed to trigger in the most recent self-update request",
                     "nullable": true,
                     "type": "integer"
                   },
-                  "triggered": {
+                  "last_target_count": {
+                    "description": "Nodes targeted by the most recent self-update request",
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "last_triggered_count": {
                     "description": "Nodes successfully triggered by the most recent self-update request",
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "targets_total": {
+                    "description": "Cumulative nodes targeted by completed self-update requests",
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "triggered_total": {
+                    "description": "Cumulative nodes successfully triggered by completed self-update requests",
                     "nullable": true,
                     "type": "integer"
                   }
@@ -2595,7 +2703,7 @@
                     "type": "integer"
                   },
                   "deliveries_terminal_total": {
-                    "description": "Total deliveries that hit a terminal error (cancelled, contributes to auto-disable)",
+                    "description": "Total deliveries that hit a terminal error and were cancelled without further retries",
                     "nullable": true,
                     "type": "integer"
                   },
@@ -4385,7 +4493,7 @@
     "/api/v1/clusters": {
       "post": {
         "callbacks": {},
-        "description": "Create a new edge cluster with optional IP range. The name `default` is reserved (used as a URL keyword on convenience routes) and will be rejected with HTTP 422.\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
+        "description": "Create a new edge cluster with optional IP range. The name `default` is reserved (used as a URL keyword on convenience routes) and will be rejected with HTTP 422.",
         "operationId": "EdgeAdminWeb.Controllers.Nodes.ClusterController.create",
         "parameters": [],
         "requestBody": {
@@ -4678,7 +4786,7 @@
       },
       "patch": {
         "callbacks": {},
-        "description": "Update a cluster's settings. Only provided fields are changed. Pass null to unset a nullable field.\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
+        "description": "Update a cluster's settings. Only provided fields are changed. Pass null to unset a nullable field.",
         "operationId": "EdgeAdminWeb.Controllers.Nodes.ClusterController.update",
         "parameters": [
           {
@@ -4747,7 +4855,7 @@
       },
       "delete": {
         "callbacks": {},
-        "description": "Delete an empty cluster (must have no nodes). The cluster stops appearing in normal cluster reads once deletion is accepted; removal completes asynchronously.\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
+        "description": "Delete an empty cluster (must have no nodes). The cluster stops appearing in normal cluster reads once deletion is accepted; removal completes asynchronously.",
         "operationId": "EdgeAdminWeb.Controllers.Nodes.ClusterController.delete",
         "parameters": [
           {
@@ -4809,7 +4917,7 @@
     "/api/v1/clusters/default/enrollment_keys/public": {
       "post": {
         "callbacks": {},
-        "description": "Public endpoint (no authentication required). Only enabled when both\nPUBLIC_ENROLLMENT_KEY_ENABLED=true and DEFAULT_CLUSTER_NAME are configured.\n\n**Note:** This endpoint is unavailable during degraded mode (503).\n",
+        "description": "Public endpoint (no authentication required). Only enabled when both\nPUBLIC_ENROLLMENT_KEY_ENABLED=true and DEFAULT_CLUSTER_NAME are configured.\n",
         "operationId": "EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController.create_for_public",
         "parameters": [],
         "responses": {
@@ -4857,7 +4965,7 @@
     "/api/v1/clusters/default/enrollment_keys": {
       "post": {
         "callbacks": {},
-        "description": "Convenience endpoint for the default cluster (configured via DEFAULT_CLUSTER_NAME env).\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
+        "description": "Convenience endpoint for the default cluster (configured via DEFAULT_CLUSTER_NAME env).",
         "operationId": "EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController.create_for_default",
         "parameters": [],
         "requestBody": {
@@ -4926,7 +5034,7 @@
     "/api/v1/clusters/{cluster_name}/enrollment_keys": {
       "post": {
         "callbacks": {},
-        "description": "Create a new enrollment key for an edge cluster. The returned `key` blob must be set as the `ENROLLMENT_KEY`\nenvironment variable on the agent to allow it to join the cluster's VPN network.\n\nKeys can be limited by use count (`uses_remaining`) or by expiry time (`expires_at`). Omit both for a single-use key with no expiry.\n\n**Note:** This endpoint is unavailable during degraded mode (503).\n",
+        "description": "Create a new enrollment key for an edge cluster. The returned `key` blob must be set as the `ENROLLMENT_KEY`\nenvironment variable on the agent to allow it to join the cluster's VPN network.\n\nKeys can be limited by use count (`uses_remaining`) or by expiry time (`expires_at`). Omit both for a single-use key with no expiry.\n",
         "operationId": "EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController.create",
         "parameters": [
           {
@@ -5293,7 +5401,7 @@
       },
       "patch": {
         "callbacks": {},
-        "description": "Update expires_at or uses_remaining. Pass null to unset a nullable field.\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
+        "description": "Update expires_at or uses_remaining. Pass null to unset a nullable field.",
         "operationId": "EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController.update",
         "parameters": [
           {
@@ -5360,7 +5468,7 @@
       },
       "delete": {
         "callbacks": {},
-        "description": "Permanently deletes an enrollment key. **Note:** This endpoint is unavailable during degraded mode (503).",
+        "description": "Permanently deletes an enrollment key.",
         "operationId": "EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController.delete",
         "parameters": [
           {
@@ -5646,7 +5754,7 @@
       },
       "delete": {
         "callbacks": {},
-        "description": "Delete a node and its associated Edge Core records. Command-execution history is retained.\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
+        "description": "Delete a node and its associated Edge Core records. Command-execution history is retained.",
         "operationId": "EdgeAdminWeb.Controllers.Nodes.NodeController.delete",
         "parameters": [
           {
@@ -5696,7 +5804,7 @@
     "/api/v1/nodes/{id}/change_cluster": {
       "post": {
         "callbacks": {},
-        "description": "Move a node to a different cluster. This clears the node's existing recovery key and removes its cluster-specific aliases; create a new recovery key explicitly if needed. The returned node reflects the saved cluster assignment immediately; network connectivity may briefly reflect the previous assignment while it converges.\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
+        "description": "Move a node to a different cluster. This clears the node's existing recovery key and removes its cluster-specific aliases; create a new recovery key explicitly if needed. The returned node reflects the saved cluster assignment immediately; network connectivity may briefly reflect the previous assignment while it converges.",
         "operationId": "EdgeAdminWeb.Controllers.Nodes.NodeController.change_cluster",
         "parameters": [
           {

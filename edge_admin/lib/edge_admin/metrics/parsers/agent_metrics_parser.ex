@@ -66,8 +66,8 @@ defmodule EdgeAdmin.Metrics.Parsers.AgentMetricsParser do
         extract_counter_by_label_value(lines, "edge_agent_proxy_tunnel_closed_total", "reason", "deadline"),
       "proxy_tunnels_closed_drain_timeout_total" =>
         extract_counter_by_label_value(lines, "edge_agent_proxy_tunnel_closed_total", "reason", "drain_timeout"),
-      "proxy_tunnel_bytes_up_total" => extract_counter(lines, "edge_agent_proxy_tunnel_bytes_up_total"),
-      "proxy_tunnel_bytes_down_total" => extract_counter(lines, "edge_agent_proxy_tunnel_bytes_down_total"),
+      "proxy_tunnel_bytes_up_total" => extract_counter(lines, "edge_agent_proxy_tunnel_bytes_up_sum"),
+      "proxy_tunnel_bytes_down_total" => extract_counter(lines, "edge_agent_proxy_tunnel_bytes_down_sum"),
 
       # SSH
       "ssh_authentications" => extract_counter(lines, "edge_agent_ssh_authentication_total"),

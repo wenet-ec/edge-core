@@ -52,6 +52,7 @@ defmodule EdgeAgent.PromEx.EdgeAgentPlugin do
         [:edge_agent, :bootstrap, :registration, :total],
         event_name: [:edge_agent, :bootstrap, :registration],
         description: "Total number of agent registration attempts",
+        measurement: &event_count/1,
         tags: [:status],
         tag_values: &get_status_tag/1
       ),
@@ -73,7 +74,7 @@ defmodule EdgeAgent.PromEx.EdgeAgentPlugin do
         [:edge_agent, :commands, :sync, :total],
         event_name: [:edge_agent, :commands, :sync],
         description: "Total number of command sync attempts with admin",
-        measurement: :count
+        measurement: &event_count/1
       ),
       last_value(
         [:edge_agent, :commands, :sync, :sent_count],
@@ -96,6 +97,7 @@ defmodule EdgeAgent.PromEx.EdgeAgentPlugin do
         [:edge_agent, :commands, :execution, :enqueued, :total],
         event_name: [:edge_agent, :commands, :execution, :enqueued],
         description: "Total number of command executions enqueued",
+        measurement: &event_count/1,
         tags: [:status],
         tag_values: &get_status_tag/1
       ),
@@ -103,6 +105,7 @@ defmodule EdgeAgent.PromEx.EdgeAgentPlugin do
         [:edge_agent, :commands, :execution, :completed, :total],
         event_name: [:edge_agent, :commands, :execution, :completed],
         description: "Total number of command executions completed",
+        measurement: &event_count/1,
         tags: [:result],
         tag_values: &get_result_tag/1
       ),
@@ -131,6 +134,7 @@ defmodule EdgeAgent.PromEx.EdgeAgentPlugin do
         [:edge_agent, :commands, :report, :total],
         event_name: [:edge_agent, :commands, :report],
         description: "Total number of command result reports to admin",
+        measurement: &event_count/1,
         tags: [:status],
         tag_values: &get_status_tag/1
       ),
@@ -144,11 +148,16 @@ defmodule EdgeAgent.PromEx.EdgeAgentPlugin do
   end
 
   defp proxy_metrics do
+    proxy_connection_metrics() ++ proxy_block_metrics() ++ proxy_tunnel_metrics()
+  end
+
+  defp proxy_connection_metrics do
     [
       counter(
         [:edge_agent, :proxy, :http, :connection, :total],
         event_name: [:edge_agent, :proxy, :http, :connection],
         description: "Total HTTP proxy connections",
+        measurement: &event_count/1,
         tags: [:result],
         tag_values: &get_result_tag/1
       ),
@@ -156,6 +165,7 @@ defmodule EdgeAgent.PromEx.EdgeAgentPlugin do
         [:edge_agent, :proxy, :socks5, :connection, :total],
         event_name: [:edge_agent, :proxy, :socks5, :connection],
         description: "Total SOCKS5 proxy connections",
+        measurement: &event_count/1,
         tags: [:result],
         tag_values: &get_result_tag/1
       ),
@@ -167,12 +177,17 @@ defmodule EdgeAgent.PromEx.EdgeAgentPlugin do
         tags: [:protocol],
         tag_values: &get_protocol_tag/1,
         reporter_options: [buckets: [1_000, 5_000, 10_000, 30_000, 60_000, 300_000, 600_000]]
-      ),
+      )
+    ]
+  end
+
+  defp proxy_block_metrics do
+    [
       counter(
         [:edge_agent, :proxy, :http, :blocked, :total],
         event_name: [:edge_agent, :proxy, :http, :blocked],
         description: "Total HTTP proxy requests blocked by security rules",
-        measurement: :count,
+        measurement: &event_count/1,
         tags: [:reason],
         tag_values: &get_reason_tag/1
       ),
@@ -180,21 +195,26 @@ defmodule EdgeAgent.PromEx.EdgeAgentPlugin do
         [:edge_agent, :proxy, :socks5, :blocked, :total],
         event_name: [:edge_agent, :proxy, :socks5, :blocked],
         description: "Total SOCKS5 proxy requests blocked by security rules",
-        measurement: :count,
+        measurement: &event_count/1,
         tags: [:reason],
         tag_values: &get_reason_tag/1
-      ),
+      )
+    ]
+  end
+
+  defp proxy_tunnel_metrics do
+    [
       counter(
         [:edge_agent, :proxy, :tunnel, :closed, :total],
         event_name: [:edge_agent, :proxy, :tunnel, :closed],
         description:
           "Tunnels that finished forwarding, tagged by protocol and close reason (normal | deadline | drain_timeout)",
-        measurement: :duration_ms,
+        measurement: &event_count/1,
         tags: [:protocol, :reason],
         tag_values: &get_tunnel_close_tag/1
       ),
       sum(
-        [:edge_agent, :proxy, :tunnel, :bytes, :up, :total],
+        [:edge_agent, :proxy, :tunnel, :bytes, :up],
         event_name: [:edge_agent, :proxy, :tunnel, :closed],
         description: "Cumulative bytes forwarded client→target, tagged by protocol",
         measurement: :bytes_up,
@@ -202,7 +222,7 @@ defmodule EdgeAgent.PromEx.EdgeAgentPlugin do
         tag_values: &get_protocol_tag/1
       ),
       sum(
-        [:edge_agent, :proxy, :tunnel, :bytes, :down, :total],
+        [:edge_agent, :proxy, :tunnel, :bytes, :down],
         event_name: [:edge_agent, :proxy, :tunnel, :closed],
         description: "Cumulative bytes forwarded target→client, tagged by protocol",
         measurement: :bytes_down,
@@ -229,6 +249,7 @@ defmodule EdgeAgent.PromEx.EdgeAgentPlugin do
         [:edge_agent, :ssh, :connection, :total],
         event_name: [:edge_agent, :ssh, :connection],
         description: "Total SSH connection attempts",
+        measurement: &event_count/1,
         tags: [:result],
         tag_values: &get_result_tag/1
       ),
@@ -236,6 +257,7 @@ defmodule EdgeAgent.PromEx.EdgeAgentPlugin do
         [:edge_agent, :ssh, :authentication, :total],
         event_name: [:edge_agent, :ssh, :authentication],
         description: "Total SSH authentication attempts by method and result",
+        measurement: &event_count/1,
         tags: [:auth_method, :result],
         tag_values: &get_ssh_auth_tags/1
       ),
@@ -255,6 +277,7 @@ defmodule EdgeAgent.PromEx.EdgeAgentPlugin do
         [:edge_agent, :discovery, :scan, :total],
         event_name: [:edge_agent, :discovery, :scan],
         description: "Total number of periodic discovery scans",
+        measurement: &event_count/1,
         tags: [:status],
         tag_values: &get_status_tag/1
       ),
@@ -273,7 +296,7 @@ defmodule EdgeAgent.PromEx.EdgeAgentPlugin do
         [:edge_agent, :vpn, :pull, :total],
         event_name: [:edge_agent, :vpn, :pull],
         description: "Total number of VPN config pull attempts",
-        measurement: :count,
+        measurement: &event_count/1,
         tags: [:result],
         tag_values: &get_result_tag/1
       )
@@ -286,7 +309,7 @@ defmodule EdgeAgent.PromEx.EdgeAgentPlugin do
         [:edge_agent, :health_check, :report, :total],
         event_name: [:edge_agent, :health_check, :report],
         description: "Total number of health check reports sent to admin (HTTP fallback mode)",
-        measurement: :count,
+        measurement: &event_count/1,
         tags: [:result],
         tag_values: &get_result_tag/1
       )
@@ -299,7 +322,7 @@ defmodule EdgeAgent.PromEx.EdgeAgentPlugin do
         [:edge_agent, :diagnostics, :push, :total],
         event_name: [:edge_agent, :diagnostics, :push],
         description: "Total diagnostic reports pushed to admin in HTTP fallback mode",
-        measurement: :count,
+        measurement: &event_count/1,
         tags: [:result],
         tag_values: &get_result_tag/1
       )
@@ -312,14 +335,15 @@ defmodule EdgeAgent.PromEx.EdgeAgentPlugin do
         [:edge_agent, :settings_config, :refresh, :total],
         event_name: [:edge_agent, :settings_config, :refresh],
         description: "Total authenticated refresh attempts for Admin URLs and Core DERP map sources",
-        measurement: :count,
+        measurement: &event_count/1,
         tags: [:result],
         tag_values: &get_result_tag/1
       )
     ]
   end
 
-  # Tag extraction functions
+  defp event_count(_measurements), do: 1
+
   defp get_status_tag(%{status: status}) do
     %{status: to_string(status)}
   end

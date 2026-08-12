@@ -187,6 +187,7 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetrics do
     @derive JSON.Encoder
     defstruct [
       :scans_total,
+      :connected_peers,
       :dns_resolutions_total,
       :peer_connections_total
     ]
@@ -194,6 +195,7 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetrics do
     def from_raw(raw) do
       %__MODULE__{
         scans_total: raw["discovery_scans_total"],
+        connected_peers: raw["discovery_connected_peers"],
         dns_resolutions_total: raw["discovery_dns_resolutions_total"],
         peer_connections_total: raw["discovery_peer_connections_total"]
       }
@@ -268,26 +270,32 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetrics do
 
     @derive JSON.Encoder
     defstruct [
-      :delivery_total,
-      :delivery_delivered_count,
+      :delivery_runs_total,
+      :delivery_last_delivered_count,
       :execution_delivered_total,
       :execution_completed_total,
       :execution_dropped_total,
-      :expiration_total,
-      :pruning_total,
-      :pruning_deleted_count
+      :expiration_runs_total,
+      :expired_total,
+      :expiration_last_expired_count,
+      :pruning_runs_total,
+      :pruned_total,
+      :pruning_last_deleted_count
     ]
 
     def from_raw(raw) do
       %__MODULE__{
-        delivery_total: raw["commands_delivery_total"],
-        delivery_delivered_count: raw["commands_delivery_delivered_count"],
+        delivery_runs_total: raw["commands_delivery_runs_total"],
+        delivery_last_delivered_count: raw["commands_delivery_last_delivered_count"],
         execution_delivered_total: raw["commands_execution_delivered_total"],
         execution_completed_total: raw["commands_execution_completed_total"],
         execution_dropped_total: raw["commands_execution_dropped_total"],
-        expiration_total: raw["commands_expiration_total"],
-        pruning_total: raw["commands_pruning_total"],
-        pruning_deleted_count: raw["commands_pruning_deleted_count"]
+        expiration_runs_total: raw["commands_expiration_runs_total"],
+        expired_total: raw["commands_expired_total"],
+        expiration_last_expired_count: raw["commands_expiration_last_expired_count"],
+        pruning_runs_total: raw["commands_pruning_runs_total"],
+        pruned_total: raw["commands_pruned_total"],
+        pruning_last_deleted_count: raw["commands_pruning_last_deleted_count"]
       }
     end
   end
@@ -314,20 +322,40 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetrics do
 
     @derive JSON.Encoder
     defstruct [
-      :total,
-      :errors,
-      :nodes_added,
-      :nodes_removed,
-      :nodes_deleted
+      :runs_total,
+      :errors_total,
+      :last_errors,
+      :nodes_added_total,
+      :last_nodes_added,
+      :nodes_removed_total,
+      :last_nodes_removed,
+      :nodes_deleted_total,
+      :last_nodes_deleted,
+      :aliases_cleaned_total,
+      :last_aliases_cleaned,
+      :aliases_repaired_total,
+      :last_aliases_repaired,
+      :ghost_aliases_cleaned_total,
+      :last_ghost_aliases_cleaned
     ]
 
     def from_raw(raw) do
       %__MODULE__{
-        total: raw["nodes_cluster_reconciliations_total"],
-        errors: raw["nodes_cluster_reconciliation_errors"],
-        nodes_added: raw["nodes_cluster_reconciliation_nodes_added"],
-        nodes_removed: raw["nodes_cluster_reconciliation_nodes_removed"],
-        nodes_deleted: raw["nodes_cluster_reconciliation_nodes_deleted"]
+        runs_total: raw["nodes_cluster_reconciliation_runs_total"],
+        errors_total: raw["nodes_cluster_reconciliation_errors_total"],
+        last_errors: raw["nodes_cluster_reconciliation_last_errors"],
+        nodes_added_total: raw["nodes_cluster_reconciliation_nodes_added_total"],
+        last_nodes_added: raw["nodes_cluster_reconciliation_last_nodes_added"],
+        nodes_removed_total: raw["nodes_cluster_reconciliation_nodes_removed_total"],
+        last_nodes_removed: raw["nodes_cluster_reconciliation_last_nodes_removed"],
+        nodes_deleted_total: raw["nodes_cluster_reconciliation_nodes_deleted_total"],
+        last_nodes_deleted: raw["nodes_cluster_reconciliation_last_nodes_deleted"],
+        aliases_cleaned_total: raw["nodes_cluster_reconciliation_aliases_cleaned_total"],
+        last_aliases_cleaned: raw["nodes_cluster_reconciliation_last_aliases_cleaned"],
+        aliases_repaired_total: raw["nodes_cluster_reconciliation_aliases_repaired_total"],
+        last_aliases_repaired: raw["nodes_cluster_reconciliation_last_aliases_repaired"],
+        ghost_aliases_cleaned_total: raw["nodes_cluster_reconciliation_ghost_aliases_cleaned_total"],
+        last_ghost_aliases_cleaned: raw["nodes_cluster_reconciliation_last_ghost_aliases_cleaned"]
       }
     end
   end
@@ -338,15 +366,23 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetrics do
     @derive JSON.Encoder
     defstruct [
       :completed_total,
-      :triggered,
-      :failed
+      :targets_total,
+      :triggered_total,
+      :failed_total,
+      :last_target_count,
+      :last_triggered_count,
+      :last_failed_count
     ]
 
     def from_raw(raw) do
       %__MODULE__{
         completed_total: raw["self_updates_completed_total"],
-        triggered: raw["self_updates_triggered"],
-        failed: raw["self_updates_failed"]
+        targets_total: raw["self_updates_targets_total"],
+        triggered_total: raw["self_updates_triggered_total"],
+        failed_total: raw["self_updates_failed_total"],
+        last_target_count: raw["self_updates_last_target_count"],
+        last_triggered_count: raw["self_updates_last_triggered_count"],
+        last_failed_count: raw["self_updates_last_failed_count"]
       }
     end
   end
@@ -460,7 +496,7 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetrics do
     `deliveries_*` count individual HTTP attempts and split by outcome:
       - `ok`           — 2xx response
       - `recoverable`  — 408/429/503/network; will be retried by Oban
-      - `terminal`     — other 4xx/5xx; cancelled, contributes to auto-disable
+      - `terminal`     — other 4xx/5xx; cancelled without further retries
     """
 
     @derive JSON.Encoder

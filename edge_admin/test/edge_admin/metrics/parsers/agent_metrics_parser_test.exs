@@ -36,10 +36,10 @@ defmodule EdgeAdmin.Metrics.Parsers.AgentMetricsParserTest do
     edge_agent_proxy_tunnel_closed_total{protocol="socks5",reason="normal"} 45
     edge_agent_proxy_tunnel_closed_total{protocol="http",reason="deadline"} 4
     edge_agent_proxy_tunnel_closed_total{protocol="http",reason="drain_timeout"} 1
-    edge_agent_proxy_tunnel_bytes_up_total{protocol="http"} 1048576
-    edge_agent_proxy_tunnel_bytes_up_total{protocol="socks5"} 524288
-    edge_agent_proxy_tunnel_bytes_down_total{protocol="http"} 4194304
-    edge_agent_proxy_tunnel_bytes_down_total{protocol="socks5"} 2097152
+    edge_agent_proxy_tunnel_bytes_up_sum{protocol="http"} 1048576
+    edge_agent_proxy_tunnel_bytes_up_sum{protocol="socks5"} 524288
+    edge_agent_proxy_tunnel_bytes_down_sum{protocol="http"} 4194304
+    edge_agent_proxy_tunnel_bytes_down_sum{protocol="socks5"} 2097152
     edge_agent_ssh_authentication_total{auth_method="password",result="success"} 4
     edge_agent_ssh_authentication_total{auth_method="public_key",result="failure"} 1
     edge_agent_ssh_connection_total{result="success"} 3

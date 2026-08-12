@@ -172,6 +172,11 @@ defmodule EdgeAdminWeb.Schemas.Metrics.AdminMetricsSchemas do
                   nullable: true,
                   description: "Total peer discovery scan cycles completed"
                 },
+                connected_peers: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Connected Erlang peer admins after the most recent discovery scan"
+                },
                 dns_resolutions_total: %Schema{
                   type: :integer,
                   nullable: true,
@@ -268,12 +273,12 @@ defmodule EdgeAdminWeb.Schemas.Metrics.AdminMetricsSchemas do
               type: :object,
               description: "Command execution and delivery metrics",
               properties: %{
-                delivery_total: %Schema{
+                delivery_runs_total: %Schema{
                   type: :integer,
                   nullable: true,
                   description: "Total delivery batch runs (Quantum scheduler cycles)"
                 },
-                delivery_delivered_count: %Schema{
+                delivery_last_delivered_count: %Schema{
                   type: :integer,
                   nullable: true,
                   description: "Number of executions queued for delivery in last batch run"
@@ -293,17 +298,32 @@ defmodule EdgeAdminWeb.Schemas.Metrics.AdminMetricsSchemas do
                   nullable: true,
                   description: "Total executions dropped because their target node was deleted"
                 },
-                expiration_total: %Schema{
+                expiration_runs_total: %Schema{
                   type: :integer,
                   nullable: true,
                   description: "Total stale execution expiration sweeps"
                 },
-                pruning_total: %Schema{
+                expired_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Cumulative executions expired by expiration sweeps"
+                },
+                expiration_last_expired_count: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Executions expired in the most recent expiration sweep"
+                },
+                pruning_runs_total: %Schema{
                   type: :integer,
                   nullable: true,
                   description: "Total command-execution pruning sweeps"
                 },
-                pruning_deleted_count: %Schema{
+                pruned_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Cumulative command-execution rows deleted by pruning sweeps"
+                },
+                pruning_last_deleted_count: %Schema{
                   type: :integer,
                   nullable: true,
                   description: "Command-execution rows deleted in the most recent pruning sweep"
@@ -330,30 +350,80 @@ defmodule EdgeAdminWeb.Schemas.Metrics.AdminMetricsSchemas do
               type: :object,
               description: "Cluster reconciliation metrics (Edge VPN ↔ DB sync)",
               properties: %{
-                total: %Schema{
+                runs_total: %Schema{
                   type: :integer,
                   nullable: true,
                   description: "Total cluster reconciliation runs"
                 },
-                errors: %Schema{
+                errors_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Cumulative errors across reconciliation runs"
+                },
+                last_errors: %Schema{
                   type: :integer,
                   nullable: true,
                   description: "Number of errors in last reconciliation run"
                 },
-                nodes_added: %Schema{
+                nodes_added_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Cumulative nodes added to Edge VPN by reconciliation runs"
+                },
+                last_nodes_added: %Schema{
                   type: :integer,
                   nullable: true,
                   description: "Nodes added to Edge VPN in the most recent reconciliation run"
                 },
-                nodes_removed: %Schema{
+                nodes_removed_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Cumulative nodes removed from Edge VPN by reconciliation runs"
+                },
+                last_nodes_removed: %Schema{
                   type: :integer,
                   nullable: true,
                   description: "Nodes removed from Edge VPN in the most recent reconciliation run"
                 },
-                nodes_deleted: %Schema{
+                nodes_deleted_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Cumulative orphaned database node records deleted by reconciliation runs"
+                },
+                last_nodes_deleted: %Schema{
                   type: :integer,
                   nullable: true,
                   description: "Orphaned database node records deleted in the most recent reconciliation run"
+                },
+                aliases_cleaned_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Cumulative alias records removed by reconciliation runs"
+                },
+                last_aliases_cleaned: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Alias records removed in the most recent reconciliation run"
+                },
+                aliases_repaired_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Cumulative alias records repaired by reconciliation runs"
+                },
+                last_aliases_repaired: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Alias records repaired in the most recent reconciliation run"
+                },
+                ghost_aliases_cleaned_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Cumulative ghost VPN aliases removed by reconciliation runs"
+                },
+                last_ghost_aliases_cleaned: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Ghost VPN aliases removed in the most recent reconciliation run"
                 }
               }
             },
@@ -366,12 +436,32 @@ defmodule EdgeAdminWeb.Schemas.Metrics.AdminMetricsSchemas do
                   nullable: true,
                   description: "Total self-update requests processed to completion"
                 },
-                triggered: %Schema{
+                targets_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Cumulative nodes targeted by completed self-update requests"
+                },
+                triggered_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Cumulative nodes successfully triggered by completed self-update requests"
+                },
+                failed_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Cumulative nodes that failed during completed self-update requests"
+                },
+                last_target_count: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Nodes targeted by the most recent self-update request"
+                },
+                last_triggered_count: %Schema{
                   type: :integer,
                   nullable: true,
                   description: "Nodes successfully triggered by the most recent self-update request"
                 },
-                failed: %Schema{
+                last_failed_count: %Schema{
                   type: :integer,
                   nullable: true,
                   description: "Nodes that failed to trigger in the most recent self-update request"
@@ -549,7 +639,7 @@ defmodule EdgeAdminWeb.Schemas.Metrics.AdminMetricsSchemas do
                 deliveries_terminal_total: %Schema{
                   type: :integer,
                   nullable: true,
-                  description: "Total deliveries that hit a terminal error (cancelled, contributes to auto-disable)"
+                  description: "Total deliveries that hit a terminal error and were cancelled without further retries"
                 }
               }
             },
@@ -632,6 +722,7 @@ defmodule EdgeAdminWeb.Schemas.Metrics.AdminMetricsSchemas do
           },
           discovery: %{
             scans_total: 144,
+            connected_peers: 2,
             dns_resolutions_total: 12,
             peer_connections_total: 3
           },
@@ -654,30 +745,47 @@ defmodule EdgeAdminWeb.Schemas.Metrics.AdminMetricsSchemas do
             zombie_cleanup_deleted_count: 0
           },
           commands: %{
-            delivery_total: 48,
-            delivery_delivered_count: 0,
+            delivery_runs_total: 48,
+            delivery_last_delivered_count: 0,
             execution_delivered_total: 23,
             execution_completed_total: 21,
             execution_dropped_total: 1,
-            expiration_total: 2,
-            pruning_total: 4,
-            pruning_deleted_count: 76
+            expiration_runs_total: 2,
+            expired_total: 5,
+            expiration_last_expired_count: 0,
+            pruning_runs_total: 4,
+            pruned_total: 120,
+            pruning_last_deleted_count: 76
           },
           ssh: %{
             verifications_total: 34,
             verifications_failed: 1
           },
           reconciliation: %{
-            total: 12,
-            errors: 0,
-            nodes_added: 1,
-            nodes_removed: 0,
-            nodes_deleted: 0
+            runs_total: 12,
+            errors_total: 0,
+            last_errors: 0,
+            nodes_added_total: 14,
+            last_nodes_added: 1,
+            nodes_removed_total: 2,
+            last_nodes_removed: 0,
+            nodes_deleted_total: 3,
+            last_nodes_deleted: 0,
+            aliases_cleaned_total: 4,
+            last_aliases_cleaned: 0,
+            aliases_repaired_total: 5,
+            last_aliases_repaired: 0,
+            ghost_aliases_cleaned_total: 1,
+            last_ghost_aliases_cleaned: 0
           },
           self_updates: %{
             completed_total: 3,
-            triggered: 4,
-            failed: 0
+            targets_total: 12,
+            triggered_total: 11,
+            failed_total: 1,
+            last_target_count: 4,
+            last_triggered_count: 4,
+            last_failed_count: 0
           },
           gateways: %{
             connections_total: 2,

@@ -1644,7 +1644,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum(rate(edge_agent_proxy_tunnel_bytes_up_total[$__rate_interval])) by (protocol)",
+          "expr": "sum(rate(edge_agent_proxy_tunnel_bytes_up_sum[$__rate_interval])) by (protocol)",
           "refId": "A",
           "legendFormat": "{{protocol}} up"
         },
@@ -1653,7 +1653,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum(rate(edge_agent_proxy_tunnel_bytes_down_total[$__rate_interval])) by (protocol)",
+          "expr": "sum(rate(edge_agent_proxy_tunnel_bytes_down_sum[$__rate_interval])) by (protocol)",
           "refId": "B",
           "legendFormat": "{{protocol}} down"
         }

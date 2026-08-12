@@ -155,15 +155,17 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetricsTest do
              }
     end
 
-    test "Discovery passes through three keys" do
+    test "Discovery passes through peer scan keys" do
       raw = %{
         "discovery_scans_total" => 10,
+        "discovery_connected_peers" => 2,
         "discovery_dns_resolutions_total" => 8,
         "discovery_peer_connections_total" => 3
       }
 
       assert Discovery.from_raw(raw) == %Discovery{
                scans_total: 10,
+               connected_peers: 2,
                dns_resolutions_total: 8,
                peer_connections_total: 3
              }
@@ -175,14 +177,41 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetricsTest do
       assert Quantum.from_raw(%{}).jobs_executed_total == nil
       assert Vpn.from_raw(%{}).zombie_cleanup_total == nil
       assert Ssh.from_raw(%{}).verifications_total == nil
-      assert Reconciliation.from_raw(%{}).total == nil
+      reconciliation = Reconciliation.from_raw(%{})
+      assert reconciliation.runs_total == nil
+      assert reconciliation.errors_total == nil
+      assert reconciliation.last_errors == nil
       assert SelfUpdates.from_raw(%{}).completed_total == nil
       assert Gateways.from_raw(%{}).active_count == nil
       assert Gateways.from_raw(%{}).diagnostics_total == nil
     end
 
     test "Commands passes through dropped execution totals" do
-      assert Commands.from_raw(%{"commands_execution_dropped_total" => 3}).execution_dropped_total == 3
+      raw = %{
+        "commands_delivery_runs_total" => 1,
+        "commands_delivery_last_delivered_count" => 2,
+        "commands_execution_dropped_total" => 3,
+        "commands_expiration_runs_total" => 4,
+        "commands_expired_total" => 5,
+        "commands_expiration_last_expired_count" => 6,
+        "commands_pruning_runs_total" => 7,
+        "commands_pruned_total" => 8,
+        "commands_pruning_last_deleted_count" => 9
+      }
+
+      assert Commands.from_raw(raw) == %Commands{
+               delivery_runs_total: 1,
+               delivery_last_delivered_count: 2,
+               execution_delivered_total: nil,
+               execution_completed_total: nil,
+               execution_dropped_total: 3,
+               expiration_runs_total: 4,
+               expired_total: 5,
+               expiration_last_expired_count: 6,
+               pruning_runs_total: 7,
+               pruned_total: 8,
+               pruning_last_deleted_count: 9
+             }
     end
 
     test "Webhook counters pass through" do
@@ -208,26 +237,58 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetricsTest do
     test "Reconciliation and self-update summaries pass through" do
       reconciliation =
         Reconciliation.from_raw(%{
-          "nodes_cluster_reconciliations_total" => 4,
-          "nodes_cluster_reconciliation_errors" => 1,
-          "nodes_cluster_reconciliation_nodes_added" => 2,
-          "nodes_cluster_reconciliation_nodes_removed" => 3,
-          "nodes_cluster_reconciliation_nodes_deleted" => 4
+          "nodes_cluster_reconciliation_runs_total" => 4,
+          "nodes_cluster_reconciliation_errors_total" => 10,
+          "nodes_cluster_reconciliation_last_errors" => 1,
+          "nodes_cluster_reconciliation_nodes_added_total" => 20,
+          "nodes_cluster_reconciliation_last_nodes_added" => 2,
+          "nodes_cluster_reconciliation_nodes_removed_total" => 30,
+          "nodes_cluster_reconciliation_last_nodes_removed" => 3,
+          "nodes_cluster_reconciliation_nodes_deleted_total" => 40,
+          "nodes_cluster_reconciliation_last_nodes_deleted" => 4,
+          "nodes_cluster_reconciliation_aliases_cleaned_total" => 50,
+          "nodes_cluster_reconciliation_last_aliases_cleaned" => 5,
+          "nodes_cluster_reconciliation_aliases_repaired_total" => 60,
+          "nodes_cluster_reconciliation_last_aliases_repaired" => 6,
+          "nodes_cluster_reconciliation_ghost_aliases_cleaned_total" => 70,
+          "nodes_cluster_reconciliation_last_ghost_aliases_cleaned" => 7
         })
 
       assert reconciliation == %Reconciliation{
-               total: 4,
-               errors: 1,
-               nodes_added: 2,
-               nodes_removed: 3,
-               nodes_deleted: 4
+               runs_total: 4,
+               errors_total: 10,
+               last_errors: 1,
+               nodes_added_total: 20,
+               last_nodes_added: 2,
+               nodes_removed_total: 30,
+               last_nodes_removed: 3,
+               nodes_deleted_total: 40,
+               last_nodes_deleted: 4,
+               aliases_cleaned_total: 50,
+               last_aliases_cleaned: 5,
+               aliases_repaired_total: 60,
+               last_aliases_repaired: 6,
+               ghost_aliases_cleaned_total: 70,
+               last_ghost_aliases_cleaned: 7
              }
 
       assert SelfUpdates.from_raw(%{
                "self_updates_completed_total" => 5,
-               "self_updates_triggered" => 6,
-               "self_updates_failed" => 1
-             }) == %SelfUpdates{completed_total: 5, triggered: 6, failed: 1}
+               "self_updates_targets_total" => 8,
+               "self_updates_triggered_total" => 6,
+               "self_updates_failed_total" => 1,
+               "self_updates_last_target_count" => 3,
+               "self_updates_last_triggered_count" => 2,
+               "self_updates_last_failed_count" => 1
+             }) == %SelfUpdates{
+               completed_total: 5,
+               targets_total: 8,
+               triggered_total: 6,
+               failed_total: 1,
+               last_target_count: 3,
+               last_triggered_count: 2,
+               last_failed_count: 1
+             }
     end
   end
 

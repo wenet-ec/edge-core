@@ -60,6 +60,7 @@ defmodule EdgeAdmin.Metrics.Parsers.AdminMetricsParser do
       "membership_steps" => extract_counter(lines, "edge_admin_membership_step_total"),
       "membership_complete_total" => extract_counter(lines, "edge_admin_membership_complete_total"),
       "discovery_scans_total" => extract_counter(lines, "edge_admin_discovery_scan_complete_total"),
+      "discovery_connected_peers" => extract_gauge(lines, "edge_admin_discovery_connected_peers"),
       "discovery_dns_resolutions_total" => extract_counter(lines, "edge_admin_discovery_dns_resolution_total"),
       "discovery_peer_connections_total" => extract_counter(lines, "edge_admin_discovery_peer_connection_total")
     }
@@ -81,14 +82,36 @@ defmodule EdgeAdmin.Metrics.Parsers.AdminMetricsParser do
         extract_gauge(lines, "edge_admin_nodes_health_check_summary_unhealthy_count"),
       "nodes_health_check_summary_unreachable_count" =>
         extract_gauge(lines, "edge_admin_nodes_health_check_summary_unreachable_count"),
-      "nodes_cluster_reconciliations_total" => extract_counter(lines, "edge_admin_nodes_cluster_reconciliation_total"),
-      "nodes_cluster_reconciliation_errors" => extract_gauge(lines, "edge_admin_nodes_cluster_reconciliation_errors"),
-      "nodes_cluster_reconciliation_nodes_added" =>
-        extract_gauge(lines, "edge_admin_nodes_cluster_reconciliation_nodes_added"),
-      "nodes_cluster_reconciliation_nodes_removed" =>
-        extract_gauge(lines, "edge_admin_nodes_cluster_reconciliation_nodes_removed"),
-      "nodes_cluster_reconciliation_nodes_deleted" =>
-        extract_gauge(lines, "edge_admin_nodes_cluster_reconciliation_nodes_deleted")
+      "nodes_cluster_reconciliation_runs_total" =>
+        extract_counter(lines, "edge_admin_nodes_cluster_reconciliation_runs_total"),
+      "nodes_cluster_reconciliation_errors_total" =>
+        extract_counter(lines, "edge_admin_nodes_cluster_reconciliation_errors_sum"),
+      "nodes_cluster_reconciliation_last_errors" =>
+        extract_gauge(lines, "edge_admin_nodes_cluster_reconciliation_last_errors"),
+      "nodes_cluster_reconciliation_nodes_added_total" =>
+        extract_counter(lines, "edge_admin_nodes_cluster_reconciliation_nodes_added_sum"),
+      "nodes_cluster_reconciliation_last_nodes_added" =>
+        extract_gauge(lines, "edge_admin_nodes_cluster_reconciliation_last_nodes_added"),
+      "nodes_cluster_reconciliation_nodes_removed_total" =>
+        extract_counter(lines, "edge_admin_nodes_cluster_reconciliation_nodes_removed_sum"),
+      "nodes_cluster_reconciliation_last_nodes_removed" =>
+        extract_gauge(lines, "edge_admin_nodes_cluster_reconciliation_last_nodes_removed"),
+      "nodes_cluster_reconciliation_nodes_deleted_total" =>
+        extract_counter(lines, "edge_admin_nodes_cluster_reconciliation_nodes_deleted_sum"),
+      "nodes_cluster_reconciliation_last_nodes_deleted" =>
+        extract_gauge(lines, "edge_admin_nodes_cluster_reconciliation_last_nodes_deleted"),
+      "nodes_cluster_reconciliation_aliases_cleaned_total" =>
+        extract_counter(lines, "edge_admin_nodes_cluster_reconciliation_aliases_cleaned_sum"),
+      "nodes_cluster_reconciliation_last_aliases_cleaned" =>
+        extract_gauge(lines, "edge_admin_nodes_cluster_reconciliation_last_aliases_cleaned"),
+      "nodes_cluster_reconciliation_aliases_repaired_total" =>
+        extract_counter(lines, "edge_admin_nodes_cluster_reconciliation_aliases_repaired_sum"),
+      "nodes_cluster_reconciliation_last_aliases_repaired" =>
+        extract_gauge(lines, "edge_admin_nodes_cluster_reconciliation_last_aliases_repaired"),
+      "nodes_cluster_reconciliation_ghost_aliases_cleaned_total" =>
+        extract_counter(lines, "edge_admin_nodes_cluster_reconciliation_ghost_aliases_cleaned_sum"),
+      "nodes_cluster_reconciliation_last_ghost_aliases_cleaned" =>
+        extract_gauge(lines, "edge_admin_nodes_cluster_reconciliation_last_ghost_aliases_cleaned")
     }
   end
 
@@ -98,20 +121,33 @@ defmodule EdgeAdmin.Metrics.Parsers.AdminMetricsParser do
       "quantum_jobs_exceptions" => extract_counter(lines, "edge_admin_quantum_job_exception_total"),
       "vpn_zombie_cleanup_total" => extract_counter(lines, "edge_admin_vpn_zombie_admin_cleanup_total"),
       "vpn_zombie_cleanup_deleted_count" => extract_gauge(lines, "edge_admin_vpn_zombie_admin_cleanup_deleted_count"),
-      "commands_delivery_total" => extract_counter(lines, "edge_admin_commands_delivery_total"),
-      "commands_delivery_delivered_count" => extract_gauge(lines, "edge_admin_commands_delivery_delivered_count"),
+      "commands_delivery_runs_total" => extract_counter(lines, "edge_admin_commands_delivery_runs_total"),
+      "commands_delivery_last_delivered_count" =>
+        extract_gauge(lines, "edge_admin_commands_delivery_last_delivered_count"),
       "commands_execution_delivered_total" => extract_counter(lines, "edge_admin_commands_execution_delivered_total"),
       "commands_execution_completed_total" => extract_counter(lines, "edge_admin_commands_execution_completed_total"),
       "commands_execution_dropped_total" => extract_counter(lines, "edge_admin_commands_execution_dropped_total"),
-      "commands_expiration_total" => extract_counter(lines, "edge_admin_commands_expiration_total"),
-      "commands_pruning_total" => extract_counter(lines, "edge_admin_commands_pruning_total"),
-      "commands_pruning_deleted_count" => extract_gauge(lines, "edge_admin_commands_pruning_deleted_count"),
+      "commands_expiration_runs_total" => extract_counter(lines, "edge_admin_commands_expiration_runs_total"),
+      "commands_expired_total" => extract_counter(lines, "edge_admin_commands_expiration_expired_sum"),
+      "commands_expiration_last_expired_count" =>
+        extract_gauge(lines, "edge_admin_commands_expiration_last_expired_count"),
+      "commands_pruning_runs_total" => extract_counter(lines, "edge_admin_commands_pruning_runs_total"),
+      "commands_pruned_total" => extract_counter(lines, "edge_admin_commands_pruning_deleted_sum"),
+      "commands_pruning_last_deleted_count" => extract_gauge(lines, "edge_admin_commands_pruning_last_deleted_count"),
       "ssh_verifications_total" => extract_counter(lines, "edge_admin_ssh_verification_total"),
       "ssh_verifications_failed" =>
         extract_counter_by_label(lines, "edge_admin_ssh_verification_total", "result", "failure"),
       "self_updates_completed_total" => extract_counter(lines, "edge_admin_self_updates_request_completed_total"),
-      "self_updates_triggered" => extract_gauge(lines, "edge_admin_self_updates_request_completed_triggered"),
-      "self_updates_failed" => extract_gauge(lines, "edge_admin_self_updates_request_completed_failed")
+      "self_updates_targets_total" => extract_counter(lines, "edge_admin_self_updates_request_completed_targets_sum"),
+      "self_updates_triggered_total" =>
+        extract_counter(lines, "edge_admin_self_updates_request_completed_triggered_sum"),
+      "self_updates_failed_total" => extract_counter(lines, "edge_admin_self_updates_request_completed_failed_sum"),
+      "self_updates_last_target_count" =>
+        extract_gauge(lines, "edge_admin_self_updates_request_completed_last_target_count"),
+      "self_updates_last_triggered_count" =>
+        extract_gauge(lines, "edge_admin_self_updates_request_completed_last_triggered_count"),
+      "self_updates_last_failed_count" =>
+        extract_gauge(lines, "edge_admin_self_updates_request_completed_last_failed_count")
     }
   end
 
@@ -145,8 +181,8 @@ defmodule EdgeAdmin.Metrics.Parsers.AdminMetricsParser do
         extract_counter_by_label(lines, "edge_admin_proxy_tunnel_closed_total", "reason", "deadline"),
       "proxy_tunnels_closed_drain_timeout_total" =>
         extract_counter_by_label(lines, "edge_admin_proxy_tunnel_closed_total", "reason", "drain_timeout"),
-      "proxy_tunnel_bytes_up_total" => extract_counter(lines, "edge_admin_proxy_tunnel_bytes_up_total"),
-      "proxy_tunnel_bytes_down_total" => extract_counter(lines, "edge_admin_proxy_tunnel_bytes_down_total")
+      "proxy_tunnel_bytes_up_total" => extract_counter(lines, "edge_admin_proxy_tunnel_bytes_up_sum"),
+      "proxy_tunnel_bytes_down_total" => extract_counter(lines, "edge_admin_proxy_tunnel_bytes_down_sum")
     }
   end
 
@@ -169,7 +205,7 @@ defmodule EdgeAdmin.Metrics.Parsers.AdminMetricsParser do
       # Webhook — fan-out (per-publish invocation count; the `count` measurement
       # is separately exposed as a sum of matched delivery jobs).
       "webhook_fan_outs_total" => extract_counter(lines, "edge_admin_webhook_fan_out_total"),
-      "webhook_matched_deliveries_total" => extract_counter(lines, "edge_admin_webhook_fan_out_matched_total"),
+      "webhook_matched_deliveries_total" => extract_counter(lines, "edge_admin_webhook_fan_out_matched_sum"),
 
       # Webhook — delivery
       "webhook_deliveries_total" => extract_counter(lines, "edge_admin_webhook_delivery_total"),

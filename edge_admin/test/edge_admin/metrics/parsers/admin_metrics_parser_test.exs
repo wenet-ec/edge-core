@@ -27,6 +27,7 @@ defmodule EdgeAdmin.Metrics.Parsers.AdminMetricsParserTest do
     edge_admin_metadata_recomputation_total{reason="lost_admin"} 1
     edge_admin_membership_step_total{step="vpn"} 1
     edge_admin_membership_step_total{step="db"} 1
+    edge_admin_discovery_connected_peers 2
     edge_admin_nodes_health_check_total{result="healthy"} 10
     edge_admin_nodes_health_check_total{result="unhealthy"} 2
     edge_admin_nodes_health_check_total{result="unreachable"} 1
@@ -35,21 +36,41 @@ defmodule EdgeAdmin.Metrics.Parsers.AdminMetricsParserTest do
     edge_admin_nodes_health_check_summary_healthy_count 10
     edge_admin_nodes_health_check_summary_unhealthy_count 2
     edge_admin_nodes_health_check_summary_unreachable_count 1
-    edge_admin_nodes_cluster_reconciliation_total{cluster="prod",result="ok"} 6
-    edge_admin_nodes_cluster_reconciliation_errors 0
-    edge_admin_nodes_cluster_reconciliation_nodes_added 1
-    edge_admin_nodes_cluster_reconciliation_nodes_removed 2
-    edge_admin_nodes_cluster_reconciliation_nodes_deleted 3
+    edge_admin_nodes_cluster_reconciliation_runs_total{cluster="prod",result="ok"} 6
+    edge_admin_nodes_cluster_reconciliation_errors_sum{cluster="prod",result="ok"} 8
+    edge_admin_nodes_cluster_reconciliation_last_errors 0
+    edge_admin_nodes_cluster_reconciliation_nodes_added_sum{cluster="prod",result="ok"} 10
+    edge_admin_nodes_cluster_reconciliation_last_nodes_added 1
+    edge_admin_nodes_cluster_reconciliation_nodes_removed_sum{cluster="prod",result="ok"} 20
+    edge_admin_nodes_cluster_reconciliation_last_nodes_removed 2
+    edge_admin_nodes_cluster_reconciliation_nodes_deleted_sum{cluster="prod",result="ok"} 30
+    edge_admin_nodes_cluster_reconciliation_last_nodes_deleted 3
+    edge_admin_nodes_cluster_reconciliation_aliases_cleaned_sum{cluster="prod",result="ok"} 40
+    edge_admin_nodes_cluster_reconciliation_last_aliases_cleaned 4
+    edge_admin_nodes_cluster_reconciliation_aliases_repaired_sum{cluster="prod",result="ok"} 50
+    edge_admin_nodes_cluster_reconciliation_last_aliases_repaired 5
+    edge_admin_nodes_cluster_reconciliation_ghost_aliases_cleaned_sum{cluster="prod",result="ok"} 60
+    edge_admin_nodes_cluster_reconciliation_last_ghost_aliases_cleaned 6
     edge_admin_quantum_job_executed_total{job="reconcile"} 100
     edge_admin_quantum_job_exception_total{job="reconcile"} 1
     edge_admin_vpn_zombie_admin_cleanup_total{result="ok"} 5
     edge_admin_vpn_zombie_admin_cleanup_deleted_count 3
     edge_admin_self_updates_request_completed_total{targeting_type="nodes"} 4
-    edge_admin_self_updates_request_completed_triggered 6
-    edge_admin_self_updates_request_completed_failed 1
-    edge_admin_commands_delivery_total{result="ok"} 50
-    edge_admin_commands_delivery_delivered_count 48
+    edge_admin_self_updates_request_completed_targets_sum{targeting_type="nodes"} 70
+    edge_admin_self_updates_request_completed_triggered_sum{targeting_type="nodes"} 60
+    edge_admin_self_updates_request_completed_failed_sum{targeting_type="nodes"} 10
+    edge_admin_self_updates_request_completed_last_target_count 7
+    edge_admin_self_updates_request_completed_last_triggered_count 6
+    edge_admin_self_updates_request_completed_last_failed_count 1
+    edge_admin_commands_delivery_runs_total{result="ok"} 50
+    edge_admin_commands_delivery_last_delivered_count 48
     edge_admin_commands_execution_dropped_total 2
+    edge_admin_commands_expiration_runs_total 3
+    edge_admin_commands_expiration_expired_sum 9
+    edge_admin_commands_expiration_last_expired_count 2
+    edge_admin_commands_pruning_runs_total 4
+    edge_admin_commands_pruning_deleted_sum 12
+    edge_admin_commands_pruning_last_deleted_count 5
     edge_admin_gateway_connection_total{cluster="prod"} 10
     edge_admin_gateway_connection_total{cluster="staging"} 5
     edge_admin_gateway_active_count 3
@@ -68,10 +89,10 @@ defmodule EdgeAdmin.Metrics.Parsers.AdminMetricsParserTest do
     edge_admin_proxy_tunnel_closed_total{protocol="socks5",routing_mode="local",cluster="prod",reason="normal"} 45
     edge_admin_proxy_tunnel_closed_total{protocol="http",routing_mode="local",cluster="prod",reason="deadline"} 4
     edge_admin_proxy_tunnel_closed_total{protocol="http",routing_mode="local",cluster="prod",reason="drain_timeout"} 1
-    edge_admin_proxy_tunnel_bytes_up_total{protocol="http",routing_mode="local",cluster="prod"} 1048576
-    edge_admin_proxy_tunnel_bytes_up_total{protocol="socks5",routing_mode="local",cluster="prod"} 524288
-    edge_admin_proxy_tunnel_bytes_down_total{protocol="http",routing_mode="local",cluster="prod"} 4194304
-    edge_admin_proxy_tunnel_bytes_down_total{protocol="socks5",routing_mode="local",cluster="prod"} 2097152
+    edge_admin_proxy_tunnel_bytes_up_sum{protocol="http",routing_mode="local",cluster="prod"} 1048576
+    edge_admin_proxy_tunnel_bytes_up_sum{protocol="socks5",routing_mode="local",cluster="prod"} 524288
+    edge_admin_proxy_tunnel_bytes_down_sum{protocol="http",routing_mode="local",cluster="prod"} 4194304
+    edge_admin_proxy_tunnel_bytes_down_sum{protocol="socks5",routing_mode="local",cluster="prod"} 2097152
     edge_admin_event_broker_enqueue_total{event_type="node.registered"} 60
     edge_admin_event_broker_enqueue_total{event_type="execution.completed"} 40
     edge_admin_event_broker_publish_total{adapter="nats",event_type="node.registered",result="ok"} 58
@@ -80,8 +101,8 @@ defmodule EdgeAdmin.Metrics.Parsers.AdminMetricsParserTest do
     edge_admin_event_broker_publish_total{adapter="nats",event_type="execution.completed",result="error"} 1
     edge_admin_webhook_fan_out_total{event_type="edge.node.registered"} 50
     edge_admin_webhook_fan_out_total{event_type="edge.command_execution.completed"} 30
-    edge_admin_webhook_fan_out_matched_total{event_type="edge.node.registered"} 50
-    edge_admin_webhook_fan_out_matched_total{event_type="edge.command_execution.completed"} 30
+    edge_admin_webhook_fan_out_matched_sum{event_type="edge.node.registered"} 50
+    edge_admin_webhook_fan_out_matched_sum{event_type="edge.command_execution.completed"} 30
     edge_admin_webhook_delivery_total{event_type="edge.node.registered",result="ok"} 48
     edge_admin_webhook_delivery_total{event_type="edge.node.registered",result="recoverable"} 1
     edge_admin_webhook_delivery_total{event_type="edge.node.registered",result="terminal"} 1
@@ -183,19 +204,46 @@ defmodule EdgeAdmin.Metrics.Parsers.AdminMetricsParserTest do
     test "extracts the latest reconciliation and self-update summaries" do
       result = AdminMetricsParser.parse(sample_prometheus_text())
 
-      assert result["nodes_cluster_reconciliations_total"] == 6
-      assert result["nodes_cluster_reconciliation_errors"] == 0
-      assert result["nodes_cluster_reconciliation_nodes_added"] == 1
-      assert result["nodes_cluster_reconciliation_nodes_removed"] == 2
-      assert result["nodes_cluster_reconciliation_nodes_deleted"] == 3
+      assert result["nodes_cluster_reconciliation_runs_total"] == 6
+      assert result["nodes_cluster_reconciliation_errors_total"] == 8
+      assert result["nodes_cluster_reconciliation_last_errors"] == 0
+      assert result["nodes_cluster_reconciliation_nodes_added_total"] == 10
+      assert result["nodes_cluster_reconciliation_last_nodes_added"] == 1
+      assert result["nodes_cluster_reconciliation_nodes_removed_total"] == 20
+      assert result["nodes_cluster_reconciliation_last_nodes_removed"] == 2
+      assert result["nodes_cluster_reconciliation_nodes_deleted_total"] == 30
+      assert result["nodes_cluster_reconciliation_last_nodes_deleted"] == 3
+      assert result["nodes_cluster_reconciliation_aliases_cleaned_total"] == 40
+      assert result["nodes_cluster_reconciliation_last_aliases_cleaned"] == 4
+      assert result["nodes_cluster_reconciliation_aliases_repaired_total"] == 50
+      assert result["nodes_cluster_reconciliation_last_aliases_repaired"] == 5
+      assert result["nodes_cluster_reconciliation_ghost_aliases_cleaned_total"] == 60
+      assert result["nodes_cluster_reconciliation_last_ghost_aliases_cleaned"] == 6
       assert result["self_updates_completed_total"] == 4
-      assert result["self_updates_triggered"] == 6
-      assert result["self_updates_failed"] == 1
+      assert result["self_updates_targets_total"] == 70
+      assert result["self_updates_triggered_total"] == 60
+      assert result["self_updates_failed_total"] == 10
+      assert result["self_updates_last_target_count"] == 7
+      assert result["self_updates_last_triggered_count"] == 6
+      assert result["self_updates_last_failed_count"] == 1
     end
 
     test "extracts dropped command executions" do
       result = AdminMetricsParser.parse(sample_prometheus_text())
       assert result["commands_execution_dropped_total"] == 2
+    end
+
+    test "extracts command workflow run and item totals" do
+      result = AdminMetricsParser.parse(sample_prometheus_text())
+
+      assert result["commands_delivery_runs_total"] == 50
+      assert result["commands_delivery_last_delivered_count"] == 48
+      assert result["commands_expiration_runs_total"] == 3
+      assert result["commands_expired_total"] == 9
+      assert result["commands_expiration_last_expired_count"] == 2
+      assert result["commands_pruning_runs_total"] == 4
+      assert result["commands_pruned_total"] == 12
+      assert result["commands_pruning_last_deleted_count"] == 5
     end
 
     test "sums gateway_scrapes_total across types" do
@@ -436,6 +484,12 @@ defmodule EdgeAdmin.Metrics.Parsers.AdminMetricsParserTest do
       assert metrics.metadata.orphaned_clusters == 2
       assert metrics.metadata.assigned_clusters == 5
       assert metrics.metadata.recomputations_total == 4
+    end
+
+    test "discovery connected peer count is preserved" do
+      raw = AdminMetricsParser.parse(sample_prometheus_text())
+      metrics = AdminMetrics.from_raw_metrics(raw)
+      assert metrics.discovery.connected_peers == 2
     end
 
     test "gateways active_count and totals are correct" do

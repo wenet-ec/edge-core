@@ -49,6 +49,7 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
         [:edge_admin, :membership, :step, :total],
         event_name: [:edge_admin, :membership, :step],
         description: "Total number of membership steps executed",
+        measurement: &event_count/1,
         tags: [:step, :status],
         tag_values: &get_membership_step_tags/1
       ),
@@ -65,6 +66,7 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
         [:edge_admin, :membership, :complete, :total],
         event_name: [:edge_admin, :membership, :complete],
         description: "Total number of completed membership sequences",
+        measurement: &event_count/1,
         tags: [:status],
         tag_values: &get_status_tag/1
       ),
@@ -86,12 +88,19 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
         [:edge_admin, :discovery, :scan_complete, :total],
         event_name: [:edge_admin, :discovery, :scan_complete],
         description: "Total number of peer discovery scans completed",
+        measurement: &event_count/1
+      ),
+      last_value(
+        [:edge_admin, :discovery, :connected_peers],
+        event_name: [:edge_admin, :discovery, :scan_complete],
+        description: "Number of connected Erlang peer admins after the most recent discovery scan",
         measurement: :connected_peers
       ),
       counter(
         [:edge_admin, :discovery, :dns_resolution, :total],
         event_name: [:edge_admin, :discovery, :dns_resolution],
         description: "Total DNS resolution attempts during peer discovery",
+        measurement: &event_count/1,
         tags: [:result],
         tag_values: &get_result_tag/1
       ),
@@ -99,6 +108,7 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
         [:edge_admin, :discovery, :peer_connection, :total],
         event_name: [:edge_admin, :discovery, :peer_connection],
         description: "Total Erlang peer connection attempts",
+        measurement: &event_count/1,
         tags: [:result],
         tag_values: &get_result_tag/1
       )
@@ -111,7 +121,7 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
         [:edge_admin, :metadata, :recomputation, :total],
         event_name: [:edge_admin, :metadata, :recomputation],
         description: "Total number of metadata recomputations",
-        measurement: :count,
+        measurement: &event_count/1,
         tags: [:trigger],
         tag_values: &get_trigger_tag/1
       ),
@@ -151,6 +161,7 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
         [:edge_admin, :proxy, :connection, :total],
         event_name: [:edge_admin, :proxy, :connection],
         description: "Total proxy connections by protocol, result, routing mode, proxy mode, and cluster",
+        measurement: &event_count/1,
         tags: [:protocol, :result, :routing_mode, :proxy_mode, :cluster],
         tag_values: &get_proxy_connection_tags/1
       ),
@@ -158,6 +169,7 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
         [:edge_admin, :proxy, :auth_failure, :total],
         event_name: [:edge_admin, :proxy, :auth_failure],
         description: "Total proxy authentication failures by protocol",
+        measurement: &event_count/1,
         tags: [:protocol],
         tag_values: &get_protocol_tag/1
       ),
@@ -178,12 +190,12 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
         event_name: [:edge_admin, :proxy, :tunnel, :closed],
         description:
           "Tunnels that finished forwarding, tagged by protocol, routing mode, cluster, and close reason (normal | deadline | drain_timeout)",
-        measurement: :duration_ms,
+        measurement: &event_count/1,
         tags: [:protocol, :routing_mode, :cluster, :reason],
         tag_values: &get_proxy_tunnel_close_tags/1
       ),
       sum(
-        [:edge_admin, :proxy, :tunnel, :bytes, :up, :total],
+        [:edge_admin, :proxy, :tunnel, :bytes, :up],
         event_name: [:edge_admin, :proxy, :tunnel, :closed],
         description: "Cumulative bytes forwarded client→target, tagged by protocol, routing mode, cluster",
         measurement: :bytes_up,
@@ -191,7 +203,7 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
         tag_values: &get_proxy_tunnel_bytes_tags/1
       ),
       sum(
-        [:edge_admin, :proxy, :tunnel, :bytes, :down, :total],
+        [:edge_admin, :proxy, :tunnel, :bytes, :down],
         event_name: [:edge_admin, :proxy, :tunnel, :closed],
         description: "Cumulative bytes forwarded target→client, tagged by protocol, routing mode, cluster",
         measurement: :bytes_down,
@@ -218,6 +230,7 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
         [:edge_admin, :nodes, :health_check, :total],
         event_name: [:edge_admin, :nodes, :health_check],
         description: "Total number of individual node health checks",
+        measurement: &event_count/1,
         tags: [:result],
         tag_values: &get_result_tag/1
       ),
@@ -253,7 +266,7 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
         event_name: [:edge_admin, :nodes, :fallback_health_report],
         description:
           "HTTP fallback health reports received from agents; each proves agent-to-admin reachability but not VPN reachability",
-        measurement: :count,
+        measurement: &event_count/1,
         tags: [:reported_status],
         tag_values: &get_fallback_health_report_tags/1
       )
@@ -266,6 +279,7 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
         [:edge_admin, :commands, :execution, :created, :total],
         event_name: [:edge_admin, :commands, :execution, :created],
         description: "Total number of command executions created",
+        measurement: &event_count/1,
         tags: [:targeting_type],
         tag_values: &get_targeting_type_tag/1
       ),
@@ -273,6 +287,7 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
         [:edge_admin, :commands, :execution, :delivered, :total],
         event_name: [:edge_admin, :commands, :execution, :delivered],
         description: "Total number of individual execution delivery attempts to agents",
+        measurement: &event_count/1,
         tags: [:result],
         tag_values: &get_result_tag/1
       ),
@@ -280,7 +295,7 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
         [:edge_admin, :commands, :execution, :completed, :total],
         event_name: [:edge_admin, :commands, :execution, :completed],
         description: "Total number of command executions completed (result reported back by agent)",
-        measurement: :duration,
+        measurement: &event_count/1,
         tags: [:exit_code_category],
         tag_values: &get_exit_code_category_tag/1
       ),
@@ -297,28 +312,40 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
         [:edge_admin, :commands, :execution, :dropped, :total],
         event_name: [:edge_admin, :commands, :execution, :dropped],
         description: "Total executions dropped because their target node was deleted",
-        measurement: :count
+        measurement: &event_count/1
       ),
       counter(
-        [:edge_admin, :commands, :expiration, :total],
+        [:edge_admin, :commands, :expiration, :runs, :total],
         event_name: [:edge_admin, :commands, :expiration],
         description: "Total number of stale execution expiration runs",
+        measurement: &event_count/1
+      ),
+      sum(
+        [:edge_admin, :commands, :expiration, :expired],
+        event_name: [:edge_admin, :commands, :expiration],
+        description: "Cumulative executions expired by expiration runs",
         measurement: :expired_count
       ),
       last_value(
-        [:edge_admin, :commands, :expiration, :expired_count],
+        [:edge_admin, :commands, :expiration, :last_expired_count],
         event_name: [:edge_admin, :commands, :expiration],
         description: "Number of executions expired in last expiration run",
         measurement: :expired_count
       ),
       counter(
-        [:edge_admin, :commands, :pruning, :total],
+        [:edge_admin, :commands, :pruning, :runs, :total],
         event_name: [:edge_admin, :commands, :pruning],
         description: "Total number of execution pruning runs (delete old finalised rows)",
+        measurement: &event_count/1
+      ),
+      sum(
+        [:edge_admin, :commands, :pruning, :deleted],
+        event_name: [:edge_admin, :commands, :pruning],
+        description: "Cumulative command execution rows deleted by pruning runs",
         measurement: :deleted_count
       ),
       last_value(
-        [:edge_admin, :commands, :pruning, :deleted_count],
+        [:edge_admin, :commands, :pruning, :last_deleted_count],
         event_name: [:edge_admin, :commands, :pruning],
         description: "Number of executions deleted in last pruning run",
         measurement: :deleted_count
@@ -339,14 +366,14 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
         [:edge_admin, :quantum, :job, :executed, :total],
         event_name: [:quantum, :job, :stop],
         description: "Total number of Quantum jobs executed",
-        measurement: :duration,
+        measurement: &event_count/1,
         tags: [:job_name, :result],
         tag_values: &get_quantum_job_tags/1
       ),
       distribution(
         [:edge_admin, :quantum, :job, :duration, :milliseconds],
         event_name: [:quantum, :job, :stop],
-        description: "Duration of Quantum job executions in native time units",
+        description: "Duration of Quantum job executions in milliseconds",
         measurement: :duration,
         unit: {:native, :millisecond},
         tags: [:job_name, :result],
@@ -357,7 +384,7 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
         [:edge_admin, :quantum, :job, :exception, :total],
         event_name: [:quantum, :job, :exception],
         description: "Total number of Quantum job exceptions",
-        measurement: :duration,
+        measurement: &event_count/1,
         tags: [:job_name, :kind],
         tag_values: &get_quantum_exception_tags/1
       )
@@ -370,7 +397,7 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
         [:edge_admin, :vpn, :zombie_admin_cleanup, :total],
         event_name: [:edge_admin, :vpn, :zombie_admin_cleanup],
         description: "Total zombie admin cleanup runs",
-        measurement: :deleted_count,
+        measurement: &event_count/1,
         tags: [:result],
         tag_values: &get_result_tag/1
       ),
@@ -381,15 +408,15 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
         measurement: :deleted_count
       ),
       counter(
-        [:edge_admin, :commands, :delivery, :total],
+        [:edge_admin, :commands, :delivery, :runs, :total],
         event_name: [:edge_admin, :commands, :delivery],
         description: "Total execution delivery batch runs",
-        measurement: :delivered_count,
+        measurement: &event_count/1,
         tags: [:result],
         tag_values: &get_result_tag/1
       ),
       last_value(
-        [:edge_admin, :commands, :delivery, :delivered_count],
+        [:edge_admin, :commands, :delivery, :last_delivered_count],
         event_name: [:edge_admin, :commands, :delivery],
         description: "Number of executions queued for delivery in last batch run",
         measurement: :delivered_count
@@ -403,7 +430,7 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
         [:edge_admin, :gateway, :connection, :total],
         event_name: [:edge_admin, :gateway, :connection],
         description: "Total gateway connection events (connected/disconnected per cluster)",
-        measurement: :count,
+        measurement: &event_count/1,
         tags: [:cluster, :event],
         tag_values: &get_gateway_tags/1
       ),
@@ -417,7 +444,7 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
         [:edge_admin, :gateway, :scrape, :total],
         event_name: [:edge_admin, :gateway, :scrape],
         description: "Total gateway metrics scrape operations",
-        measurement: :count,
+        measurement: &event_count/1,
         tags: [:cluster, :metrics_type, :result],
         tag_values: &get_gateway_scrape_tags/1
       ),
@@ -425,7 +452,7 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
         [:edge_admin, :gateway, :diagnostics, :total],
         event_name: [:edge_admin, :gateway, :diagnostics],
         description: "Total gateway diagnostic operations",
-        measurement: :count,
+        measurement: &event_count/1,
         tags: [:cluster, :result],
         tag_values: &get_gateway_diagnostics_tags/1
       )
@@ -438,7 +465,7 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
         [:edge_admin, :ssh, :verification, :total],
         event_name: [:edge_admin, :ssh, :verification],
         description: "Total SSH credential verification attempts",
-        measurement: :count,
+        measurement: &event_count/1,
         tags: [:result, :auth_method],
         tag_values: &get_ssh_verification_tags/1
       )
@@ -448,10 +475,10 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
   defp reconciliation_metrics do
     [
       counter(
-        [:edge_admin, :nodes, :cluster_reconciliation, :total],
+        [:edge_admin, :nodes, :cluster_reconciliation, :runs, :total],
         event_name: [:edge_admin, :nodes, :cluster_reconciliation],
         description: "Total cluster reconciliation runs",
-        measurement: :duration,
+        measurement: &event_count/1,
         tags: [:cluster, :result],
         tag_values: &get_reconciliation_tags/1
       ),
@@ -465,28 +492,102 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
         reporter_options: [buckets: [100, 500, 1_000, 5_000, 10_000, 30_000, 60_000]]
       ),
       last_value(
-        [:edge_admin, :nodes, :cluster_reconciliation, :nodes_added],
+        [:edge_admin, :nodes, :cluster_reconciliation, :last_nodes_added],
         event_name: [:edge_admin, :nodes, :cluster_reconciliation],
         description: "Nodes added to Edge VPN in last reconciliation run",
         measurement: :nodes_added
       ),
+      sum(
+        [:edge_admin, :nodes, :cluster_reconciliation, :nodes_added],
+        event_name: [:edge_admin, :nodes, :cluster_reconciliation],
+        description: "Cumulative nodes added to Edge VPN by reconciliation runs",
+        measurement: :nodes_added,
+        tags: [:cluster, :result],
+        tag_values: &get_reconciliation_tags/1
+      ),
       last_value(
-        [:edge_admin, :nodes, :cluster_reconciliation, :nodes_removed],
+        [:edge_admin, :nodes, :cluster_reconciliation, :last_nodes_removed],
         event_name: [:edge_admin, :nodes, :cluster_reconciliation],
         description: "Nodes removed from Edge VPN in last reconciliation run",
         measurement: :nodes_removed
       ),
+      sum(
+        [:edge_admin, :nodes, :cluster_reconciliation, :nodes_removed],
+        event_name: [:edge_admin, :nodes, :cluster_reconciliation],
+        description: "Cumulative nodes removed from Edge VPN by reconciliation runs",
+        measurement: :nodes_removed,
+        tags: [:cluster, :result],
+        tag_values: &get_reconciliation_tags/1
+      ),
       last_value(
-        [:edge_admin, :nodes, :cluster_reconciliation, :nodes_deleted],
+        [:edge_admin, :nodes, :cluster_reconciliation, :last_nodes_deleted],
         event_name: [:edge_admin, :nodes, :cluster_reconciliation],
         description: "Orphaned DB node records deleted in last reconciliation run",
         measurement: :nodes_deleted
       ),
+      sum(
+        [:edge_admin, :nodes, :cluster_reconciliation, :nodes_deleted],
+        event_name: [:edge_admin, :nodes, :cluster_reconciliation],
+        description: "Cumulative orphaned DB node records deleted by reconciliation runs",
+        measurement: :nodes_deleted,
+        tags: [:cluster, :result],
+        tag_values: &get_reconciliation_tags/1
+      ),
       last_value(
-        [:edge_admin, :nodes, :cluster_reconciliation, :errors],
+        [:edge_admin, :nodes, :cluster_reconciliation, :last_aliases_cleaned],
+        event_name: [:edge_admin, :nodes, :cluster_reconciliation],
+        description: "Alias records removed in last reconciliation run",
+        measurement: :aliases_cleaned
+      ),
+      sum(
+        [:edge_admin, :nodes, :cluster_reconciliation, :aliases_cleaned],
+        event_name: [:edge_admin, :nodes, :cluster_reconciliation],
+        description: "Cumulative alias records removed by reconciliation runs",
+        measurement: :aliases_cleaned,
+        tags: [:cluster, :result],
+        tag_values: &get_reconciliation_tags/1
+      ),
+      last_value(
+        [:edge_admin, :nodes, :cluster_reconciliation, :last_aliases_repaired],
+        event_name: [:edge_admin, :nodes, :cluster_reconciliation],
+        description: "Alias records repaired in last reconciliation run",
+        measurement: :aliases_repaired
+      ),
+      sum(
+        [:edge_admin, :nodes, :cluster_reconciliation, :aliases_repaired],
+        event_name: [:edge_admin, :nodes, :cluster_reconciliation],
+        description: "Cumulative alias records repaired by reconciliation runs",
+        measurement: :aliases_repaired,
+        tags: [:cluster, :result],
+        tag_values: &get_reconciliation_tags/1
+      ),
+      last_value(
+        [:edge_admin, :nodes, :cluster_reconciliation, :last_ghost_aliases_cleaned],
+        event_name: [:edge_admin, :nodes, :cluster_reconciliation],
+        description: "Ghost VPN aliases removed in last reconciliation run",
+        measurement: :ghost_aliases_cleaned
+      ),
+      sum(
+        [:edge_admin, :nodes, :cluster_reconciliation, :ghost_aliases_cleaned],
+        event_name: [:edge_admin, :nodes, :cluster_reconciliation],
+        description: "Cumulative ghost VPN aliases removed by reconciliation runs",
+        measurement: :ghost_aliases_cleaned,
+        tags: [:cluster, :result],
+        tag_values: &get_reconciliation_tags/1
+      ),
+      last_value(
+        [:edge_admin, :nodes, :cluster_reconciliation, :last_errors],
         event_name: [:edge_admin, :nodes, :cluster_reconciliation],
         description: "Number of errors in last reconciliation run",
         measurement: :errors
+      ),
+      sum(
+        [:edge_admin, :nodes, :cluster_reconciliation, :errors],
+        event_name: [:edge_admin, :nodes, :cluster_reconciliation],
+        description: "Cumulative reconciliation errors",
+        measurement: :errors,
+        tags: [:cluster, :result],
+        tag_values: &get_reconciliation_tags/1
       )
     ]
   end
@@ -497,20 +598,51 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
         [:edge_admin, :self_updates, :request_completed, :total],
         event_name: [:edge_admin, :self_updates, :request_completed],
         description: "Total self-update requests processed",
+        measurement: &event_count/1,
         tags: [:targeting_type],
         tag_values: &get_targeting_type_tag/1
       ),
       last_value(
-        [:edge_admin, :self_updates, :request_completed, :triggered],
+        [:edge_admin, :self_updates, :request_completed, :last_target_count],
+        event_name: [:edge_admin, :self_updates, :request_completed],
+        description: "Nodes targeted by the last self-update request",
+        measurement: :total
+      ),
+      sum(
+        [:edge_admin, :self_updates, :request_completed, :targets],
+        event_name: [:edge_admin, :self_updates, :request_completed],
+        description: "Cumulative nodes targeted by completed self-update requests",
+        measurement: :total,
+        tags: [:targeting_type],
+        tag_values: &get_targeting_type_tag/1
+      ),
+      last_value(
+        [:edge_admin, :self_updates, :request_completed, :last_triggered_count],
         event_name: [:edge_admin, :self_updates, :request_completed],
         description: "Nodes successfully triggered in last self-update request",
         measurement: :triggered
       ),
+      sum(
+        [:edge_admin, :self_updates, :request_completed, :triggered],
+        event_name: [:edge_admin, :self_updates, :request_completed],
+        description: "Cumulative nodes successfully triggered by completed self-update requests",
+        measurement: :triggered,
+        tags: [:targeting_type],
+        tag_values: &get_targeting_type_tag/1
+      ),
       last_value(
-        [:edge_admin, :self_updates, :request_completed, :failed],
+        [:edge_admin, :self_updates, :request_completed, :last_failed_count],
         event_name: [:edge_admin, :self_updates, :request_completed],
         description: "Nodes that failed to trigger in last self-update request",
         measurement: :failed
+      ),
+      sum(
+        [:edge_admin, :self_updates, :request_completed, :failed],
+        event_name: [:edge_admin, :self_updates, :request_completed],
+        description: "Cumulative nodes that failed during completed self-update requests",
+        measurement: :failed,
+        tags: [:targeting_type],
+        tag_values: &get_targeting_type_tag/1
       )
     ]
   end
@@ -521,7 +653,7 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
         [:edge_admin, :event_broker, :enqueue, :total],
         event_name: [:edge_admin, :event_broker, :enqueue],
         description: "Total events enqueued for async broker delivery (before broker publish attempt)",
-        measurement: :count,
+        measurement: &event_count/1,
         tags: [:event_type],
         tag_values: &get_event_broker_enqueue_tags/1
       ),
@@ -529,7 +661,7 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
         [:edge_admin, :event_broker, :publish, :total],
         event_name: [:edge_admin, :event_broker, :publish],
         description: "Total broker publish attempts, tagged by adapter, event type, and result (ok | error)",
-        measurement: :duration,
+        measurement: &event_count/1,
         tags: [:adapter, :event_type, :result],
         tag_values: &get_event_broker_publish_tags/1
       ),
@@ -552,12 +684,12 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
         [:edge_admin, :webhook, :fan_out, :total],
         event_name: [:edge_admin, :webhook, :fan_out],
         description: "Total fan-out invocations from the publish path.",
-        measurement: :count,
+        measurement: &event_count/1,
         tags: [:event_type],
         tag_values: &get_webhook_fan_out_tags/1
       ),
       sum(
-        [:edge_admin, :webhook, :fan_out, :matched, :total],
+        [:edge_admin, :webhook, :fan_out, :matched],
         event_name: [:edge_admin, :webhook, :fan_out],
         description: "Total matching webhooks enqueued from the publish path.",
         measurement: :count,
@@ -568,7 +700,7 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
         [:edge_admin, :webhook, :delivery, :total],
         event_name: [:edge_admin, :webhook, :delivery],
         description: "Total webhook delivery attempts, tagged by event type and result (ok | recoverable | terminal)",
-        measurement: :duration,
+        measurement: &event_count/1,
         tags: [:event_type, :result],
         tag_values: &get_webhook_delivery_tags/1
       ),
@@ -585,7 +717,7 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
     ]
   end
 
-  # Tag extraction functions
+  defp event_count(_measurements), do: 1
 
   defp get_membership_step_tags(%{step: step, status: status}) do
     %{step: to_string(step), status: to_string(status)}

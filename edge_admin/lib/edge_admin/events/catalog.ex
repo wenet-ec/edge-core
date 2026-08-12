@@ -45,9 +45,7 @@ defmodule EdgeAdmin.Events.Catalog do
   alias EdgeAdmin.SelfUpdates.Schemas.SelfUpdateRequest
   alias EdgeAdmin.Ssh.Schemas.SshUsername
 
-  # ---------------------------------------------------------------------------
   # Enrollment key event structs
-  # ---------------------------------------------------------------------------
 
   defmodule EnrollmentKeyVerified do
     @moduledoc false
@@ -69,9 +67,7 @@ defmodule EdgeAdmin.Events.Catalog do
           }
   end
 
-  # ---------------------------------------------------------------------------
   # Node event structs
-  # ---------------------------------------------------------------------------
 
   defmodule NodeRegistered do
     @moduledoc false
@@ -108,9 +104,7 @@ defmodule EdgeAdmin.Events.Catalog do
     @type t :: %__MODULE__{node: Node.t(), self_update_request_id: String.t()}
   end
 
-  # ---------------------------------------------------------------------------
   # Command execution event structs
-  # ---------------------------------------------------------------------------
 
   defmodule CommandExecutionCreated do
     @moduledoc false
@@ -196,9 +190,7 @@ defmodule EdgeAdmin.Events.Catalog do
           }
   end
 
-  # ---------------------------------------------------------------------------
   # SSH event structs
-  # ---------------------------------------------------------------------------
 
   defmodule SshUsernameVerified do
     @moduledoc false
@@ -217,9 +209,7 @@ defmodule EdgeAdmin.Events.Catalog do
           }
   end
 
-  # ---------------------------------------------------------------------------
   # Self-update event structs
-  # ---------------------------------------------------------------------------
 
   defmodule SelfUpdateCompleted do
     @moduledoc false
@@ -228,9 +218,7 @@ defmodule EdgeAdmin.Events.Catalog do
     @type t :: %__MODULE__{request: SelfUpdateRequest.t()}
   end
 
-  # ---------------------------------------------------------------------------
   # Core operational event structs
-  # ---------------------------------------------------------------------------
 
   defmodule CoreTest do
     @moduledoc false
@@ -243,12 +231,9 @@ defmodule EdgeAdmin.Events.Catalog do
           }
   end
 
-  # ---------------------------------------------------------------------------
-  # Registry — one entry per event. Order is the catalog's canonical order.
-  #
-  # Sample data uses string keys / wire-format values: this is the shape an
-  # external subscriber sees in `data` after `to_data/1` runs.
-  # ---------------------------------------------------------------------------
+  # One entry per event, in the catalog's canonical order. Sample data uses
+  # string keys / wire-format values: this is the shape an external subscriber
+  # sees in `data` after `to_data/1` runs.
 
   @node_base_data %{
     "node_id" => "node-abc123",
@@ -474,10 +459,6 @@ defmodule EdgeAdmin.Events.Catalog do
   @descriptions Map.new(@events, &{&1.type, &1.description})
   @data_examples Map.new(@events, &{&1.type, &1.data_example})
 
-  # ---------------------------------------------------------------------------
-  # Public API — derived from @events
-  # ---------------------------------------------------------------------------
-
   @doc """
   Returns every event type currently in the catalog as a list of strings.
 
@@ -598,9 +579,7 @@ defmodule EdgeAdmin.Events.Catalog do
     }
   end
 
-  # ---------------------------------------------------------------------------
   # Data builders — full object snapshots, no internal/secret fields
-  # ---------------------------------------------------------------------------
 
   # The `key` blob is intentionally excluded from the event — it's a credential.
   # On `:invalid_key` the enrollment_key is nil (no DB row matched); the other

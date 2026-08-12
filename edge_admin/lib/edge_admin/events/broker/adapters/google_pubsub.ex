@@ -101,10 +101,6 @@ defmodule EdgeAdmin.Events.Broker.Adapters.GooglePubsub do
 
   @goth_name __MODULE__.Goth
 
-  # ---------------------------------------------------------------------------
-  # Supervision
-  # ---------------------------------------------------------------------------
-
   def child_spec(_opts) do
     %{
       id: __MODULE__,
@@ -125,10 +121,6 @@ defmodule EdgeAdmin.Events.Broker.Adapters.GooglePubsub do
   """
   def goth_name, do: @goth_name
 
-  # ---------------------------------------------------------------------------
-  # Adapter callbacks
-  # ---------------------------------------------------------------------------
-
   @impl Adapter
   def healthy? do
     case GenServer.call(__MODULE__, :healthy?) do
@@ -145,10 +137,6 @@ defmodule EdgeAdmin.Events.Broker.Adapters.GooglePubsub do
   rescue
     _ -> {:error, "Google Pub/Sub adapter not started"}
   end
-
-  # ---------------------------------------------------------------------------
-  # GenServer
-  # ---------------------------------------------------------------------------
 
   @impl GenServer
   def init([]) do
@@ -210,10 +198,6 @@ defmodule EdgeAdmin.Events.Broker.Adapters.GooglePubsub do
       {:error, reason} -> {:reply, {:error, inspect(reason)}, state}
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # Helpers
-  # ---------------------------------------------------------------------------
 
   defp topic_url(state, topic_id) do
     "#{state.base_url}/v1/projects/#{state.project}/topics/#{state.topic_id_prefix}#{topic_id}"

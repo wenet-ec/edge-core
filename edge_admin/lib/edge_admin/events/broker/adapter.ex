@@ -58,10 +58,6 @@ defmodule EdgeAdmin.Events.Broker.Adapter do
   """
   @callback healthy?() :: :ok | {:error, String.t()}
 
-  # ---------------------------------------------------------------------------
-  # Registry
-  # ---------------------------------------------------------------------------
-
   @adapters [
     %{name: :nats, module: EdgeAdmin.Events.Broker.Adapters.Nats, wire_strings: ~w(nats)},
     %{name: :kafka, module: EdgeAdmin.Events.Broker.Adapters.Kafka, wire_strings: ~w(kafka)},

@@ -13,7 +13,7 @@ defmodule EdgeAdmin.Events.Broker.Adapters.Mqtt do
   nothing to lose by speaking 3.1.1 on the way out. Topic = event type with
   `.` rewritten to `/`
   (e.g. `edge/node/registered`) so MQTT segment-wildcards work naturally —
-  subscribers can use `edge/#`, `edge/node/+`, `edge/execution/completed`, etc.
+  subscribers can use `edge/#`, `edge/node/+`, `edge/command_execution/completed`, etc.
 
   Pub/sub semantics — durability, retention, and replay are the broker's
   concern. MQTT QoS controls only the publisher↔broker↔subscriber delivery
@@ -74,10 +74,6 @@ defmodule EdgeAdmin.Events.Broker.Adapters.Mqtt do
 
   require Logger
 
-  # ---------------------------------------------------------------------------
-  # Supervision
-  # ---------------------------------------------------------------------------
-
   def child_spec(_opts) do
     %{
       id: __MODULE__,
@@ -90,10 +86,6 @@ defmodule EdgeAdmin.Events.Broker.Adapters.Mqtt do
   def start_link do
     GenServer.start_link(__MODULE__, [], name: __MODULE__)
   end
-
-  # ---------------------------------------------------------------------------
-  # Adapter callbacks
-  # ---------------------------------------------------------------------------
 
   @impl Adapter
   def healthy? do
@@ -111,10 +103,6 @@ defmodule EdgeAdmin.Events.Broker.Adapters.Mqtt do
   rescue
     _ -> {:error, "MQTT adapter not started"}
   end
-
-  # ---------------------------------------------------------------------------
-  # GenServer — connection management
-  # ---------------------------------------------------------------------------
 
   @impl GenServer
   def init([]) do
@@ -180,10 +168,6 @@ defmodule EdgeAdmin.Events.Broker.Adapters.Mqtt do
   end
 
   def handle_info(_msg, state), do: {:noreply, state}
-
-  # ---------------------------------------------------------------------------
-  # Helpers
-  # ---------------------------------------------------------------------------
 
   defp do_connect(_state) do
     config = Application.get_env(:edge_admin, :event_broker_mqtt, [])

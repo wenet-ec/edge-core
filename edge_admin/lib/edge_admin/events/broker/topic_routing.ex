@@ -11,7 +11,13 @@ defmodule EdgeAdmin.Events.Broker.TopicRouting do
   def topic_for("edge.ssh_username." <> _), do: "edge-ssh-events"
   def topic_for("edge.core." <> _), do: "edge-core-events"
 
-  @doc "Returns the Kafka partition key selected from an event envelope."
+  @doc """
+  Returns the Kafka partition key selected from an event envelope.
+
+  Kafka uses this only for routing and in-partition ordering. Prefer the ID
+  that defines the event lifecycle: command executions before node IDs, then
+  self-update requests, enrollment keys, and finally node IDs.
+  """
   @spec partition_key_for(map()) :: String.t()
   def partition_key_for(%{"data" => %{"command_execution_id" => id}}) when is_binary(id), do: id
   def partition_key_for(%{"data" => %{"self_update_request_id" => id}}) when is_binary(id), do: id

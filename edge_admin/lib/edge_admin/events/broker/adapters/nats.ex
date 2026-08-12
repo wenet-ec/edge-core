@@ -57,10 +57,6 @@ defmodule EdgeAdmin.Events.Broker.Adapters.Nats do
     %JsStream{name: "EDGE_CORE_EVENTS", subjects: ["edge.core.>"], storage: :file}
   ]
 
-  # ---------------------------------------------------------------------------
-  # Supervision
-  # ---------------------------------------------------------------------------
-
   def child_spec(_opts) do
     %{
       id: __MODULE__,
@@ -95,10 +91,6 @@ defmodule EdgeAdmin.Events.Broker.Adapters.Nats do
      }}
   end
 
-  # ---------------------------------------------------------------------------
-  # Adapter callbacks
-  # ---------------------------------------------------------------------------
-
   @impl Adapter
   def healthy? do
     Gnat.server_info(@conn)
@@ -112,10 +104,6 @@ defmodule EdgeAdmin.Events.Broker.Adapters.Nats do
     payload = JSON.encode!(envelope)
     Gnat.pub(@conn, envelope["type"], payload)
   end
-
-  # ---------------------------------------------------------------------------
-  # GenServer — startup, JetStream stream provisioning
-  # ---------------------------------------------------------------------------
 
   @impl GenServer
   def init([]) do
@@ -133,10 +121,6 @@ defmodule EdgeAdmin.Events.Broker.Adapters.Nats do
 
   @impl GenServer
   def handle_info(:ensure_streams, state), do: do_ensure_streams(state)
-
-  # ---------------------------------------------------------------------------
-  # Private helpers
-  # ---------------------------------------------------------------------------
 
   defp do_ensure_streams(state) do
     if connection_ready?() do

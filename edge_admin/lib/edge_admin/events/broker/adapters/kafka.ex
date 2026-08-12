@@ -51,10 +51,6 @@ defmodule EdgeAdmin.Events.Broker.Adapters.Kafka do
     "edge-core-events"
   ]
 
-  # ---------------------------------------------------------------------------
-  # Supervision
-  # ---------------------------------------------------------------------------
-
   def child_spec(_opts) do
     %{
       id: __MODULE__,
@@ -67,10 +63,6 @@ defmodule EdgeAdmin.Events.Broker.Adapters.Kafka do
   def start_link do
     GenServer.start_link(__MODULE__, [], name: __MODULE__)
   end
-
-  # ---------------------------------------------------------------------------
-  # Adapter callback
-  # ---------------------------------------------------------------------------
 
   @impl Adapter
   def healthy? do
@@ -93,10 +85,6 @@ defmodule EdgeAdmin.Events.Broker.Adapters.Kafka do
       {:error, reason} -> {:error, reason}
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # GenServer — startup, topic + producer initialisation
-  # ---------------------------------------------------------------------------
 
   @impl GenServer
   def init([]) do
@@ -142,10 +130,6 @@ defmodule EdgeAdmin.Events.Broker.Adapters.Kafka do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # Private helpers
-  # ---------------------------------------------------------------------------
-
   # Resolve all broker hostnames to IP tuples before passing to brod.
   # Returns {:ok, [{ip_tuple, port}]} or {:error, reason} on first failure.
   defp resolve_brokers(brokers) do
@@ -173,22 +157,4 @@ defmodule EdgeAdmin.Events.Broker.Adapters.Kafka do
       end
     end)
   end
-
-  # Partition key — Kafka uses it for two things: (1) co-locating events with
-  # the same key onto the same partition (in-partition ordering is guaranteed,
-  # cross-partition is not), and (2) hash-distributing across partitions for
-  # parallel consumption. It is NOT a dedup key, NOT a uniqueness constraint —
-  # purely routing.
-  #
-  # Choice rationale: pick whichever id consumers care about ordering by. For
-  # executions we partition by `command_execution_id` so a single execution's
-  # lifecycle (created → sent → completed/expired/cancelled → pruned) stays on
-  # one partition. We do NOT partition by node_id (which would give per-node
-  # command timelines but lose per-execution ordering) or command_id (which
-  # would group fan-out under one partition and bottleneck large rollouts).
-  #
-  # Order of clauses matters since execution events also carry node_id —
-  # command_execution_id must match first. enrollment_key events carry no
-  # node_id; on `:invalid_key` even enrollment_key_id is null and we fall
-  # through to the empty-string default.
 end

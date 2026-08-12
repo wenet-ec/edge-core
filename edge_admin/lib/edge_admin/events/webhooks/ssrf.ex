@@ -54,10 +54,6 @@ defmodule EdgeAdmin.Events.Webhooks.Ssrf do
     "metadata.tencentyun.com"
   ]
 
-  # ---------------------------------------------------------------------------
-  # Public API
-  # ---------------------------------------------------------------------------
-
   @doc """
   Validates a URL string. Returns `:ok` or `{:error, reason_atom_or_tuple}`.
 
@@ -114,10 +110,6 @@ defmodule EdgeAdmin.Events.Webhooks.Ssrf do
   end
 
   def format_error(other), do: inspect(other)
-
-  # ---------------------------------------------------------------------------
-  # Internal
-  # ---------------------------------------------------------------------------
 
   defp check_scheme(scheme) when scheme in ["http", "https"], do: :ok
   defp check_scheme(_), do: {:error, :invalid_url}

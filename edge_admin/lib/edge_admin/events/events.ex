@@ -5,8 +5,8 @@ defmodule EdgeAdmin.Events do
 
   Business logic constructs a typed event struct from `EdgeAdmin.Events.Catalog`
   and calls `publish/1`. Events are delivered to every configured delivery
-  channel — today that's the broker (`EdgeAdmin.Events.Broker`); webhooks and
-  other channels plug in here as they're added.
+  channel: broker delivery (`EdgeAdmin.Events.Broker`) and configured
+  webhooks (`EdgeAdmin.Events.Webhooks`).
 
   Publishing is fire-and-forget from the call site's perspective: errors are
   logged inside each channel but never returned to the caller.
@@ -24,7 +24,7 @@ defmodule EdgeAdmin.Events do
         "specversion"     => "1.0",
         "id"              => uuid,
         "source"          => "https://github.com/wenet-ec/edge-core",
-        "type"            => "node.registered",
+        "type"            => "edge.node.registered",
         "time"            => iso8601,
         "datacontenttype" => "application/json",
         "corename"        => "prod-us",

@@ -67,10 +67,6 @@ defmodule EdgeAdmin.Events.Broker.Supervisor do
     Supervisor.init(children, strategy: :one_for_one)
   end
 
-  # ---------------------------------------------------------------------------
-  # Private
-  # ---------------------------------------------------------------------------
-
   defp build_children(:nats) do
     [
       Nats.connection_supervisor_spec(),

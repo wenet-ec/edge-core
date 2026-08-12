@@ -107,10 +107,6 @@ defmodule EdgeAdmin.Events.Broker do
     end
   end
 
-  # ===========================================================================
-  # Private
-  # ===========================================================================
-
   defp enabled? do
     Application.get_env(:edge_admin, :event_broker_enabled, false)
   end

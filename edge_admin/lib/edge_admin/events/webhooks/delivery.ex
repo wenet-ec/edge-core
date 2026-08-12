@@ -50,10 +50,6 @@ defmodule EdgeAdmin.Events.Webhooks.Delivery do
     |> classify(webhook, envelope)
   end
 
-  # ---------------------------------------------------------------------------
-  # Headers / signing
-  # ---------------------------------------------------------------------------
-
   @doc false
   # Public for unit testing. Builds the outbound request headers for a given
   # webhook + serialized body: standard Content-Type and X-Edge-Signature plus
@@ -77,10 +73,6 @@ defmodule EdgeAdmin.Events.Webhooks.Delivery do
   def sign(secret, body) when is_binary(secret) and is_binary(body) do
     :hmac |> :crypto.mac(:sha256, secret, body) |> Base.encode16(case: :lower)
   end
-
-  # ---------------------------------------------------------------------------
-  # Classification
-  # ---------------------------------------------------------------------------
 
   @doc false
   # Public for unit testing. Classifies a `Req.post` result into the retry

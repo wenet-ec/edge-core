@@ -45,10 +45,6 @@ defmodule EdgeAdmin.Events.Broker.Adapters.Redis do
 
   require Logger
 
-  # ---------------------------------------------------------------------------
-  # Supervision
-  # ---------------------------------------------------------------------------
-
   def child_spec(_opts) do
     %{
       id: __MODULE__,
@@ -61,10 +57,6 @@ defmodule EdgeAdmin.Events.Broker.Adapters.Redis do
   def start_link do
     GenServer.start_link(__MODULE__, [], name: __MODULE__)
   end
-
-  # ---------------------------------------------------------------------------
-  # Adapter callbacks
-  # ---------------------------------------------------------------------------
 
   @impl Adapter
   def healthy? do
@@ -82,10 +74,6 @@ defmodule EdgeAdmin.Events.Broker.Adapters.Redis do
   rescue
     _ -> {:error, "Redis adapter not started"}
   end
-
-  # ---------------------------------------------------------------------------
-  # GenServer — connection management
-  # ---------------------------------------------------------------------------
 
   @impl GenServer
   def init([]) do

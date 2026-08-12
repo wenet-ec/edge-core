@@ -60,7 +60,7 @@ defmodule EdgeAgent.MetricsServers.ProcessSupervisor do
 
       {output, _exit_code} ->
         Logger.warning("Failed to kill node_exporter process #{pid}: #{output}")
-        # Try force kill
+
         case System.cmd("kill", ["-KILL", "#{pid}"], stderr_to_stdout: true) do
           {_output, 0} -> :ok
           {output, _exit_code} -> {:error, {:kill_failed, output}}
@@ -127,7 +127,7 @@ defmodule EdgeAgent.MetricsServers.ProcessSupervisor do
 
       {output, _exit_code} ->
         Logger.warning("Failed to kill wireguard_exporter process #{pid}: #{output}")
-        # Try force kill
+
         case System.cmd("kill", ["-KILL", "#{pid}"], stderr_to_stdout: true) do
           {_output, 0} -> :ok
           {output, _exit_code} -> {:error, {:kill_failed, output}}
@@ -191,9 +191,8 @@ defmodule EdgeAgent.MetricsServers.ProcessSupervisor do
   # filtering on process name; the configured exporter must be one of them.
   @spec parse_ss_output(String.t(), String.t()) :: {:ok, integer()} | {:error, term()}
   def parse_ss_output(output, binary_name) do
-    # Note: `ss` truncates process names to 15 chars (Linux /proc/PID/comm
-    # limit), so e.g. "prometheus_wireguard_exporter" appears as
-    # "prometheus_wire". Match by prefix.
+    # `ss` truncates process names to 15 chars (Linux /proc/PID/comm limit),
+    # so "prometheus_wireguard_exporter" appears as "prometheus_wire".
     truncated = String.slice(binary_name, 0, 15)
 
     output
@@ -258,10 +257,7 @@ defmodule EdgeAgent.MetricsServers.ProcessSupervisor do
     "prometheus_wireguard_exporter --port #{port}($| )"
   end
 
-  # Private functions
-
   defp spawn_node_exporter(args) do
-    # Use Port to spawn the process
     port =
       Port.open({:spawn_executable, Config.node_exporter_binary()}, [
         :binary,
@@ -270,10 +266,8 @@ defmodule EdgeAgent.MetricsServers.ProcessSupervisor do
         cd: "/tmp"
       ])
 
-    # Give the process a moment to start
     :timer.sleep(2000)
 
-    # Find the actual PID of the node_exporter process
     case find_node_exporter_process(Config.host_metrics_port()) do
       {:ok, pid} ->
         {:ok, pid, port}
@@ -288,7 +282,6 @@ defmodule EdgeAgent.MetricsServers.ProcessSupervisor do
   end
 
   defp spawn_wireguard_exporter(args) do
-    # Use Port to spawn the process
     port =
       Port.open({:spawn_executable, Config.wireguard_exporter_binary()}, [
         :binary,
@@ -297,10 +290,8 @@ defmodule EdgeAgent.MetricsServers.ProcessSupervisor do
         cd: "/tmp"
       ])
 
-    # Give the process a moment to start
     :timer.sleep(2000)
 
-    # Find the actual PID of the wireguard_exporter process
     case find_wireguard_exporter_process(Config.wireguard_metrics_port()) do
       {:ok, pid} ->
         {:ok, pid, port}

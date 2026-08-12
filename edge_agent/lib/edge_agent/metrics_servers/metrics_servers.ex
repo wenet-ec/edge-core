@@ -1,8 +1,6 @@
 # edge_agent/lib/edge_agent/metrics_servers/metrics_servers.ex
 defmodule EdgeAgent.MetricsServers do
   @moduledoc """
-  Metrics servers GenServer
-
   Manages the node_exporter and wireguard_exporter processes for collecting
   system and WireGuard metrics from the host.
 
@@ -50,7 +48,6 @@ defmodule EdgeAgent.MetricsServers do
   # even when nothing is asking.
   @check_health_interval_ms 30_000
 
-  # Client API
   @impl EdgeAgent.MetricsServers.Behaviour
   def start_servers, do: GenServer.call(__MODULE__, :start_servers, 10_000)
 
@@ -85,7 +82,6 @@ defmodule EdgeAgent.MetricsServers do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)
   end
 
-  # GenServer callbacks
   @impl true
   def init(_opts) do
     Process.flag(:trap_exit, true)
@@ -214,13 +210,11 @@ defmodule EdgeAgent.MetricsServers do
 
   @impl true
   def handle_info({:EXIT, _pid, _reason}, state) do
-    # Ignore exits from other processes
     {:noreply, state}
   end
 
   @impl true
   def handle_info({_port, {:data, _data}}, state) do
-    # Handle output from node_exporter - just log it at debug level
     {:noreply, state}
   end
 
@@ -238,7 +232,6 @@ defmodule EdgeAgent.MetricsServers do
 
   @impl true
   def handle_info({_port, _msg}, state) do
-    # Ignore other port messages
     {:noreply, state}
   end
 
@@ -279,7 +272,6 @@ defmodule EdgeAgent.MetricsServers do
     :ok
   end
 
-  # Private functions
   defp do_start_servers(state) do
     Logger.info("Starting metrics exporters...")
 
@@ -349,7 +341,6 @@ defmodule EdgeAgent.MetricsServers do
   defp do_stop_servers(state) do
     Logger.info("Stopping metrics exporters...")
 
-    # Stop both exporters
     node_result = ProcessSupervisor.stop_node_exporter(state.node_exporter_pid, state.node_exporter_port_ref)
 
     wg_result =

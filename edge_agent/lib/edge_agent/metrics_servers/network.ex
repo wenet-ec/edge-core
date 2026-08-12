@@ -1,9 +1,7 @@
 # edge_agent/lib/edge_agent/metrics_servers/network.ex
 defmodule EdgeAgent.MetricsServers.Network do
   @moduledoc """
-  Network utility functions for the metrics server.
-
-  Handles IP address detection and network interface queries.
+  Network interface detection for the metrics server.
   """
 
   alias EdgeAgent.MetricsServers.Network.Parser
@@ -33,12 +31,9 @@ defmodule EdgeAgent.MetricsServers.Network do
     _ -> nil
   end
 
-  # Private functions
-
   defp detect_via_ip_route do
     case System.cmd("ip", ["route", "get", "8.8.8.8"], stderr_to_stdout: true) do
       {output, 0} ->
-        # Parse output like: "8.8.8.8 via 192.168.1.1 dev eth0 src 192.168.1.100 uid 1000"
         case Regex.run(~r/src\s+(\d+\.\d+\.\d+\.\d+)/, output) do
           [_, ip] -> ip
           _ -> nil
@@ -54,7 +49,6 @@ defmodule EdgeAgent.MetricsServers.Network do
   defp detect_via_default_route do
     case System.cmd("ip", ["route", "show", "default"], stderr_to_stdout: true) do
       {output, 0} ->
-        # Parse output like: "default via 192.168.1.1 dev eth0 proto dhcp src 192.168.1.100 metric 100"
         case Regex.run(~r/dev\s+(\w+)/, output) do
           [_, interface] ->
             get_interface_ip(interface)

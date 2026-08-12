@@ -3,12 +3,11 @@ defmodule EdgeAdmin.Encryption do
   @moduledoc """
   Encryption-at-rest boundary for sensitive Ecto columns.
 
-  Configured at runtime in `runtime.exs` from `ENCRYPTION_KEY` +
-  `ENCRYPTION_TAG`. The
-  key is 32 bytes of base64; the tag pairs 1:1 with the key and is prepended
-  to every ciphertext blob so the encryption library can find the right cipher
-  on decrypt
-  (this is what makes rotation possible without DB-side bookkeeping).
+  Configured at runtime in `runtime.exs` from `ENCRYPTION_KEY` and
+  `ENCRYPTION_TAG`. The key is 32 bytes of base64; the tag pairs 1:1 with the
+  key and is prepended to every ciphertext blob so the encryption library can
+  find the right cipher on decrypt. This makes rotation possible without
+  DB-side bookkeeping.
 
   Both env vars are required at boot — same shape as `MASTER_KEY` and
   `SECRET_KEY_BASE`. There is no optional-encryption branch; lite/example

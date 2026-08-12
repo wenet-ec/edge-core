@@ -1,21 +1,8 @@
 # edge_admin/lib/edge_admin_web/edge_admin_web.ex
 defmodule EdgeAdminWeb do
   @moduledoc """
-  The entrypoint for defining your web interface, such
-  as controllers, components, channels, and so on.
-
-  This can be used in your application as:
-
-      use EdgeAdminWeb, :controller
-      use EdgeAdminWeb, :html
-
-  The definitions below will be executed for every controller,
-  component, etc, so keep them short and clean, focused
-  on imports, uses and aliases.
-
-  Do NOT define functions inside the quoted expressions
-  below. Instead, define additional modules and import
-  those modules here.
+  Shared web-layer macros for controllers, HTML components, channels, routes,
+  and OpenAPI-aware API controllers.
   """
 
   # Only files actually present in priv/static — narrowing this list shrinks
@@ -30,8 +17,6 @@ defmodule EdgeAdminWeb do
 
       import Phoenix.Controller
       import Phoenix.LiveView.Router
-
-      # Import common connection and controller functions to use in pipelines
       import Plug.Conn
     end
   end
@@ -106,7 +91,7 @@ defmodule EdgeAdminWeb do
   end
 
   @doc """
-  When used, dispatch to the appropriate controller/live_view/etc.
+  Dispatches to the requested web-layer macro.
   """
   defmacro __using__(which) when is_atom(which) do
     apply(__MODULE__, which, [])

@@ -63,10 +63,6 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
     }
   end
 
-  # ---------------------------------------------------------------------------
-  # Servers
-  # ---------------------------------------------------------------------------
-
   defp servers do
     %{
       "nats" => %{
@@ -186,10 +182,6 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
     }
   end
 
-  # ---------------------------------------------------------------------------
-  # Channels — one per subject/topic
-  # ---------------------------------------------------------------------------
-
   defp channels do
     Catalog.all_event_types()
     |> Enum.map(fn channel_id -> {channel_id, Map.fetch!(raw_channels(), channel_id)} end)
@@ -228,10 +220,6 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
       }
     }
   end
-
-  # ---------------------------------------------------------------------------
-  # Operations — one send operation per channel
-  # ---------------------------------------------------------------------------
 
   defp operations do
     Catalog.all_event_types()
@@ -300,10 +288,6 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
   defp sns_domain_for("edge.self_update_request." <> _), do: "self-updates"
   defp sns_domain_for("edge.core." <> _), do: "core"
 
-  # ---------------------------------------------------------------------------
-  # Components
-  # ---------------------------------------------------------------------------
-
   defp components do
     %{
       "messages" => messages(),
@@ -311,10 +295,6 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
       "securitySchemes" => security_schemes()
     }
   end
-
-  # ---------------------------------------------------------------------------
-  # Messages — one per event type, each with its own example
-  # ---------------------------------------------------------------------------
 
   # Per-event AsyncAPI message metadata. Keyed by full event type (matches
   # `Catalog.all_event_types/0`):
@@ -417,10 +397,6 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
       ]
     }
   end
-
-  # ---------------------------------------------------------------------------
-  # Schemas
-  # ---------------------------------------------------------------------------
 
   defp schemas do
     Enum.reduce(

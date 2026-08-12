@@ -16,23 +16,6 @@ defmodule EdgeAdminWeb.ResponseEnvelope do
 
   Error:
       %{error: %{code: "not_found", message: "...", details: nil}, meta: %{...}}
-
-  ## Usage in views
-
-      # show
-      def show(%{conn: conn, node: node}) do
-        ResponseEnvelope.success(conn, data(node))
-      end
-
-      # index (paginated)
-      def index(%{conn: conn, nodes: nodes, meta: flop_meta}) do
-        ResponseEnvelope.success(conn, Enum.map(nodes, &data/1), flop_meta)
-      end
-
-  ## Usage in FallbackController / ErrorJSON
-
-      ResponseEnvelope.error(conn, "not_found", "Resource not found")
-      ResponseEnvelope.error(conn, "validation_failed", "Validation failed", field_errors)
   """
 
   alias Flop.Meta
@@ -77,8 +60,6 @@ defmodule EdgeAdminWeb.ResponseEnvelope do
 
     %{error: error_payload, meta: request_meta(conn)}
   end
-
-  # --- Private ---
 
   defp request_meta(conn) do
     %{

@@ -8,44 +8,35 @@ defmodule EdgeAdminWeb.Router do
   alias EdgeAdminWeb.Controllers.Agents
   alias EdgeAdminWeb.Plugs.ApiDocsEnabled
 
-  # PutApiSpec is mounted in the endpoint so every pipeline already has it.
-
-  # Browser pipeline with basic auth (for LiveDashboard only)
   pipeline :browser_with_basic_auth do
     plug(:fetch_session)
     plug(:fetch_live_flash)
     plug(:basic_auth)
   end
 
-  # Public API pipeline (no authentication required)
   pipeline :public_api do
     plug(:accepts, ["json"])
   end
 
-  # Protected API pipeline (requires API_KEY or MASTER_KEY)
   pipeline :protected_api do
     plug(:accepts, ["json"])
     plug(EdgeAdminWeb.Plugs.ApiKeyAuth)
   end
 
-  # MCP pipeline (accepts MCP_KEY or MASTER_KEY fallback — MCP manages its own content types)
   pipeline :mcp do
     plug(EdgeAdminWeb.Plugs.McpAuth)
   end
 
-  # Metrics API pipeline (accepts MASTER_KEY or METRICS_KEY)
   pipeline :protected_metrics do
     plug(:accepts, ["json"])
     plug(EdgeAdminWeb.Plugs.MetricsAuth)
   end
 
-  # API specs pipeline — serves OpenAPI + AsyncAPI JSON specs (gated by API_DOCS_ENABLED)
   pipeline :api_specs do
     plug(:accepts, ["json"])
     plug(ApiDocsEnabled)
   end
 
-  # API documentation UI pipeline (SwaggerUI, ReDoc)
   pipeline :api_docs_ui do
     plug(:accepts, ["html"])
     plug(:fetch_session)
@@ -53,7 +44,6 @@ defmodule EdgeAdminWeb.Router do
     plug(ApiDocsEnabled)
   end
 
-  # Agent API pipeline (requires agent api_token)
   pipeline :agent_api do
     plug(:accepts, ["json"])
     plug(EdgeAdminWeb.Plugs.AgentAuth)
@@ -74,7 +64,6 @@ defmodule EdgeAdminWeb.Router do
     get("/guide/events", EdgeAdminWeb.Controllers.Guide.EventController, :show)
   end
 
-  # API documentation UIs — all gated by API_DOCS_ENABLED (disabled in production)
   scope "/" do
     pipe_through(:api_docs_ui)
 
@@ -87,7 +76,6 @@ defmodule EdgeAdminWeb.Router do
     get("/asyncdoc", EdgeAdminWeb.Controllers.AsyncApi.DocController, :show)
   end
 
-  # Admin debug with basic auth protection
   scope "/" do
     pipe_through(:browser_with_basic_auth)
 
@@ -108,7 +96,6 @@ defmodule EdgeAdminWeb.Router do
     )
   end
 
-  # API spec endpoints — gated by API_DOCS_ENABLED (disabled in production)
   scope "/api" do
     pipe_through(:api_specs)
 
@@ -116,7 +103,6 @@ defmodule EdgeAdminWeb.Router do
     get("/asyncapi", EdgeAdminWeb.Controllers.AsyncApi.SpecController, :show)
   end
 
-  # Public API endpoints (no authentication required)
   scope "/api/v1", EdgeAdminWeb.Controllers do
     pipe_through(:public_api)
 
@@ -129,7 +115,6 @@ defmodule EdgeAdminWeb.Router do
     end
   end
 
-  # Protected admin metadata endpoints (requires API_KEY or MASTER_KEY)
   scope "/api/v1", EdgeAdminWeb.Controllers do
     pipe_through(:protected_api)
 
@@ -142,85 +127,48 @@ defmodule EdgeAdminWeb.Router do
     end
   end
 
-  # Metrics endpoints (accepts MASTER_KEY or METRICS_KEY)
   scope "/api/v1", EdgeAdminWeb.Controllers do
     pipe_through(:protected_metrics)
 
     scope "/", Metrics do
-      # Prometheus HTTP service discovery for host metrics
       get("/nodes/metrics/host/discovery", HostMetricsDiscoveryController, :index)
-
-      # Raw host metrics proxy (per-node)
       get("/nodes/:node_id/metrics/host/raw", HostMetricsController, :show)
-
-      # Prometheus HTTP service discovery for agent metrics
       get("/nodes/metrics/agent/discovery", AgentMetricsDiscoveryController, :index)
-
-      # Raw agent metrics proxy (per-node)
       get("/nodes/:node_id/metrics/agent/raw", AgentMetricsController, :show)
-
-      # Prometheus HTTP service discovery for WireGuard metrics
       get("/nodes/metrics/wireguard/discovery", WireguardMetricsDiscoveryController, :index)
-
-      # Raw WireGuard metrics proxy (per-node)
       get("/nodes/:node_id/metrics/wireguard/raw", WireguardMetricsController, :show)
-
-      # Node metrics endpoints (human-friendly)
       get("/nodes/:node_id/metrics", NodeMetricsController, :show_unified)
       get("/nodes/:node_id/metrics/host", NodeMetricsController, :show_host)
       get("/nodes/:node_id/metrics/agent", NodeMetricsController, :show_agent)
-
-      # Admin metrics endpoints (human-friendly)
       get("/admins/me/metrics", AdminMetricsController, :show)
     end
   end
 
-  # Agent API endpoints (no authentication for initial registration or recovery)
   scope "/api/v1/agents", Agents do
     pipe_through(:public_api)
 
-    # Node registration (no auth required)
     post("/nodes/register", NodeController, :register)
-
-    # Enrollment key verification (no auth required, blocked during degraded mode)
     post("/enrollment_keys/verify", EnrollmentKeyController, :verify)
   end
 
-  # Agent API endpoints (requires agent api_token)
   scope "/api/v1/agents", Agents do
     pipe_through(:agent_api)
 
-    # Node reregistration
     post("/nodes/reregister", NodeController, :reregister)
-
-    # Node health check reporting
     post("/nodes/me/health_check", NodeController, :update_health_check)
-
-    # Diagnostics push
     post("/diagnostics/push", NodeDiagnosticController, :push)
-
-    # SSH credentials verification
     post("/ssh_usernames/verify_credentials", SshUsernameController, :verify_credentials)
-
-    # Command sync and result reporting
     get("/command_executions", CommandExecutionController, :index)
     post("/command_executions/:id/acknowledge", CommandExecutionController, :acknowledge)
     post("/command_executions/:id/report_result", CommandExecutionController, :report_result)
-
-    # Self-update check
     get("/self_updates/check", SelfUpdateController, :check)
-
-    # Metrics cache push
     post("/metrics/push", MetricsController, :push)
-
-    # Alias registration
     post("/aliases", AliasController, :create)
 
     # Refreshable, non-secret Settings Config.
     get("/settings/config", SettingsController, :config)
   end
 
-  # Protected API endpoints (requires API_KEY or MASTER_KEY)
   scope "/api/v1", EdgeAdminWeb.Controllers do
     pipe_through(:protected_api)
 
@@ -281,7 +229,6 @@ defmodule EdgeAdminWeb.Router do
     resources("/self_update_requests", SelfUpdates.SelfUpdateRequestController, only: [:index, :create, :show, :delete])
   end
 
-  # MCP server endpoint (requires MASTER_KEY)
   scope "/" do
     pipe_through(:mcp)
 

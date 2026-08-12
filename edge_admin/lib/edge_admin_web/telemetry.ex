@@ -42,10 +42,6 @@ defmodule EdgeAdminWeb.Telemetry do
       vm_metrics()
   end
 
-  # ---------------------------------------------------------------------------
-  # Built-in framework metrics — already emitted by Phoenix / Ecto / Oban
-  # ---------------------------------------------------------------------------
-
   defp phoenix_metrics do
     [
       summary("phoenix.endpoint.stop.duration",
@@ -117,13 +113,8 @@ defmodule EdgeAdminWeb.Telemetry do
     ]
   end
 
-  # ---------------------------------------------------------------------------
-  # Business metrics — curated from EdgeAdmin.PromEx.EdgeAdminPlugin
-  #
   # Names and event prefixes match what's actually emitted by the codebase.
   # See `EdgeAdmin.PromEx.EdgeAdminPlugin` for the full per-event histogram set.
-  # ---------------------------------------------------------------------------
-
   defp business_metrics do
     [
       # Admin-cluster membership — is this admin part of its cluster?
@@ -211,10 +202,6 @@ defmodule EdgeAdminWeb.Telemetry do
       )
     ]
   end
-
-  # ---------------------------------------------------------------------------
-  # VM metrics — BEAM health
-  # ---------------------------------------------------------------------------
 
   defp vm_metrics do
     [

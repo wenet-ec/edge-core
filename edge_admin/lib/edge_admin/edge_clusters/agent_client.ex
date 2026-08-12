@@ -9,16 +9,8 @@ defmodule EdgeAdmin.EdgeClusters.AgentClient do
   All functions accept a `Node` struct and derive the URL from `vpn_hostname`
   and `http_port`. Authentication uses `node.api_token` where required.
 
-  ## Functions
-
-  - `ping/2` — GET /health (node health check)
-  - `deliver_execution/2` — POST /api/v1/command_executions
-  - `cancel_execution/2` — POST /api/v1/command_executions/:id/cancel
-  - `trigger_self_update/1` — POST /api/v1/self_updates/trigger
-  - `get_diagnostics/1` — GET /api/v1/diagnostics
-  - `scrape_host_metrics/1` — GET http://<vpn_hostname>:<host_metrics_port>/metrics
-  - `scrape_agent_metrics/1` — GET /api/v1/agents/me/metrics/raw
-  - `scrape_wireguard_metrics/1` — GET http://<vpn_hostname>:<wireguard_metrics_port>/metrics
+  Covers health checks, command delivery/cancellation, diagnostics,
+  self-update triggers, and the three metrics surfaces.
   """
 
   alias EdgeAdmin.Nodes.Schemas.Node
@@ -72,9 +64,7 @@ defmodule EdgeAdmin.EdgeClusters.AgentClient do
     "http://#{Node.vpn_hostname(node)}:#{port}"
   end
 
-  # ---------------------------------------------------------------------------
   # Health
-  # ---------------------------------------------------------------------------
 
   @doc """
   Pings the agent health endpoint.
@@ -111,9 +101,7 @@ defmodule EdgeAdmin.EdgeClusters.AgentClient do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # Commands
-  # ---------------------------------------------------------------------------
 
   @doc """
   Delivers a command execution payload to the agent.
@@ -162,9 +150,7 @@ defmodule EdgeAdmin.EdgeClusters.AgentClient do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # Self-update
-  # ---------------------------------------------------------------------------
 
   @doc """
   Triggers a self-update on the agent.
@@ -202,9 +188,7 @@ defmodule EdgeAdmin.EdgeClusters.AgentClient do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # Metrics scraping
-  # ---------------------------------------------------------------------------
 
   @doc """
   Scrapes Node Exporter host metrics from the agent's host metrics port.

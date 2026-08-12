@@ -4,36 +4,9 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   Gateway GenServer managing VPN connection and HTTP communication with an edge cluster.
 
   One Gateway process runs per cluster assigned to this admin. Each Gateway maintains
-  a persistent VPN connection to its cluster and provides HTTP client functions for
-  admin-to-agent communication.
-
-  ## Key Concepts
-
-  - **VPN Connection**: Direct host-to-network join via Edge VPN API (no enrollment keys)
-  - **Cross-Admin Routing**: syn registry enables routing requests to the correct admin
-  - **HTTP Client**: Provides helper functions for metrics scraping and agent commands
-  - **Non-blocking Operations**: All HTTP/TCP operations use Task.async to prevent head-of-line blocking
-  - **Lifecycle**: Started/stopped by EdgeClusters coordinator based on metadata assignments
-
-  ## Responsibilities
-
-  1. **VPN Management**
-     - Join cluster network on startup (creates Edge VPN node)
-     - Leave cluster network on shutdown (deletes node, preserves host)
-
-  2. **syn Registration**
-     - Register with key `{:gateway, admin_name, cluster_name}`
-     - Enable cross-admin request routing
-     - Automatic deregistration on process exit
-
-  3. **HTTP Communication** (calls routed through this Gateway only)
-     - Scrape host metrics (Node Exporter)
-     - Scrape agent metrics (PromEx)
-     - Scrape WireGuard metrics
-     - Retrieve Agent self-diagnostics
-     - Trigger agent self-updates
-     - Cancel command executions
-     - Open TCP connections through the cluster VPN (proxy tunnels)
+  a direct host-to-network VPN membership for that cluster and registers itself
+  in `:cluster_scope` so other admins can route cluster-specific work to the
+  owner.
 
   Note: command-execution *delivery* (`AgentClient.deliver_execution/2`) does
   NOT go through Gateway — `Commands` calls `AgentClient` directly. Only the
@@ -46,33 +19,11 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   admin's pid is looked up via the `:cluster_scope` registry; once obtained,
   callers issue `GenServer.call/3` against it over Erlang distribution.
 
-      # Find the Gateway that owns a cluster
-      :syn.lookup(:cluster_scope, {:gateway, "admin-abc", "cluster-prod"})
-      #=> {pid, metadata}
-
-      # Use from code
-      {:ok, gateway_pid} = Gateway.lookup("cluster-prod")
-      Gateway.scrape_host_metrics(gateway_pid, node)
-
   ## VPN Lifecycle
 
   - **Join**: `Vpn.add_host_to_network(host_id, network_name)` - Direct API call
   - **Leave**: `Vpn.remove_host_from_network(host_id, network_name)` - Removes node, keeps host
   - **No Enrollment Keys**: Uses existing host credentials from admin cluster
-
-  ## Examples
-
-      # Gateway is started by EdgeClusters coordinator
-      DynamicSupervisor.start_child(Supervisor, {Gateway, "cluster-prod"})
-
-      # Lookup and use Gateway
-      {:ok, gateway_pid} = Gateway.lookup("cluster-prod")
-      {:ok, metrics} = Gateway.scrape_host_metrics(gateway_pid, node)
-
-      # Cross-admin routing (automatic)
-      # Admin A owns cluster-prod
-      # Admin B needs to scrape metrics from node in cluster-prod
-      # Admin B's request automatically routes to Admin A's Gateway
   """
 
   use GenServer
@@ -89,10 +40,6 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
 
   defp telemetry_result({:ok, _}), do: :success
   defp telemetry_result(_), do: :error
-
-  # ===========================================================================
-  # Client API
-  # ===========================================================================
 
   @doc """
   Starts a Gateway process for the given cluster.
@@ -113,18 +60,8 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   during topology recomputation), falls back to scanning every known admin's
   registration in `:cluster_scope` to locate the gateway.
 
-  ## Parameters
-  - cluster_name: The edge cluster name
-
-  ## Returns
-  - `{:ok, gateway_pid}` - Gateway process found
-  - `{:error, :gateway_not_found}` - No Gateway registered for this cluster
-  - `{:error, :no_owner}` - Cluster not assigned to any admin
-
-  ## Examples
-
-      {:ok, pid} = Gateway.lookup("cluster-abc123")
-      Gateway.scrape_host_metrics(pid, node)
+  Returns `{:ok, gateway_pid}`, `{:error, :gateway_not_found}`, or
+  `{:error, :no_owner}`.
   """
   def lookup(cluster_name) do
     case Metadata.get_cluster_owner(cluster_name) do
@@ -161,53 +98,17 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
     result || {:error, :gateway_not_found}
   end
 
-  @doc """
-  Scrapes host metrics from a node's Node Exporter.
-
-  ## Parameters
-
-  - gateway_pid: Gateway process
-  - node: Node struct with vpn_hostname, host_metrics_port
-
-  ## Returns
-
-  - {:ok, metrics_text} - Raw Prometheus metrics
-  - {:error, reason} - HTTP error or network failure
-  """
+  @doc "Scrapes host metrics from a node's Node Exporter."
   def scrape_host_metrics(gateway_pid, node) do
     GenServer.call(gateway_pid, {:scrape_host_metrics, node}, AgentClient.metrics_call_timeout())
   end
 
-  @doc """
-  Scrapes agent application metrics from a node's PromEx endpoint.
-
-  ## Parameters
-
-  - gateway_pid: Gateway process
-  - node: Node struct with vpn_hostname, http_port, api_token
-
-  ## Returns
-
-  - {:ok, metrics_text} - Raw Prometheus metrics
-  - {:error, reason} - HTTP error or network failure
-  """
+  @doc "Scrapes agent application metrics from a node's PromEx endpoint."
   def scrape_agent_metrics(gateway_pid, node) do
     GenServer.call(gateway_pid, {:scrape_agent_metrics, node}, AgentClient.metrics_call_timeout())
   end
 
-  @doc """
-  Scrapes WireGuard metrics from a node's WireGuard Exporter endpoint.
-
-  ## Parameters
-
-  - gateway_pid: Gateway process
-  - node: Node struct with vpn_hostname, wireguard_metrics_port
-
-  ## Returns
-
-  - {:ok, metrics_text} - Raw Prometheus metrics
-  - {:error, reason} - HTTP error or network failure
-  """
+  @doc "Scrapes WireGuard metrics from a node's WireGuard Exporter endpoint."
   def scrape_wireguard_metrics(gateway_pid, node) do
     GenServer.call(gateway_pid, {:scrape_wireguard_metrics, node}, AgentClient.metrics_call_timeout())
   end
@@ -219,37 +120,12 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
     GenServer.call(gateway_pid, {:get_diagnostics, node}, AgentClient.diagnostics_call_timeout())
   end
 
-  @doc """
-  Triggers self-update on an agent.
-
-  ## Parameters
-
-  - gateway_pid: Gateway process
-  - node: Node struct with vpn_hostname, http_port, api_token
-
-  ## Returns
-
-  - :ok - Update triggered successfully
-  - {:error, reason} - HTTP error or network failure
-  """
+  @doc "Triggers self-update on an agent."
   def trigger_self_update(gateway_pid, node) do
     GenServer.call(gateway_pid, {:trigger_self_update, node}, AgentClient.command_call_timeout())
   end
 
-  @doc """
-  Cancels a command execution on an agent.
-
-  ## Parameters
-
-  - gateway_pid: Gateway process
-  - node: Node struct with vpn_hostname, http_port, api_token
-  - execution_id: Command execution ID to cancel
-
-  ## Returns
-
-  - :ok - Cancellation request sent successfully
-  - {:error, reason} - HTTP error or network failure
-  """
+  @doc "Cancels a command execution on an agent."
   def cancel_execution(gateway_pid, node, execution_id) do
     GenServer.call(gateway_pid, {:cancel_execution, node, execution_id}, AgentClient.command_call_timeout())
   end
@@ -285,34 +161,24 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
     GenServer.call(gateway_pid, {:tcp_connect, target_host, target_port, caller_pid}, tcp_connect_timeout() + 2_000)
   end
 
-  # ===========================================================================
-  # GenServer Callbacks
-  # ===========================================================================
-
   @impl true
   def init(cluster_name) do
-    # Trap exits so terminate/2 gets called on shutdown
     Process.flag(:trap_exit, true)
 
     Logger.info("Gateway initializing for cluster #{cluster_name}")
 
     admin_name = Application.get_env(:edge_admin, :admin_name)
 
-    # Read VPN host ID from Metadata (set during init)
     admin_info = Metadata.get_admin()
     vpn_host_id = admin_info.vpn_host_id
 
-    # Join VPN network for this cluster using direct API
-    # cluster_name is already normalized (e.g., "cluster-test")
     case join_network(cluster_name, vpn_host_id) do
       :ok ->
-        # Register in syn with admin_name to avoid overriding other admins' Gateways
         :syn.register(:cluster_scope, {:gateway, admin_name, cluster_name}, self())
         Logger.debug("Gateway registered in syn for #{admin_name} -> #{cluster_name}")
 
         Logger.info("Gateway started for cluster #{cluster_name}")
 
-        # Emit telemetry
         :telemetry.execute(
           [:edge_admin, :gateway, :connection],
           %{count: 1},
@@ -338,10 +204,8 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   def terminate(reason, state) do
     Logger.info("Gateway terminating for cluster #{state.cluster_name}, reason: #{inspect(reason)}")
 
-    # Leave the network on shutdown
     leave_network(state.vpn_host_id, state.cluster_name)
 
-    # Emit telemetry
     :telemetry.execute(
       [:edge_admin, :gateway, :connection],
       %{count: 1},
@@ -350,10 +214,6 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
 
     :ok
   end
-
-  # ===========================================================================
-  # HTTP Client Handlers
-  # ===========================================================================
 
   @impl true
   def handle_call({:scrape_host_metrics, node}, from, state) do
@@ -464,14 +324,11 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
           {:ok, socket} ->
             Logger.debug("Gateway established connection to #{target_host}:#{target_port}")
 
-            # Check if caller is on same node (local) or different node (remote)
             if node(caller_pid) == node() do
-              # Local: transfer socket ownership directly to caller
               :gen_tcp.controlling_process(socket, caller_pid)
               Logger.debug("Socket transferred to local caller")
               {:ok, socket}
             else
-              # Remote: spawn proxy process on this node to manage socket
               {:ok, proxy_pid} = RemoteTunnel.start_proxy(socket, caller_pid)
               Logger.debug("Remote proxy started: #{inspect(proxy_pid)}")
               {:ok, :remote, proxy_pid}
@@ -488,42 +345,29 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
     {:noreply, state}
   end
 
-  # Handle EXIT messages from linked processes (RemoteTunnel proxies)
-  # These are normal when connections close
   @impl true
   def handle_info({:EXIT, _pid, :normal}, state) do
     {:noreply, state}
   end
 
-  # Handle unexpected EXIT messages (non-normal termination)
   def handle_info({:EXIT, pid, reason}, state) do
     Logger.warning("Linked process #{inspect(pid)} exited abnormally: #{inspect(reason)}")
     {:noreply, state}
   end
 
-  # Catch-all for unexpected messages
   def handle_info(msg, state) do
     Logger.warning("Gateway received unexpected message: #{inspect(msg)}")
     {:noreply, state}
   end
 
-  # ===========================================================================
-  # Private Helpers
-  # ===========================================================================
-
   defp join_network(cluster_name, host_id, attempt \\ 1, max_attempts \\ 3) do
-    # cluster_name is already normalized (e.g., "cluster-test")
-    # Add this host to the cluster network via direct API
-    # Edge VPN handles DNS automatically (no custom DNS entries needed)
     case Vpn.add_host_to_network(host_id, cluster_name) do
       {:ok, :already_joined} ->
-        # Host already has a node in this network (e.g. Gateway restarted without leaving).
-        # Edge VPN returns HTTP 500 "host already part of network" for this — treat as success.
+        # Edge VPN returns HTTP 500 "host already part of network" for this.
         Logger.info("Gateway already in network #{cluster_name}, skipping join")
         :ok
 
       {:ok, _} ->
-        # Verify that we actually joined the network
         case verify_joined_network(host_id, cluster_name) do
           :ok ->
             Logger.info("Gateway joined network #{cluster_name} (verified)")
@@ -535,7 +379,6 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
             )
 
             if attempt < max_attempts do
-              # Exponential backoff: 500ms, 1000ms, 2000ms
               delay_ms = trunc(500 * :math.pow(2, attempt - 1))
               Logger.info("Retrying join for #{cluster_name} in #{delay_ms}ms...")
               :timer.sleep(delay_ms)
@@ -557,7 +400,6 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
         )
 
         if attempt < max_attempts do
-          # Exponential backoff: 500ms, 1000ms, 2000ms
           delay_ms = trunc(500 * :math.pow(2, attempt - 1))
           Logger.info("Retrying join for #{cluster_name} in #{delay_ms}ms...")
           :timer.sleep(delay_ms)
@@ -572,7 +414,6 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   defp leave_network(vpn_host_id, cluster_name, attempt \\ 1, max_attempts \\ 3) do
     case Vpn.remove_host_from_network(vpn_host_id, cluster_name) do
       {:ok, _} ->
-        # Verify that we actually left the network
         case verify_left_network(vpn_host_id, cluster_name) do
           :ok ->
             Logger.info("Gateway left network #{cluster_name} (verified)")
@@ -584,7 +425,6 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
             )
 
             if attempt < max_attempts do
-              # Exponential backoff: 500ms, 1000ms, 2000ms
               delay_ms = trunc(500 * :math.pow(2, attempt - 1))
               Logger.info("Retrying leave for #{cluster_name} in #{delay_ms}ms...")
               :timer.sleep(delay_ms)
@@ -594,14 +434,12 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
                 "Node still present in #{cluster_name} after #{max_attempts} leave attempts - may require manual cleanup"
               )
 
-              # Don't crash terminate - just log and continue
               :ok
             end
 
           {:error, reason} ->
             Logger.warning("Failed to verify leave for #{cluster_name}: #{inspect(reason)} - assuming success")
 
-            # Don't crash terminate on verification errors
             :ok
         end
 
@@ -611,7 +449,6 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
         )
 
         if attempt < max_attempts do
-          # Exponential backoff: 500ms, 1000ms, 2000ms
           delay_ms = trunc(500 * :math.pow(2, attempt - 1))
           Logger.info("Retrying leave for #{cluster_name} in #{delay_ms}ms...")
           :timer.sleep(delay_ms)
@@ -621,14 +458,12 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
             "Failed to leave network #{cluster_name} after #{max_attempts} attempts - may require manual cleanup"
           )
 
-          # Don't crash terminate - just log and continue
           :ok
         end
     end
   end
 
   defp verify_joined_network(host_id, cluster_name) do
-    # Check if our host has a node in this network
     case Vpn.list_nodes(cluster_name) do
       {:ok, nodes} ->
         node_exists =
@@ -651,7 +486,6 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   end
 
   defp verify_left_network(host_id, cluster_name) do
-    # Check if our host still has a node in this network
     case Vpn.list_nodes(cluster_name) do
       {:ok, nodes} ->
         node_still_exists =
@@ -669,7 +503,6 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
         end
 
       {:error, :not_found} ->
-        # Network doesn't exist anymore - that's fine, we're definitely not in it
         Logger.debug("Network #{cluster_name} not found - assuming successful leave")
         :ok
 

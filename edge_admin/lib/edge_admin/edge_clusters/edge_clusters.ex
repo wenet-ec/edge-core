@@ -3,31 +3,9 @@ defmodule EdgeAdmin.EdgeClusters do
   @moduledoc """
   Gateway coordinator that manages VPN connections to edge clusters.
 
-  This GenServer orchestrates Gateway processes (one per assigned cluster) based on
-  metadata assignments. It subscribes to cluster assignment changes and dynamically
-  starts/stops Gateway processes to match the current topology.
-
-  ## Key Concepts
-
-  - **Gateway**: A GenServer that maintains VPN connection to a single cluster
-  - **Metadata Assignment**: ETS-based mapping of which admin owns which clusters
-  - **Reconciliation**: Process of starting/stopping Gateways to match assignments
-  - **Anti-Thrashing**: Flag pattern prevents rapid start/stop cycles
-
-  ## Responsibilities
-
-  - Subscribe to metadata recomputation events (`PubSub`)
-  - Read cluster assignments from ETS (`Metadata`)
-  - Diff old vs new assignments (start/stop logic)
-  - Orchestrate Gateway lifecycle via `DynamicSupervisor`
-  - Prevent thrashing with reconciliation flag pattern
-
-  ## Architecture
-
-  **Coordinator Pattern**: This module coordinates, `EdgeClusters.Supervisor` supervises:
-  - `EdgeClusters` (this module): Coordinator GenServer
-  - `EdgeClusters.Supervisor`: DynamicSupervisor for Gateway processes
-  - `EdgeClusters.Gateway`: Per-cluster GenServer managing VPN connection
+  This GenServer subscribes to local metadata recomputation events, reads this
+  Admin's assigned clusters from ETS, and starts/stops one Gateway process per
+  assigned cluster through `EdgeClusters.Supervisor`.
 
   **Race Condition Handling**: `init/1` only subscribes to local metadata events
   and starts with an empty `current_clusters` set — it does NOT pre-load ETS
@@ -40,17 +18,6 @@ defmodule EdgeAdmin.EdgeClusters do
   - If reconciling, set `pending_reconcile: true` (don't interrupt)
   - When done, check flag and reconcile again if needed
   - No locks, timers, or debouncing - just a flag
-
-  ## Examples
-
-      # Coordinator receives metadata event
-      :metadata_recomputed -> reconcile_gateways()
-
-      # Result: Start Gateway for new cluster
-      DynamicSupervisor.start_child(GatewaySupervisor, {Gateway, cluster: "prod"})
-
-      # Result: Stop Gateway for removed cluster
-      DynamicSupervisor.terminate_child(GatewaySupervisor, gateway_pid)
   """
 
   use GenServer
@@ -61,54 +28,35 @@ defmodule EdgeAdmin.EdgeClusters do
 
   require Logger
 
-  # ===========================================================================
-  # Client API
-  # ===========================================================================
-
   def start_link(opts \\ []) do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)
   end
-
-  # ===========================================================================
-  # GenServer Callbacks
-  # ===========================================================================
 
   @impl true
   def init(_opts) do
     :syn.add_node_to_scopes([:cluster_scope])
 
-    # Get admin name from Application config
     admin_name = Application.get_env(:edge_admin, :admin_name)
-
-    # Subscribe to local metadata events
     Metadata.Events.subscribe_local()
 
     Logger.info("EdgeClusters subscribed to local metadata events, waiting")
 
-    # Start with empty state - gateways will be spawned when we receive first event
     {:ok,
      %{
        admin_name: admin_name,
        current_clusters: MapSet.new(),
-       # %{cluster_name => pid}
        gateway_pids: %{},
        reconciling?: false,
        pending_reconcile: false
      }}
   end
 
-  # ===========================================================================
-  # Event Handlers
-  # ===========================================================================
-
   @impl true
   def handle_info(:metadata_recomputed, state) do
     if state.reconciling? do
-      # Currently working - mark as "needs redo"
       Logger.debug("EdgeClusters: Metadata changed while reconciling, marked pending")
       {:noreply, %{state | pending_reconcile: true}}
     else
-      # Idle - start reconciliation
       spawn_reconciliation_task(state)
       Logger.debug("EdgeClusters: Starting reconciliation")
       {:noreply, %{state | reconciling?: true}}
@@ -118,7 +66,6 @@ defmodule EdgeAdmin.EdgeClusters do
   @impl true
   def handle_info(:reconciliation_complete, state) do
     if state.pending_reconcile do
-      # Something changed while we worked - do it again
       spawn_reconciliation_task(state)
       Logger.debug("EdgeClusters: Pending reconciliation triggered")
       {:noreply, %{state | reconciling?: true, pending_reconcile: false}}
@@ -145,15 +92,9 @@ defmodule EdgeAdmin.EdgeClusters do
     {:noreply, state}
   end
 
-  # ===========================================================================
-  # Private Helpers
-  # ===========================================================================
-
   defp get_assigned_clusters(admin_name) do
-    # Get assignments from Metadata public API
     assignments = Metadata.get_edge_clusters()
 
-    # Extract cluster IDs for this admin (keyed by admin_name, not admin_id)
     assignments
     |> Map.get(admin_name, %{})
     |> Map.keys()
@@ -163,7 +104,6 @@ defmodule EdgeAdmin.EdgeClusters do
     parent = self()
 
     Task.start(fn ->
-      # Read ETS for new desired state
       new_clusters = get_assigned_clusters(state.admin_name)
       new_clusters_set = MapSet.new(new_clusters)
 
@@ -173,13 +113,9 @@ defmodule EdgeAdmin.EdgeClusters do
 
       Logger.info("EdgeClusters reconciliation: +#{MapSet.size(to_join)} clusters, -#{MapSet.size(to_leave)} clusters")
 
-      # Track successful joins separately
       successful_joins = MapSet.new()
-
-      # Start tracking new gateway pids
       new_gateway_pids = state.gateway_pids
 
-      # Apply changes (VPN operations happen here - slow)
       {new_gateway_pids, successful_joins} =
         Enum.reduce(to_join, {new_gateway_pids, successful_joins}, fn cluster_name, {acc_pids, acc_joins} ->
           case start_gateway(cluster_name) do
@@ -209,8 +145,7 @@ defmodule EdgeAdmin.EdgeClusters do
           end
         end)
 
-      # Only mark as current if we successfully joined
-      # Start with clusters that were already current and not being removed
+      # Only mark a new assignment current after the Gateway actually starts.
       new_current_clusters =
         state.current_clusters
         |> MapSet.difference(to_leave)
@@ -220,10 +155,7 @@ defmodule EdgeAdmin.EdgeClusters do
         "EdgeClusters state update: current_clusters=#{inspect(MapSet.to_list(new_current_clusters))}, gateway_pids=#{inspect(Map.keys(new_gateway_pids))}"
       )
 
-      # Update parent state
       send(parent, {:update_clusters, new_current_clusters, new_gateway_pids})
-
-      # Notify completion
       send(parent, :reconciliation_complete)
     end)
   end

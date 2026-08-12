@@ -11,22 +11,10 @@ defmodule EdgeAgent.Lan.Mdns do
   - `_edge_core._tcp.local` — service type record used by agents and other
     LAN clients to discover edge agents on the same subnet.
 
-  ## Process model
-
-  This module is a **one-shot Task**, not a long-lived GenServer. `MdnsLite`
-  owns its own state in `MdnsLite.TableServer` (part of `:mdns_lite`'s
-  supervision tree); the calls below are fire-and-forget configuration. Once
-  the Task exits, mDNS keeps advertising on its own. `restart: :transient`
-  ensures a crash during configuration is still surfaced by the supervisor,
-  while a normal exit doesn't cause needless restarts.
-
-  ## node_id invariant
-
-  The node_id is determined during Bootstrap (step 1) and persisted in
-  SQLite before this Task starts, so `Settings.get_node_id/0` is always
-  populated by the time `run/0` runs. If it isn't, that's a bug in the
-  supervision order — `run/0` raises rather than silently advertising
-  nothing.
+  This is a one-shot Task. `MdnsLite` keeps its own state in
+  `MdnsLite.TableServer`, so the Task configures records and exits while mDNS
+  continues advertising. Bootstrap persists the node ID before this Task starts;
+  `run/0` raises if that supervision invariant is broken.
   """
 
   alias EdgeAgent.Settings

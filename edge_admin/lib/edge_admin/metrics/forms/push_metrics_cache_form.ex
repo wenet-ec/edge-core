@@ -16,21 +16,7 @@ defmodule EdgeAdmin.Metrics.Forms.PushMetricsCacheForm do
   @doc """
   Validates metrics cache push parameters from agent.
 
-  ## Validations
-  - `metrics_type` - Must be "host", "agent", or "wireguard"
-  - `metrics_text` - Required, non-empty string (raw Prometheus text)
-
-  ## Returns
-  - `{:ok, attrs}` - Validated attributes as map
-  - `{:error, changeset}` - Validation errors
-
-  ## Examples
-
-      iex> changeset(%{"metrics" => %{"metrics_type" => "host", "metrics_text" => "# HELP..."}})
-      {:ok, %{"metrics_type" => "host", "metrics_text" => "# HELP..."}}
-
-      iex> changeset(%{"metrics" => %{"metrics_type" => "invalid", "metrics_text" => "..."}})
-      {:error, %Ecto.Changeset{}}
+  `metrics_type` must be `"host"`, `"agent"`, or `"wireguard"`.
   """
   def changeset(attrs) when is_map(attrs) do
     %__MODULE__{}

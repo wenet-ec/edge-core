@@ -103,7 +103,6 @@ defmodule EdgeAdmin.Metrics.Parsers.AgentMetricsParser do
     }
   end
 
-  # Extract simple gauge value
   defp extract_gauge(lines, metric_name) do
     lines
     |> Enum.find(fn line -> String.starts_with?(line, metric_name <> " ") end)
@@ -119,7 +118,6 @@ defmodule EdgeAdmin.Metrics.Parsers.AgentMetricsParser do
     end
   end
 
-  # Extract counter total (sum across all label combinations)
   defp extract_counter(lines, metric_name) do
     lines
     |> Enum.filter(fn line ->
@@ -134,8 +132,6 @@ defmodule EdgeAdmin.Metrics.Parsers.AgentMetricsParser do
     |> Enum.sum()
   end
 
-  # Extract counter total filtered to lines where label_name="label_value".
-  # Returns an integer sum.
   defp extract_counter_by_label_value(lines, metric_name, label_name, label_value) do
     pattern = ~s(#{label_name}="#{label_value}")
 
@@ -152,8 +148,6 @@ defmodule EdgeAdmin.Metrics.Parsers.AgentMetricsParser do
     |> Enum.sum()
   end
 
-  # Extract counter values grouped by label
-  # Returns a map like %{"localhost_blocked" => 5, "docker_network_blocked" => 3}
   defp extract_counter_by_label(lines, metric_name, label_name) do
     lines
     |> Enum.filter(fn line ->
@@ -176,7 +170,6 @@ defmodule EdgeAdmin.Metrics.Parsers.AgentMetricsParser do
     end)
   end
 
-  # Parse a number string that could be an integer or float
   defp parse_number(str) do
     if String.contains?(str, ".") do
       str |> String.to_float() |> trunc()
@@ -185,7 +178,6 @@ defmodule EdgeAdmin.Metrics.Parsers.AgentMetricsParser do
     end
   end
 
-  # Extract Oban queue counts by state
   defp extract_oban_queues(lines) do
     oban_lines =
       Enum.filter(lines, fn line ->

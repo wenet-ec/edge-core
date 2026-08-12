@@ -31,7 +31,6 @@ defmodule EdgeAdmin.Metrics.Schemas.NodeMetricsCache do
     field :metrics_type, :string
     field :metrics_text, :string
 
-    # Associations
     belongs_to :node, Node
 
     timestamps()

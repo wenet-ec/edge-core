@@ -24,9 +24,7 @@ defmodule EdgeAdmin.Metrics.Parsers.HostMetricsParser do
     |> parse_uptime_metrics(lines)
   end
 
-  # Parse CPU metrics
   defp parse_cpu_metrics(metrics, lines) do
-    # Extract CPU cores
     cores =
       lines
       |> parse_metric_value(~r/^node_cpu_seconds_total\{cpu="(\d+)"/)
@@ -38,7 +36,6 @@ defmodule EdgeAdmin.Metrics.Parsers.HostMetricsParser do
           nil
       end
 
-    # Extract load averages
     load_1m = parse_single_metric(lines, "node_load1")
     load_5m = parse_single_metric(lines, "node_load5")
     load_15m = parse_single_metric(lines, "node_load15")
@@ -48,11 +45,10 @@ defmodule EdgeAdmin.Metrics.Parsers.HostMetricsParser do
       "load_1m" => load_1m,
       "load_5m" => load_5m,
       "load_15m" => load_15m
-      # Note: cpu_usage_percent requires rate calculation, not available from instant values
+      # cpu_usage_percent requires rate calculation, not available from instant values.
     })
   end
 
-  # Parse memory metrics
   defp parse_memory_metrics(metrics, lines) do
     total = parse_single_metric(lines, "node_memory_MemTotal_bytes")
     available = parse_single_metric(lines, "node_memory_MemAvailable_bytes")
@@ -69,9 +65,7 @@ defmodule EdgeAdmin.Metrics.Parsers.HostMetricsParser do
     })
   end
 
-  # Parse disk metrics (root filesystem only for simplicity)
   defp parse_disk_metrics(metrics, lines) do
-    # Find root filesystem metrics
     total = parse_metric_with_label(lines, "node_filesystem_size_bytes", ~r/mountpoint="\/"/)
     available = parse_metric_with_label(lines, "node_filesystem_avail_bytes", ~r/mountpoint="\/"/)
 
@@ -87,21 +81,18 @@ defmodule EdgeAdmin.Metrics.Parsers.HostMetricsParser do
     })
   end
 
-  # Parse network metrics (eth0 interface, instant values only)
   defp parse_network_metrics(metrics, lines) do
-    # Note: These are total counters, not rates
-    # We can't calculate bytes/sec without time series data
+    # These are total counters, not rates; bytes/sec needs time-series data.
     rx_total = parse_metric_with_label(lines, "node_network_receive_bytes_total", ~r/device="eth0"/)
     tx_total = parse_metric_with_label(lines, "node_network_transmit_bytes_total", ~r/device="eth0"/)
 
     Map.merge(metrics, %{
       "network_rx_total_bytes" => rx_total,
       "network_tx_total_bytes" => tx_total
-      # Note: rx/tx_bytes_per_sec requires rate calculation, not available from instant values
+      # rx/tx_bytes_per_sec requires rate calculation, not available from instant values.
     })
   end
 
-  # Parse uptime metrics
   defp parse_uptime_metrics(metrics, lines) do
     boot_time = parse_single_metric(lines, "node_boot_time_seconds")
 
@@ -113,7 +104,6 @@ defmodule EdgeAdmin.Metrics.Parsers.HostMetricsParser do
     Map.put(metrics, "uptime_seconds", uptime_seconds)
   end
 
-  # Helper: Parse a simple metric without labels
   defp parse_single_metric(lines, metric_name) do
     Enum.find_value(lines, fn line ->
       case Regex.run(~r/^#{Regex.escape(metric_name)}\s+([\d.eE+-]+)/, line) do
@@ -130,7 +120,6 @@ defmodule EdgeAdmin.Metrics.Parsers.HostMetricsParser do
     end
   end
 
-  # Helper: Parse a metric with specific label filter
   defp parse_metric_with_label(lines, metric_name, label_regex) do
     Enum.find_value(lines, fn line ->
       if String.starts_with?(line, metric_name) && Regex.match?(label_regex, line) do
@@ -142,7 +131,6 @@ defmodule EdgeAdmin.Metrics.Parsers.HostMetricsParser do
     end)
   end
 
-  # Helper: Parse metric value with regex capture
   defp parse_metric_value(lines, regex) do
     Enum.flat_map(lines, fn line ->
       case Regex.scan(regex, line) do

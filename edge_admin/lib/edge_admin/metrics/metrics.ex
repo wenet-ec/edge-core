@@ -12,6 +12,7 @@ defmodule EdgeAdmin.Metrics do
   ## VPN Scraping
 
   Node metrics are scraped via VPN using the Gateway pattern:
+
   1. Find node's cluster via Metadata (ETS)
   2. Lookup Gateway process for that cluster (syn registry)
   3. Gateway makes HTTP request to node via VPN DNS
@@ -26,24 +27,6 @@ defmodule EdgeAdmin.Metrics do
   - **Staleness Threshold**: Cache entries older than 5 minutes are not served
   - **Upsert**: Each node can only have one cache entry per metrics type (host/agent/wireguard)
   - **Fallback**: Admin tries VPN scrape first, falls back to cache if VPN fails
-
-  ## Examples
-
-      # Admin metrics (self)
-      iex> scrape_admin_metrics()
-      {:ok, "# HELP edge_admin_uptime..."}
-
-      # Node metrics via VPN
-      iex> scrape_host_metrics("node-123")
-      {:ok, "# HELP node_cpu_seconds_total..."}
-
-      # Node metrics via cache (fallback)
-      iex> get_cached_metrics("node-123", "host")
-      %NodeMetricsCache{metrics_text: "# HELP node_cpu_seconds_total..."}
-
-      # Structured metrics (parsed)
-      iex> get_host_metrics("node-123")
-      {:ok, %HostMetrics{cpu: %{...}, memory: %{...}, disk: %{...}}}
   """
 
   import Ecto.Query, warn: false
@@ -66,16 +49,8 @@ defmodule EdgeAdmin.Metrics do
 
   @cache_staleness_minutes 5
 
-  # ===========================================================================
-  # Admin Metrics (Self)
-  # ===========================================================================
-
   @doc """
   Scrapes raw Prometheus admin metrics directly from PromEx module.
-
-  ## Returns
-  - `{:ok, metrics_text}` - Raw Prometheus metrics in text format
-  - `{:error, :prom_ex_unavailable}` - PromEx is down
   """
   @spec scrape_admin_metrics() :: {:ok, String.t()} | {:error, :prom_ex_unavailable}
   def scrape_admin_metrics do
@@ -90,12 +65,6 @@ defmodule EdgeAdmin.Metrics do
 
   @doc """
   Returns human-friendly admin metrics by parsing raw Prometheus text from admin PromEx.
-
-  ## Returns
-  - `{:ok, %AdminMetrics{}}` - Structured metrics with application, metadata,
-    membership, discovery, nodes, quantum, vpn, commands, ssh, reconciliation,
-    self_updates, gateways, proxy, event_broker, webhook, oban_queues
-  - `{:error, reason}` - PromEx unavailable
   """
   @spec get_admin_metrics() :: {:ok, AdminMetrics.t()} | {:error, term()}
   def get_admin_metrics do
@@ -107,23 +76,12 @@ defmodule EdgeAdmin.Metrics do
     end
   end
 
-  # ===========================================================================
-  # Node Host Metrics (node_exporter)
-  # ===========================================================================
-
   @doc """
   Scrapes raw Prometheus host metrics from a node's node_exporter via Gateway.
 
   Tries VPN scrape first, falls back to cached metrics if VPN fails.
-
-  ## Parameters
-  - `node_id` - Node UUID (string)
-
-  ## Returns
-  - `{:ok, metrics_text}` - Raw Prometheus metrics (live from VPN or cache)
-  - `{:error, :not_found}` - Node not in DB
-  - `{:error, :service_unavailable}` - VPN scrape failed AND no fresh cache available
-    (covers gateway-missing, cluster-not-in-ETS, scrape timeout, agent error)
+  Returns `:service_unavailable` when both live scraping and fresh cache lookup
+  fail.
   """
   @spec scrape_host_metrics(binary()) :: {:ok, String.t()} | {:error, term()}
   def scrape_host_metrics(node_id) do
@@ -132,20 +90,12 @@ defmodule EdgeAdmin.Metrics do
 
   @doc """
   Returns human-friendly host metrics for a node by parsing raw Prometheus text from node_exporter.
-
-  ## Parameters
-  - `node_id` - Node UUID (string)
-
-  ## Returns
-  - `{:ok, %HostMetrics{}}` - Structured metrics with cpu, memory, disk, uptime
-  - `{:error, reason}` - Various error reasons
   """
   @spec get_host_metrics(binary()) :: {:ok, HostMetrics.t()} | {:error, term()}
   def get_host_metrics(node_id) do
     with {:ok, raw_text} <- scrape_host_metrics(node_id),
          {:ok, node} <- Nodes.get_node(node_id) do
       parsed_metrics = HostMetricsParser.parse(raw_text)
-      # Add cluster_name to parsed metrics for from_raw_metrics
       parsed_metrics = Map.put(parsed_metrics, "cluster_name", node.cluster.name)
 
       metrics = HostMetrics.from_raw_metrics(parsed_metrics, node_id)
@@ -154,23 +104,12 @@ defmodule EdgeAdmin.Metrics do
     end
   end
 
-  # ===========================================================================
-  # Node Agent Metrics (agent PromEx)
-  # ===========================================================================
-
   @doc """
   Scrapes raw Prometheus agent metrics from a node's PromEx endpoint via Gateway.
 
   Tries VPN scrape first, falls back to cached metrics if VPN fails.
-
-  ## Parameters
-  - `node_id` - Node UUID (string)
-
-  ## Returns
-  - `{:ok, metrics_text}` - Raw Prometheus metrics (live from VPN or cache)
-  - `{:error, :not_found}` - Node not in DB
-  - `{:error, :service_unavailable}` - VPN scrape failed AND no fresh cache available
-    (covers gateway-missing, cluster-not-in-ETS, scrape timeout, agent error)
+  Returns `:service_unavailable` when both live scraping and fresh cache lookup
+  fail.
   """
   @spec scrape_agent_metrics(binary()) :: {:ok, String.t()} | {:error, term()}
   def scrape_agent_metrics(node_id) do
@@ -179,21 +118,12 @@ defmodule EdgeAdmin.Metrics do
 
   @doc """
   Returns human-friendly agent metrics for a node by parsing raw Prometheus text from PromEx.
-
-  ## Parameters
-  - `node_id` - Node UUID (string)
-
-  ## Returns
-  - `{:ok, %AgentMetrics{}}` - Structured metrics with application, bootstrap,
-    commands, discovery, proxy, ssh, vpn, health_check, settings_config, oban_queues
-  - `{:error, reason}` - Various error reasons
   """
   @spec get_agent_metrics(binary()) :: {:ok, AgentMetrics.t()} | {:error, term()}
   def get_agent_metrics(node_id) do
     with {:ok, raw_text} <- scrape_agent_metrics(node_id),
          {:ok, node} <- Nodes.get_node(node_id) do
       parsed_metrics = AgentMetricsParser.parse(raw_text)
-      # Add cluster_name to parsed metrics for from_raw_metrics
       parsed_metrics = Map.put(parsed_metrics, "cluster_name", node.cluster.name)
 
       metrics = AgentMetrics.from_raw_metrics(parsed_metrics, node_id)
@@ -209,12 +139,8 @@ defmodule EdgeAdmin.Metrics do
   Uses best-effort approach — partial failures return `available: false` per
   source while the call itself still succeeds.
 
-  ## Parameters
-  - `node_id` — Node UUID (string)
-
-  ## Returns
-  - `{:ok, %UnifiedMetrics{}}` — always. Each per-source field carries its
-    own `available` flag; the call itself never errors.
+  Always returns `{:ok, %UnifiedMetrics{}}`; each per-source field carries its
+  own `available` flag.
   """
   @spec get_unified_metrics(binary()) :: {:ok, UnifiedMetrics.t()}
   def get_unified_metrics(node_id) do
@@ -244,34 +170,18 @@ defmodule EdgeAdmin.Metrics do
   defp source_data({:ok, metrics}), do: metrics |> Map.from_struct() |> Map.put(:available, true)
   defp source_data({:error, _}), do: %{available: false, error: "unavailable"}
 
-  # ===========================================================================
-  # Node WireGuard Metrics (wireguard_exporter)
-  # ===========================================================================
-
   @doc """
   Scrapes raw Prometheus WireGuard metrics from a node's wireguard_exporter via Gateway.
 
   Tries VPN scrape first, falls back to cached metrics if VPN fails.
-
-  ## Parameters
-  - `node_id` - Node UUID (string)
-
-  ## Returns
-  - `{:ok, metrics_text}` - Raw Prometheus metrics (live from VPN or cache)
-  - `{:error, :not_found}` - Node not in DB
-  - `{:error, :service_unavailable}` - VPN scrape failed AND no fresh cache available
-    (covers gateway-missing, cluster-not-in-ETS, scrape timeout, agent error)
+  Returns `:service_unavailable` when both live scraping and fresh cache lookup
+  fail.
   """
   @spec scrape_wireguard_metrics(binary()) :: {:ok, String.t()} | {:error, term()}
   def scrape_wireguard_metrics(node_id) do
     scrape_node_metrics(node_id, :wireguard, &Gateway.scrape_wireguard_metrics/2)
   end
 
-  # ===========================================================================
-  # Private Helpers
-  # ===========================================================================
-
-  # Unified scraping logic with VPN + cache fallback
   defp scrape_node_metrics(node_id, metrics_type, gateway_scrape_fn) do
     # Check DB first — a missing node is always 404, regardless of VPN/cache state
     with {:ok, node} <- Nodes.get_node(node_id) do
@@ -316,7 +226,6 @@ defmodule EdgeAdmin.Metrics do
     end
   end
 
-  # Attempts to serve metrics from cache
   defp fallback_to_cache(node_id, metrics_type) do
     case get_cached_metrics(node_id, Atom.to_string(metrics_type)) do
       %NodeMetricsCache{metrics_text: metrics_text} ->
@@ -329,33 +238,12 @@ defmodule EdgeAdmin.Metrics do
     end
   end
 
-  # ===========================================================================
-  # Node Metrics Cache functions
-  # ===========================================================================
-
   @doc """
   Upserts metrics cache for a node.
 
   Creates a new cache entry or updates existing one (based on unique constraint
   on node_id + metrics_type). This allows agents to push metrics repeatedly
   without creating duplicate entries.
-
-  ## Parameters
-  - `node_id` - Node UUID (string or binary)
-  - `metrics_type` - Type of metrics: "host", "agent", or "wireguard"
-  - `metrics_text` - Raw Prometheus metrics in text format
-
-  ## Returns
-  - `{:ok, %NodeMetricsCache{}}` - Cache entry created/updated
-  - `{:error, %Ecto.Changeset{}}` - Validation failed
-
-  ## Examples
-
-      iex> upsert_metrics_cache("abc-123", "host", "# HELP...")
-      {:ok, %NodeMetricsCache{node_id: "abc-123", metrics_type: "host"}}
-
-      iex> upsert_metrics_cache("abc-123", "invalid", "...")
-      {:error, %Ecto.Changeset{errors: [metrics_type: {"is invalid", ...}]}}
   """
   @spec upsert_metrics_cache(binary(), String.t(), String.t()) ::
           {:ok, NodeMetricsCache.t()} | {:error, Ecto.Changeset.t()}
@@ -380,28 +268,6 @@ defmodule EdgeAdmin.Metrics do
   Returns nil if:
   - No cache entry exists
   - Cache entry is older than 5 minutes (stale)
-
-  ## Parameters
-  - `node_id` - Node UUID (string or binary)
-  - `metrics_type` - Type of metrics: "host", "agent", or "wireguard"
-
-  ## Returns
-  - `%NodeMetricsCache{}` - Fresh cache entry (not stale)
-  - `nil` - No cache or stale
-
-  ## Examples
-
-      # Cache exists and is fresh (< 5 minutes old)
-      iex> get_cached_metrics("abc-123", "host")
-      %NodeMetricsCache{metrics_text: "# HELP...", updated_at: ~U[2025-01-29 11:25:00Z]}
-
-      # Cache is stale (> 5 minutes old)
-      iex> get_cached_metrics("abc-123", "host")
-      nil
-
-      # No cache exists
-      iex> get_cached_metrics("xyz-999", "agent")
-      nil
   """
   @spec get_cached_metrics(binary(), String.t()) :: NodeMetricsCache.t() | nil
   def get_cached_metrics(node_id, metrics_type) do
@@ -416,16 +282,7 @@ defmodule EdgeAdmin.Metrics do
   @doc """
   Returns the configured cache staleness threshold in minutes.
 
-  This is hard-coded to 5 minutes and is used for documentation
-  and testing purposes. Cache entries older than this are not served.
-
-  ## Returns
-  - Integer representing staleness threshold in minutes
-
-  ## Examples
-
-      iex> cache_staleness_minutes()
-      5
+  Cache entries older than this are not served.
   """
   @spec cache_staleness_minutes() :: non_neg_integer()
   def cache_staleness_minutes, do: @cache_staleness_minutes

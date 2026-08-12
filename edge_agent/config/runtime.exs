@@ -4,7 +4,6 @@ import EdgeAgent.Config
 
 alias EdgeAgent.LocalScheduler.Tasks
 
-# Optional environment variables with defaults
 data_dir = get_env("DATA_DIR", :string, "/app/data")
 recovery_key = get_env("RECOVERY_KEY", :string)
 
@@ -15,17 +14,15 @@ config :edge_agent, EdgeAgent.Repo,
   queue_target: 100,
   queue_interval: 2_000
 
-# NOTE: Only set `server` to `true` if `PHX_SERVER` is present. We cannot set
-# it to `false` otherwise because `mix phx.server` will stop working without it.
+# Only set `server` to `true` when `PHX_SERVER` is present. Setting it to
+# `false` here prevents `mix phx.server` from starting the endpoint.
 if get_env("PHX_SERVER", :boolean, false) == true do
   config :edge_agent, EdgeAgentWeb.Endpoint, server: true
 end
 
 api_port = get_env("API_PORT", :integer, 44_000)
 
-# =============================================================================
 # Background Job Schedules
-# =============================================================================
 enqueue_executions_schedule = get_env("ENQUEUE_EXECUTIONS_SCHEDULE", :string, "* * * * *")
 report_executions_schedule = get_env("REPORT_EXECUTIONS_SCHEDULE", :string, "* * * * *")
 sync_executions_schedule = get_env("SYNC_EXECUTIONS_SCHEDULE", :string, "*/2 * * * *")
@@ -37,11 +34,8 @@ check_self_update_schedule = get_env("CHECK_SELF_UPDATE_SCHEDULE", :string, "0 *
 push_metrics_schedule = get_env("PUSH_METRICS_SCHEDULE", :string, "*/2 * * * *")
 pull_vpn_config_schedule = get_env("PULL_VPN_CONFIG_SCHEDULE", :string, "0 0 * * *")
 
-# --- LocalScheduler (Quantum) ---
-#
 # In-process cron for stateless, idempotent housekeeping. Avoids writing an
-# `oban_jobs` row per tick on the agent's SQLite — the same pattern admin uses
-# with its `EdgeAdmin.LocalScheduler`.
+# `oban_jobs` row per tick on the agent's SQLite.
 config :edge_agent, EdgeAgent.LocalScheduler,
   jobs: [
     discover_admins: [

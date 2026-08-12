@@ -1,8 +1,6 @@
 # deploy/local/.envs/.edge_agent
 
-# =============================================================================
 # VPN Enrollment
-# =============================================================================
 # Exactly one of ENROLLMENT_KEY or PUBLIC_ENROLLMENT_KEY_URLS must be set.
 # ENROLLMENT_KEY is a static signed token (preferred for production).
 # PUBLIC_ENROLLMENT_KEY_URLS is a comma-separated list of admin URLs to try
@@ -14,9 +12,7 @@ PUBLIC_ENROLLMENT_KEY_URLS=http://localhost:4000/api/v1/clusters/default/enrollm
 # Path to a local file containing the enrollment key (alternative to the above).
 # PUBLIC_ENROLLMENT_KEY_PATHS=data.key,result.token
 
-# =============================================================================
 # Node recovery
-# =============================================================================
 # Optional. On a fresh Agent data volume only, RECOVERY_KEY restores a node
 # when used with its normal enrollment key. Create it from the Admin for the
 # exact node and cluster being restored. Do not use it while that node is still running.
@@ -24,21 +20,15 @@ PUBLIC_ENROLLMENT_KEY_URLS=http://localhost:4000/api/v1/clusters/default/enrollm
 # Never set it for normal deployments.
 # RECOVERY_KEY=
 
-# =============================================================================
 # Self-Update (Watchtower)
-# =============================================================================
 SELF_UPDATE_ENABLED=true
 WATCHTOWER_URL=http://localhost:58080
 WATCHTOWER_HTTP_API_TOKEN=local-dev-token
 
-# =============================================================================
 # Web Server / API
-# =============================================================================
 # API_PORT=44000          # Agent HTTP API port (default: 44000)
 
-# =============================================================================
 # Ports
-# =============================================================================
 # SSH_PORT=40022                    # Embedded SSH server (default: 40022)
 # HOST_METRICS_PORT=49100           # Node exporter scrape port (default: 49100)
 # WIREGUARD_METRICS_PORT=49586      # WireGuard exporter scrape port (default: 49586)
@@ -46,43 +36,31 @@ WATCHTOWER_HTTP_API_TOKEN=local-dev-token
 # SOCKS5_PROXY_PORT=41080           # SOCKS5 proxy (default: 41080)
 # AGENT_WIREGUARD_PORT=             # Static WireGuard listen port (optional; useful behind NAT)
 
-# =============================================================================
 # Admin Discovery
-# =============================================================================
 # Port that admin instances expose their discovery endpoint on.
 # Must match ADMIN_DISCOVERY_PORT in the admin env.
 # ADMIN_DISCOVERY_PORT=44000
 
-# =============================================================================
 # Node Aliases
-# =============================================================================
 # Friendly DNS names for this node (comma-separated). Best-effort — conflicts silently ignored.
 # Each alias becomes node-{alias}.cluster-{cluster}.{domain} in the VPN mesh.
 ALIASES=test
 
-# =============================================================================
 # Proxy Security
-# =============================================================================
 # Comma-separated lists for proxy access control (optional).
 # PROXY_BLOCKED_PORTS=            # Block specific destination ports
 # PROXY_CUSTOM_BLOCKED_HOSTS=     # Block specific destination hostnames
 # PROXY_CUSTOM_ALLOWED_HOSTS=     # Allowlist: if set, only these hosts are reachable
 
-# =============================================================================
 # Authentication
-# =============================================================================
 # AGENT_METRICS_AUTH_ENABLED=true     # Require auth on metrics scrape endpoints (default: true)
 # PROXY_SERVERS_AUTH_ENABLED=true     # Require auth on proxy endpoints (default: true)
 
-# =============================================================================
 # HTTP Timeouts (agent → admin communication)
-# =============================================================================
 # ADMIN_CALL_TIMEOUT_MS=10000         # Registration, command acks, health reporting, metrics push
 # ADMIN_DISCOVERY_TIMEOUT_MS=5000     # Admin peer probing during discovery (parallel; geo-friendly)
 
-# =============================================================================
 # Proxy Server Timeouts
-# =============================================================================
 # Per-operation proxy timeouts (in milliseconds)
 # PROXY_CONNECTION_TIMEOUT_MS=2000        # TCP connect to target host (default: 2s)
 # PROXY_READ_TIMEOUT_MS=10000             # Socket read (default: 10s)
@@ -91,9 +69,7 @@ ALIASES=test
 # PROXY_DRAIN_GRACE_TIMEOUT_MS=30000      # Grace window for tunnels during graceful drain on shutdown (default: 30s)
 # PROXY_NUM_ACCEPTORS=100                 # Ranch acceptor processes per listener (default: 100)
 
-# =============================================================================
 # Background Job Schedules
-# =============================================================================
 # ENQUEUE_EXECUTIONS_SCHEDULE=* * * * *      # Enqueue pending command executions (default: every 1min)
 # REPORT_EXECUTIONS_SCHEDULE=* * * * *       # Report completed executions to admin (default: every 1min)
 # SYNC_EXECUTIONS_SCHEDULE=*/2 * * * *       # Sync unprocessed executions via HTTP fallback (default: every 2min)
@@ -104,41 +80,31 @@ ALIASES=test
 # PUSH_METRICS_SCHEDULE=*/2 * * * *          # Push metrics to admin via HTTP fallback (default: every 2min)
 # PULL_VPN_CONFIG_SCHEDULE=0 0 * * *         # Pull full VPN config as DNS recovery backstop (default: daily)
 
-# =============================================================================
 # VPN
-# =============================================================================
 # VPN_READY_TIMEOUT_SECONDS=30   # How long to wait for VPN to be ready before aborting (default: 30)
 # PULL_VPN_CONFIG_ENABLED=true   # Last-resort backstop for DNS recovery after netclient daemon
 #                                # restarts. Disable only on severely resource-starved machines
 #                                # where netclient pull causes disruptive WireGuard interface
 #                                # resets — broken DNS can then persist indefinitely. (default: true)
 
-# =============================================================================
 # Edge VPN CLI
-# =============================================================================
 # Scheme used by the Edge VPN CLI to reach the Edge VPN server.
 EDGE_VPN_API_SCHEME=http
 
-# =============================================================================
 # DERP Map Cache
-# =============================================================================
 # DERP_MAP_REFRESH_INTERVAL_MS=300000    # Stable refresh interval once the map has been fetched
 #                                        # (default: 5 min). On startup the cache warms up fast:
 #                                        # first attempt at 5 s, doubling each miss until this
 #                                        # value is reached. Set lower (e.g. 60000) for faster
 #                                        # rotation in test/dev environments.
 
-# =============================================================================
 # VPN / WireGuard
-# =============================================================================
 # Controls netclient's WireGuard backend (checked at entrypoint and by netclient).
 # "wireguard-go" → userspace wireguard-go, DERP relay enabled (default in containers)
 # unset          → kernel WireGuard module (better performance, no DERP; requires kernel module on host)
 # WG_QUICK_USERSPACE_IMPLEMENTATION=wireguard-go
 
-# =============================================================================
 # Database & Data Paths (SQLite)
-# =============================================================================
 # DATA_DIR sets the root for all persistent agent state (default: /app/data).
 # Subdirectories are implicit — no need to set them individually:
 #   ${DATA_DIR}/agent/edge_agent.db  — SQLite database

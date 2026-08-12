@@ -550,10 +550,6 @@ defmodule EdgeAdmin.Nodes.Workflows.Reconciliation do
     end)
   end
 
-  # ===========================================================================
-  # Network reconciliation functions
-  # ===========================================================================
-
   defp ensure_cluster_network(cluster) do
     case cluster_network_state(cluster) do
       :present -> :ok

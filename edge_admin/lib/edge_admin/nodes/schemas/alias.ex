@@ -74,18 +74,8 @@ defmodule EdgeAdmin.Nodes.Schemas.Alias do
   @doc """
   Returns the full VPN hostname for this alias.
 
-  ## Format
-  `node-{name}.cluster-{cluster_name}.{domain}`
-
-  where domain is configured via `EDGE_VPN_DEFAULT_DOMAIN` (default: `nm.internal`)
-
-  ## Requirements
-  Requires cluster association to be preloaded.
-
-  ## Examples
-
-      iex> vpn_hostname(%Alias{name: "web", cluster: %Cluster{name: "prod"}})
-      "node-web.cluster-prod.nm.internal"
+  Format: `node-{name}.cluster-{cluster_name}.{domain}`. Requires the cluster
+  association to be preloaded.
   """
   @spec vpn_hostname(t()) :: String.t()
   def vpn_hostname(%__MODULE__{name: name, cluster: %{name: cluster_name}}) do
@@ -104,13 +94,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Alias do
   Use this when creating or deleting DNS entries via the Edge VPN API.
   Use `vpn_hostname/1` for the user-facing fully qualified hostname.
 
-  ## Format
-  `node-{name}.cluster-{cluster_name}`
-
-  ## Examples
-
-      iex> vpn_dns_name(%Alias{name: "web", cluster: %Cluster{name: "prod"}})
-      "node-web.cluster-prod"
+  Format: `node-{name}.cluster-{cluster_name}`.
   """
   @spec vpn_dns_name(t()) :: String.t()
   def vpn_dns_name(%__MODULE__{name: name, cluster: %{name: cluster_name}}) do

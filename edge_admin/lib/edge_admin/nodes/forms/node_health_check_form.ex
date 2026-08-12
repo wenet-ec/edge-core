@@ -21,20 +21,8 @@ defmodule EdgeAdmin.Nodes.Forms.NodeHealthCheckForm do
   @doc """
   Validates node health check parameters from agent.
 
-  ## Validations
-  - `status` - Must be `"healthy"` or `"unhealthy"` on the wire (cast to atom)
-
-  ## Returns
-  - `{:ok, attrs}` - Validated attributes as map (status is an atom)
-  - `{:error, changeset}` - Validation errors
-
-  ## Examples
-
-      iex> changeset(%{"status" => "healthy"})
-      {:ok, %{"status" => :healthy}}
-
-      iex> changeset(%{"status" => "unreachable"})
-      {:error, %Ecto.Changeset{}}
+  `status` must be `"healthy"` or `"unhealthy"` on the wire and is cast to
+  an atom.
   """
   def changeset(attrs) when is_map(attrs) do
     %__MODULE__{}

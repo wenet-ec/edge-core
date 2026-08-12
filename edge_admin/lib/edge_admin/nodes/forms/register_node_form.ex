@@ -3,8 +3,8 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeForm do
   @moduledoc """
   Form for validating agent node registration inputs.
 
-  Handles input validation and normalization for initial node registration and recovery.
-  This form validates external API inputs from agents before passing to the domain layer.
+  Validates and normalizes external API input from agents before passing it to
+  the domain layer.
   """
   use EdgeAdmin.Form
 
@@ -40,12 +40,7 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeForm do
   @doc """
   Validates and normalizes agent node registration parameters.
 
-  ## Validations
-  - Format validations: UUID, ports, and network name format
-
-  ## Returns
-  - `{:ok, attrs}` - Validated attributes as map
-  - `{:error, changeset}` - Validation errors
+  Checks UUIDs, ports, and network-name format.
   """
   @spec changeset(map()) :: {:ok, map()} | {:error, Ecto.Changeset.t()}
   def changeset(attrs) when is_map(attrs) do

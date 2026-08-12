@@ -110,7 +110,6 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
     field(:last_seen_at, :utc_datetime)
     field(:version, :string)
 
-    # Operational fields
     field(:http_port, :integer)
     field(:ssh_port, :integer)
     field(:host_metrics_port, :integer)
@@ -122,15 +121,12 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
     field(:recovery_key, :string, redact: true)
     field(:self_update_enabled, :boolean, default: false)
 
-    # Edge VPN references
     field(:vpn_host_id, :binary_id)
 
-    # Computed fields
     field(:node_name, :string, virtual: true)
     field(:vpn_hostname, :string, virtual: true)
     field(:mdns_hostname, :string, virtual: true)
 
-    # Associations
     belongs_to(:cluster, Cluster)
     belongs_to(:enrollment_key, EnrollmentKey)
     has_one(:node_diagnostic, NodeDiagnostic, on_delete: :delete_all)
@@ -233,13 +229,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
   @doc """
   Returns the node name for this node.
 
-  ## Format
-  `node-{id}`
-
-  ## Examples
-
-      iex> node_name(%Node{id: "abc-123"})
-      "node-abc-123"
+  Format: `node-{id}`.
   """
   @spec node_name(t() | String.t()) :: String.t()
   def node_name(%__MODULE__{id: id}), do: Vpn.build_vpn_name(id, prefix: :node)
@@ -248,22 +238,9 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
   @doc """
   Returns the VPN hostname for this node.
 
-  ## Format
-  `node-{id}.cluster-{cluster_name}.{domain}`
-
-  where domain is configured via `EDGE_VPN_DEFAULT_DOMAIN` (default: `nm.internal`)
-
-  ## Requirements
-  Requires cluster association to be preloaded.
-
-  ## Examples
-
-      iex> vpn_hostname(%Node{id: "abc-123", cluster: %Cluster{name: "prod"}})
-      "node-abc-123.cluster-prod.nm.internal"
+  Format: `node-{id}.cluster-{cluster_name}.{domain}`. Requires the cluster
+  association to be preloaded.
   """
-  # ---------------------------------------------------------------------------
-  # Status registry
-  # ---------------------------------------------------------------------------
   @spec vpn_hostname(t()) :: String.t()
   def vpn_hostname(%__MODULE__{id: id, cluster: %{name: cluster_name}}) do
     short_name = node_name(id)
@@ -274,13 +251,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
   @doc """
   Returns the mDNS hostname for this node.
 
-  ## Format
-  `node-{id}.local`
-
-  ## Examples
-
-      iex> mdns_hostname(%Node{id: "abc-123"})
-      "node-abc-123.local"
+  Format: `node-{id}.local`.
   """
   @spec mdns_hostname(t()) :: String.t()
   def mdns_hostname(%__MODULE__{id: id}) do

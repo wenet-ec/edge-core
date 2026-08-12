@@ -3,8 +3,7 @@ defmodule EdgeAdmin.Nodes.Forms.CreateAliasForm do
   @moduledoc """
   Form for validating alias creation inputs.
 
-  Handles input validation for creating node aliases.
-  This form validates external API inputs before passing to the domain layer.
+  Validates external API input before passing it to the domain layer.
   """
   use EdgeAdmin.Form
 
@@ -17,15 +16,7 @@ defmodule EdgeAdmin.Nodes.Forms.CreateAliasForm do
   @doc """
   Validates and normalizes alias creation parameters.
 
-  Note: node_id and cluster_id are validated at the controller level via path param
-  and set by the context function.
-
-  ## Validations
-  - `name` - Required, must be lowercase alphanumeric with hyphens (DNS-compatible)
-
-  ## Returns
-  - `{:ok, attrs}` - Validated and normalized attributes as a map with string keys
-  - `{:error, changeset}` - Validation errors
+  `node_id` and `cluster_id` come from path/context data, not this form.
   """
   def changeset(attrs) when is_map(attrs) do
     %__MODULE__{}

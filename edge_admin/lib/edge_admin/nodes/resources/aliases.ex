@@ -191,7 +191,6 @@ defmodule EdgeAdmin.Nodes.Resources.Aliases do
         from(a in acc, where: case_insensitive_like(field(a, ^field), ^value))
       end)
 
-    # Run Flop query
     case Flop.validate_and_run(query, flop_params,
            for: Alias,
            replace_invalid_params: true
@@ -207,17 +206,7 @@ defmodule EdgeAdmin.Nodes.Resources.Aliases do
   @doc """
   Gets a single alias by ID.
 
-  ## Parameters
-  - `id` - The alias ID
-
-  ## Returns
-  - `{:ok, alias}` - Alias found (with cluster preloaded)
-  - `{:error, :not_found}` - Alias doesn't exist or invalid UUID
-
-  ## Examples
-
-      iex> get_alias(alias_id)
-      {:ok, %Alias{name: "web-server", cluster: %Cluster{}}}
+  Returns the alias with its cluster preloaded, or `{:error, :not_found}`.
   """
   @spec get(String.t()) :: {:ok, Alias.t()} | {:error, :not_found}
   def get(id) do
@@ -246,19 +235,7 @@ defmodule EdgeAdmin.Nodes.Resources.Aliases do
   If that rollback ever fails and the alias row remains, reconciliation treats the
   DB row as source of truth and recreates the DNS entry.
 
-  ## Parameters
-  - `node` - The node to create an alias for (must have cluster preloaded)
-  - `params` - Map with "name" key
-
-  ## Returns
-  - `{:ok, alias}` - Alias created successfully
-  - `{:error, changeset}` - Validation failed
-  - `{:error, :service_unavailable}` - Edge VPN health check failed, node not found, or DNS creation failed
-
-  ## Examples
-
-      iex> create_alias(node, %{"name" => "web-server"})
-      {:ok, %Alias{name: "web-server", node_id: "abc-123"}}
+  Returns `:service_unavailable` when Edge VPN health or DNS creation fails.
   """
   @spec create(Node.t(), map()) ::
           {:ok, Alias.t()}
@@ -392,14 +369,7 @@ defmodule EdgeAdmin.Nodes.Resources.Aliases do
     end
   end
 
-  @doc """
-  Returns a changeset for tracking alias changes (for forms).
-
-  ## Examples
-
-      iex> change_alias(alias_record)
-      %Ecto.Changeset{data: %Alias{}}
-  """
+  @doc "Returns a changeset for tracking alias changes."
   @spec change(Alias.t(), map()) :: Ecto.Changeset.t()
   def change(%Alias{} = alias_record, attrs \\ %{}) do
     Alias.changeset(alias_record, attrs)

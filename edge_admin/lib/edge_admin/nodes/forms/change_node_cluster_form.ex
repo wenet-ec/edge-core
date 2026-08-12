@@ -3,8 +3,7 @@ defmodule EdgeAdmin.Nodes.Forms.ChangeNodeClusterForm do
   @moduledoc """
   Form for validating node cluster change inputs.
 
-  Handles input validation for changing a node's cluster assignment.
-  This form validates external API inputs before passing to the domain layer.
+  Validates external API input before passing it to the domain layer.
   """
   use EdgeAdmin.Form
 
@@ -17,13 +16,8 @@ defmodule EdgeAdmin.Nodes.Forms.ChangeNodeClusterForm do
   @doc """
   Validates and normalizes node cluster change parameters.
 
-  ## Validations
-  - `cluster_name` - Required, must match the cluster-name pattern in `EdgeAdmin.Naming`
-  - Also checks if cluster exists (via get_cluster_fn callback)
-
-  ## Returns
-  - `{:ok, cluster_name}` - Validated cluster name as string
-  - `{:error, changeset}` - Validation errors
+  Validates the cluster-name shape and checks existence through the supplied
+  lookup callback.
   """
   def changeset(attrs, get_cluster_fn \\ &EdgeAdmin.Nodes.get_cluster/1)
 

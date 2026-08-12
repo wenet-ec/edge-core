@@ -102,13 +102,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Cluster do
   @doc """
   Returns the Edge VPN network name for this cluster.
 
-  ## Format
-  `cluster-{name}`
-
-  ## Examples
-
-      iex> network_name(%Cluster{name: "prod"})
-      "cluster-prod"
+  Format: `cluster-{name}`.
   """
   @spec network_name(t() | String.t()) :: String.t()
   def network_name(%__MODULE__{name: name}), do: Vpn.build_network_name(name, prefix: :node)
@@ -117,15 +111,8 @@ defmodule EdgeAdmin.Nodes.Schemas.Cluster do
   @doc """
   Returns the VPN domain suffix for nodes in this cluster.
 
-  ## Format
-  `cluster-{name}.{domain}`
-
-  where domain is configured via `EDGE_VPN_DEFAULT_DOMAIN` (default: `nm.internal`)
-
-  ## Examples
-
-      iex> vpn_domain(%Cluster{name: "prod"})
-      "cluster-prod.nm.internal"
+  Format: `cluster-{name}.{domain}`, where `domain` comes from
+  `EDGE_VPN_DEFAULT_DOMAIN` (default: `nm.internal`).
   """
   @spec vpn_domain(t()) :: String.t()
   def vpn_domain(%__MODULE__{name: name}) do
@@ -135,39 +122,21 @@ defmodule EdgeAdmin.Nodes.Schemas.Cluster do
   @doc """
   Returns the number of nodes in this cluster.
 
-  ## Requirements
-  Requires nodes association to be preloaded.
-
-  ## Returns
-  - Integer count if nodes preloaded
-  - `0` if nodes not loaded
-
-  ## Examples
-
-      iex> node_count(%Cluster{nodes: [%Node{}, %Node{}]})
-      2
-
-      iex> node_count(%Cluster{nodes: %Ecto.Association.NotLoaded{}})
-      0
+  Returns `0` when the nodes association is not loaded.
   """
   @spec node_count(t()) :: non_neg_integer()
   def node_count(%__MODULE__{nodes: nodes}) when is_list(nodes), do: length(nodes)
   def node_count(%__MODULE__{}), do: 0
 
-  # Private helper functions
-
   defp maybe_generate_name(changeset) do
     if get_field(changeset, :name) do
       changeset
     else
-      # Generate 12-char random alphanumeric name
       random_name = Random.string(12)
 
       put_change(changeset, :name, random_name)
     end
   end
-
-  # Private validation functions
 
   defp validate_ipv4_cidr_format(changeset) do
     validate_change(changeset, :ipv4_range, fn _, value ->

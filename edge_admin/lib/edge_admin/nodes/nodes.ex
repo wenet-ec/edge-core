@@ -6,14 +6,6 @@ defmodule EdgeAdmin.Nodes do
   Nodes represent edge devices (agents) enrolled in the system. Each node belongs
   to a cluster and can execute commands via SSH or proxy connections.
 
-  ## Key Concepts
-
-  - **Node**: An enrolled edge device running the EdgeAgent, identified by a UUID
-  - **Cluster**: A logical grouping of nodes in an isolated VPN network
-  - **Enrollment**: Process of adding a new node to the system via enrollment keys
-  - **Alias**: Custom DNS entry for a node (e.g., "web-server" -> "node-abc123")
-  - **Health Check**: Periodic pings to verify node availability (healthy/unhealthy/unreachable)
-
   ## Architecture
 
   Two sources of state must be kept in sync: the Admin database and Edge VPN (the VPN
@@ -97,27 +89,6 @@ defmodule EdgeAdmin.Nodes do
     for one cluster, not the global Edge VPN state. The maintenance scheduler performs
     the global sweep once after it queues per-cluster work.
 
-  ## Examples
-
-      # List all nodes with filtering and pagination
-      iex> list_nodes(%{"cluster_name" => "prod", "status" => "healthy"})
-      {:ok, {[%Node{}, ...], %Flop.Meta{}}}
-
-      # Get a single node by ID
-      iex> get_node("abc-123")
-      {:ok, %Node{id: "abc-123", cluster: %Cluster{}, ...}}
-
-      # Register or update a node from agent
-      iex> register_node(%{"node_id" => "abc-123", "network_name" => "cluster-test", ...})
-      {:ok, %Node{}}
-
-      # Create a cluster
-      iex> create_cluster(%{"name" => "prod", "ipv4_range" => "100.64.1.0/24"})
-      {:ok, %Cluster{}}
-
-      # Create an alias for a node
-      iex> create_alias(node, %{"name" => "web-server"})
-      {:ok, %Alias{}}
   """
 
   alias EdgeAdmin.Nodes.Resources.Aliases
@@ -133,13 +104,6 @@ defmodule EdgeAdmin.Nodes do
   alias EdgeAdmin.Nodes.Workflows.HealthCheck
   alias EdgeAdmin.Nodes.Workflows.Reconciliation
 
-  # ===========================================================================
-  # Private Helpers
-  # ===========================================================================
-
-  # ===========================================================================
-  # Cluster functions
-  # ===========================================================================
   @doc """
   Lists all clusters with node counts, filtering, and pagination.
 
@@ -161,20 +125,7 @@ defmodule EdgeAdmin.Nodes do
   - `name`, `ipv4_range`, `ipv6_range`, `inserted_at`, `updated_at`
   - Default: `inserted_at:desc`
 
-  ## Parameters
-  - `params` - Map of filter/sort/pagination parameters (Flop format)
-
-  ## Returns
-  - `{:ok, {clusters, meta}}` - List of clusters with pagination metadata
-  - `{:error, meta}` - Validation errors
-
-  ## Examples
-
-      iex> list_clusters(%{"name" => "prod*"})
-      {:ok, {[%Cluster{name: "production"}], %Flop.Meta{}}}
-
-      iex> list_clusters(%{"node_count__gte" => "5"})
-      {:ok, {[%Cluster{nodes: [...]}, ...], %Flop.Meta{}}}
+  Returns `{:ok, {clusters, meta}}` or `{:error, meta}`.
   """
   @spec list_clusters(map()) :: {:ok, {[Cluster.t()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
   defdelegate list_clusters(params \\ %{}), to: Clusters, as: :list
@@ -192,11 +143,11 @@ defmodule EdgeAdmin.Nodes do
     - `true`: Returns "cluster-prod", "node-abc123" (for metadata)
     - `false`: Returns "prod", "abc123" (for discovery endpoints)
   - `:filter_status` - Filter nodes by status (default: nil, includes all)
-    - Example: `[:healthy, :unhealthy]` excludes unreachable nodes
+    - `[:healthy, :unhealthy]` excludes unreachable nodes
 
-  ## Returns
-  List of maps:
-  ```
+  Returns maps shaped as:
+
+  ```elixir
   # With prefix: true
   [
     %{name: "cluster-prod-east", nodes: ["node-abc123", "node-def456"]},
@@ -216,20 +167,7 @@ defmodule EdgeAdmin.Nodes do
   @doc """
   Gets a single cluster by name.
 
-  ## Parameters
-  - `name` - The cluster name
-
-  ## Returns
-  - `{:ok, cluster}` - Cluster found (with nodes preloaded)
-  - `{:error, :not_found}` - Cluster doesn't exist
-
-  ## Examples
-
-      iex> get_cluster("production")
-      {:ok, %Cluster{name: "production", nodes: [...]}}
-
-      iex> get_cluster("nonexistent")
-      {:error, :not_found}
+  Returns the cluster with nodes preloaded, or `{:error, :not_found}`.
   """
   @spec get_cluster(String.t()) :: {:ok, Cluster.t()} | {:error, :not_found}
   defdelegate get_cluster(name), to: Clusters, as: :get
@@ -271,14 +209,7 @@ defmodule EdgeAdmin.Nodes do
   network-level limit would not represent this cluster's edge-node limit.
   The active cluster row is re-read and locked before the limit is checked or updated.
 
-  ## Parameters
-  - `cluster` - The cluster struct to update
-  - `params` - Raw request params (validated through UpdateClusterForm)
-
-  ## Returns
-  - `{:ok, cluster}` - Update succeeded
-  - `{:error, :not_found}` - Cluster was retired or no longer exists
-  - `{:error, changeset}` - Validation failed
+  Returns `{:error, :not_found}` when the cluster was retired or no longer exists.
   """
   @spec update_cluster(Cluster.t(), map()) ::
           {:ok, Cluster.t()} | {:error, :not_found} | {:error, Ecto.Changeset.t()}
@@ -302,72 +233,23 @@ defmodule EdgeAdmin.Nodes do
           | {:error, :service_unavailable}
   defdelegate delete_cluster(cluster), to: Clusters, as: :delete
 
-  @doc """
-  Returns a changeset for tracking cluster changes (for forms).
-
-  ## Examples
-
-      iex> change_cluster(cluster)
-      %Ecto.Changeset{data: %Cluster{}}
-  """
+  @doc "Returns a changeset for tracking cluster changes."
   @spec change_cluster(Cluster.t(), map()) :: Ecto.Changeset.t()
   defdelegate change_cluster(cluster, attrs \\ %{}), to: Clusters, as: :change
 
   @doc """
   Gets a single node by ID.
 
-  ## Parameters
-  - `id` - The node's UUID
-
-  ## Returns
-  - `{:ok, node}` - Node found (with cluster and aliases preloaded)
-  - `{:error, :not_found}` - Node doesn't exist or invalid UUID format
-
-  ## Examples
-
-      iex> get_node("abc-123")
-      {:ok, %Node{id: "abc-123", cluster: %Cluster{}, aliases: [...]}}
-
-      iex> get_node("invalid")
-      {:error, :not_found}
+  Returns the node with cluster and aliases preloaded, or `{:error, :not_found}`.
   """
   @spec get_node(String.t()) :: {:ok, Node.t()} | {:error, :not_found}
   defdelegate get_node(id), to: NodeResource, as: :get
 
-  @doc """
-  Creates a new node.
-
-  ## Parameters
-  - `attrs` - Map of node attributes
-
-  ## Returns
-  - `{:ok, node}` - Node created successfully
-  - `{:error, changeset}` - Validation failed
-
-  ## Examples
-
-      iex> create_node(%{"id" => "abc-123", "cluster_id" => cluster.id, ...})
-      {:ok, %Node{id: "abc-123"}}
-  """
+  @doc "Creates a new node."
   @spec create_node(map()) :: {:ok, Node.t()} | {:error, Ecto.Changeset.t()}
   defdelegate create_node(attrs \\ %{}), to: NodeResource, as: :create
 
-  @doc """
-  Updates a node.
-
-  ## Parameters
-  - `node` - The node struct to update
-  - `attrs` - Map of attributes to update
-
-  ## Returns
-  - `{:ok, node}` - Update succeeded
-  - `{:error, changeset}` - Validation failed
-
-  ## Examples
-
-      iex> update_node(node, %{"status" => "unhealthy"})
-      {:ok, %Node{status: :unhealthy}}
-  """
+  @doc "Updates a node."
   @spec update_node(Node.t(), map()) :: {:ok, Node.t()} | {:error, Ecto.Changeset.t()}
   defdelegate update_node(node, attrs), to: NodeResource, as: :update
 
@@ -401,15 +283,8 @@ defmodule EdgeAdmin.Nodes do
 
   Inconsistencies are handled by the cluster reconciliation worker.
 
-  ## Parameters
-  - `node` - The node struct to move
-  - `params` - Request params containing new cluster name (validated through ChangeNodeClusterForm)
-
-  ## Returns
-  - `{:ok, updated_node}` - Node cluster changed successfully
-  - `{:error, changeset}` - Validation failed (form, schema, or new cluster not found)
-  - `{:error, {:conflict, reason}}` - Already in target cluster (`SameClusterCheck`)
-    or target cluster at node limit (`NodeLimitCheck`)
+  Returns a conflict when the node is already in the target cluster or the
+  target cluster is at its node limit.
   """
   @spec change_node_cluster(Node.t(), map()) ::
           {:ok, Node.t()} | {:error, :not_found} | {:error, Ecto.Changeset.t()} | {:error, {:conflict, String.t()}}
@@ -438,14 +313,7 @@ defmodule EdgeAdmin.Nodes do
   @spec delete_node(Node.t()) :: {:ok, Node.t()} | {:error, Ecto.Changeset.t()} | {:error, :service_unavailable}
   defdelegate delete_node(node), to: NodeResource
 
-  @doc """
-  Returns a changeset for tracking node changes (for forms).
-
-  ## Examples
-
-      iex> change_node(node)
-      %Ecto.Changeset{data: %Node{}}
-  """
+  @doc "Returns a changeset for tracking node changes."
   @spec change_node(Node.t(), map()) :: Ecto.Changeset.t()
   defdelegate change_node(node, attrs \\ %{}), to: NodeResource, as: :change
 
@@ -461,21 +329,11 @@ defmodule EdgeAdmin.Nodes do
   ## Limits
 
   `NodeLimitCheck` is enforced for new nodes only.
-
-  ## Parameters
-  - `params` - Node registration parameters (validated through RegisterNodeForm)
-
-  ## Returns
-  - `{:ok, node}` - Node registered or recovered successfully
-  - `{:error, changeset}` - Validation or registration failed
   """
   @spec register_node(map()) ::
           {:ok, Node.t()} | {:error, Ecto.Changeset.t()} | {:error, :unauthorized | {:conflict, String.t()}}
   defdelegate register_node(params), to: NodeResource, as: :register
 
-  # ===========================================================================
-  # Enrollment Key functions
-  # ===========================================================================
   @doc """
   Re-registers the node authenticated by the Agent API token.
   """
@@ -522,9 +380,7 @@ defmodule EdgeAdmin.Nodes do
   - `enrollment_key_id__in` - Exact IN match on enrollment-key IDs — comma-separated UUIDs
   - `has_enrollment_key` - Boolean: whether the node has an enrollment-key association
 
-  ## Returns
-  - `{:ok, {nodes, meta}}` - List of nodes with Flop.Meta pagination info
-  - `{:error, meta}` - Validation errors (when replace_invalid_params: false)
+  Returns `{:ok, {nodes, meta}}` or `{:error, meta}`.
   """
 
   @spec list_nodes(map()) :: {:ok, {[Node.t()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
@@ -543,19 +399,7 @@ defmodule EdgeAdmin.Nodes do
   @doc """
   Gets multiple nodes by their IDs.
 
-  ## Parameters
-  - `node_ids` - List of node IDs
-
-  ## Returns
-  - List of `{:ok, node}` or `{:error, message}` tuples
-
-  ## Examples
-
-      iex> get_nodes_by_ids(["abc-123", "def-456"])
-      [{:ok, %Node{id: "abc-123"}}, {:ok, %Node{id: "def-456"}}]
-
-      iex> get_nodes_by_ids(["abc-123", "invalid"])
-      [{:ok, %Node{id: "abc-123"}}, {:error, "Node invalid not found"}]
+  Returns one `{:ok, node}` or `{:error, message}` tuple per input ID.
   """
 
   @spec get_nodes_by_ids([String.t()]) :: [{:ok, Node.t()} | {:error, String.t()}]
@@ -564,23 +408,8 @@ defmodule EdgeAdmin.Nodes do
   @doc """
   Lists all valid node identifiers (IDs and aliases) for a cluster.
 
-  Returns a map with node IDs as keys and the full node struct as values.
-  Each node can be looked up by its ID or any of its aliases.
-
-  ## Parameters
-  - `cluster_name` - Cluster name (without "cluster-" prefix)
-
-  ## Returns
-  - `{:ok, identifiers_map}` - Map of identifier => node
-  - `{:error, :not_found}` - Cluster doesn't exist
-
-  ## Example
-      {:ok, map} = list_proxy_chain_identifiers("default")
-      # map = %{
-      #   "abc-123" => %Node{id: "abc-123", ...},
-      #   "test" => %Node{id: "abc-123", ...},  # alias
-      #   "def-456" => %Node{id: "def-456", ...}
-      # }
+  Returns a map of identifier to node, keyed by each node ID and alias, or
+  `{:error, :not_found}` when the cluster does not exist.
   """
   @callback list_proxy_chain_identifiers(String.t()) :: {:ok, map()} | {:error, :not_found}
   @spec list_proxy_chain_identifiers(String.t()) :: {:ok, map()} | {:error, :not_found}
@@ -647,14 +476,9 @@ defmodule EdgeAdmin.Nodes do
   The decrement uses a conditional UPDATE to prevent race conditions when two agents
   simultaneously attempt to consume the last use of a key.
 
-  ## Returns
-
-  - `{:ok, %{error: String.t(), vpn_enrollment_key: String.t(), enrollment_key_id: String.t() | nil}}` —
-    on every input that survives form validation. A non-nil
-    `enrollment_key_id` indicates successful verification; `nil` indicates
-    that verification failed.
-  - `{:error, changeset}` — input failed `VerifyEnrollmentKeyForm` validation
-    (e.g. missing `key`).
+  Returns `{:ok, result}` for every input that survives form validation. A
+  non-nil `enrollment_key_id` indicates successful verification; `nil`
+  indicates verification failed.
   """
   @spec verify_enrollment_key(map()) :: {:ok, map()} | {:error, Ecto.Changeset.t()}
   def verify_enrollment_key(params), do: EnrollmentKeys.verify(params)

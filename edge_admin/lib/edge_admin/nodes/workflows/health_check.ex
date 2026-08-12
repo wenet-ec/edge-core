@@ -30,13 +30,6 @@ defmodule EdgeAdmin.Nodes.Workflows.HealthCheck do
   `last_seen_at` is still updated so fallback contact prevents the node from
   becoming `:unreachable`.
 
-  ## Parameters
-  - `node` - The node struct
-  - `params` - Health check parameters (validated through NodeHealthCheckForm)
-
-  ## Returns
-  - `{:ok, node}` - Node updated successfully
-  - `{:error, changeset}` - Validation or update failed
   """
   @spec update_node_health_check(Node.t(), map()) :: {:ok, Node.t()} | {:error, Ecto.Changeset.t()}
   def update_node_health_check(node, params) do
@@ -81,8 +74,6 @@ defmodule EdgeAdmin.Nodes.Workflows.HealthCheck do
     concurrency = Application.get_env(:edge_admin, :node_health_check_concurrency, 100)
     task_timeout = AgentClient.health_check_call_timeout()
 
-    # Get nodes this admin governs from ETS
-    # Returns %{cluster_name => ["node-{id}", "node-{id2}"]}
     my_clusters = Metadata.get_my_clusters()
     node_names = my_clusters |> Map.values() |> List.flatten()
 

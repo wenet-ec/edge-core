@@ -9,6 +9,15 @@ defmodule EdgeAdmin.Admins.Membership do
   the admin is a participating member of the cluster; until it does, the rest
   of the supervision tree is intentionally held back.
 
+  ## Admin VPN identity reset
+
+  Admin identity is intentionally ephemeral. The Admin start scripts reset
+  `/etc/netclient` before this module starts so each boot enrolls as a fresh
+  Edge VPN host with the runtime-generated `:admin_id` / `:admin_name`.
+  That reset lives in `deploy/local/compose/edge_admin/start` and
+  `deploy/production/compose/edge_admin/start`; it is part of this membership
+  lifecycle, not incidental deployment cleanup.
+
   ## Responsibilities
 
   1. **VPN Network Join** (step 1)

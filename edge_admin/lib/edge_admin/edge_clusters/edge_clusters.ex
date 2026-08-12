@@ -25,6 +25,7 @@ defmodule EdgeAdmin.EdgeClusters do
   alias EdgeAdmin.Admins.Metadata
   alias EdgeAdmin.EdgeClusters.Reconciliation
   alias EdgeAdmin.EdgeClusters.Supervisor, as: GatewaySupervisor
+  alias EdgeAdmin.Vpn
 
   require Logger
 
@@ -145,6 +146,8 @@ defmodule EdgeAdmin.EdgeClusters do
           end
         end)
 
+      sweep_unassigned_vpn_memberships(new_clusters_set)
+
       # Only mark a new assignment current after the Gateway actually starts.
       new_current_clusters =
         state.current_clusters
@@ -197,6 +200,39 @@ defmodule EdgeAdmin.EdgeClusters do
 
       {:error, :not_found} ->
         Logger.debug("Gateway already stopped for cluster #{cluster_name}")
+        :ok
+    end
+  end
+
+  defp sweep_unassigned_vpn_memberships(assigned_clusters) do
+    vpn_host_id = Metadata.get_admin().vpn_host_id
+
+    case Vpn.edge_vpn_cli_health_check() do
+      {:ok, _status, %{networks: networks}} when is_list(networks) ->
+        networks
+        |> Enum.filter(&edge_cluster_network?/1)
+        |> Enum.reject(&MapSet.member?(assigned_clusters, &1))
+        |> Enum.each(&remove_unassigned_vpn_membership(vpn_host_id, &1))
+    end
+  end
+
+  defp edge_cluster_network?(network_name) when is_binary(network_name) do
+    String.starts_with?(network_name, "cluster-")
+  end
+
+  defp edge_cluster_network?(_network_name), do: false
+
+  defp remove_unassigned_vpn_membership(vpn_host_id, cluster_name) do
+    Logger.warning("Removing unassigned Edge VPN membership for #{cluster_name}")
+
+    case Vpn.remove_host_from_network(vpn_host_id, cluster_name) do
+      {:ok, _} ->
+        Logger.info("Removed unassigned Edge VPN membership for #{cluster_name}")
+        :ok
+
+      {:error, reason} ->
+        Logger.warning("Failed to remove unassigned Edge VPN membership for #{cluster_name}: #{inspect(reason)}")
+
         :ok
     end
   end

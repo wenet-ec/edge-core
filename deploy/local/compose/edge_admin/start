@@ -46,7 +46,11 @@ cleanup() {
     echo "Cleanup complete"
 }
 
-echo "Wiping Edge VPN CLI (netclient) credentials..."
+# Load-bearing lifecycle invariant: Admins are intentionally ephemeral. Every
+# boot gets a fresh Admin VPN identity, and stale Admin hosts are cleaned later
+# by zombie cleanup. Do not remove this wipe unless Admin persistent identity
+# and stale-membership reconciliation are implemented as a full lifecycle.
+echo "Resetting Admin VPN identity for ephemeral Admin lifecycle..."
 rm -rf /etc/netclient/*
 
 echo "Cleaning up stale WireGuard interface..."

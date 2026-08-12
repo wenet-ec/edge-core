@@ -23,7 +23,10 @@ DB_SSL=false
 # DB_IPV6=false
 
 # SQLite connection (DB_ADAPTER=sqlite).
-# SQLITE_DB_PATH=/app/data/edge/edge_admin.db  # default if unset
+# Unified Admin data root. SQLite defaults to ${DATA_DIR}/edge/edge_admin.db.
+# Admin VPN state is not persisted here; the Edge VPN CLI state is reset every boot.
+# DATA_DIR=/app/data
+# SQLITE_DB_PATH=/app/data/edge/edge_admin.db  # overrides DATA_DIR-derived default if set
 
 # Migrations (postgres only).
 # Lock strategy. Default: pg_advisory_lock.

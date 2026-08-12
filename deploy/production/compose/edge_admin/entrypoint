@@ -7,6 +7,13 @@ set -o nounset
 
 echo "=== Edge Admin Entrypoint ==="
 
+DATA_DIR="${DATA_DIR:-/app/data}"
+
+# Unified Admin data directory. In SQLite mode the default database path is
+# ${DATA_DIR}/edge/edge_admin.db. Admin VPN identity remains intentionally
+# ephemeral; the start script resets Edge VPN CLI state on every boot.
+mkdir -p "${DATA_DIR}/edge"
+
 # Mitigate netclient's directory creation race.
 mkdir -p /etc/netclient
 chmod 0775 /etc/netclient

@@ -12,8 +12,8 @@ defmodule EdgeAdmin.Admins.Membership do
   ## Admin VPN identity reset
 
   Admin identity is intentionally ephemeral. The Admin start scripts reset
-  `/etc/netclient` before this module starts so each boot enrolls as a fresh
-  Edge VPN host with the runtime-generated `:admin_id` / `:admin_name`.
+  Edge VPN CLI state before this module starts so each boot enrolls as a
+  fresh Edge VPN host with the runtime-generated `:admin_id` / `:admin_name`.
   That reset lives in `deploy/local/compose/edge_admin/start` and
   `deploy/production/compose/edge_admin/start`; it is part of this membership
   lifecycle, not incidental deployment cleanup.

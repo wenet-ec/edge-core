@@ -20,7 +20,7 @@ alias EdgeAdmin.Repo.SQLite
 #                        the main repo uses URL form.
 #
 #   sqlite             — single-instance only, no external DB. Uses
-#                        SQLITE_DB_PATH (default: /app/data/edge/edge_admin.db).
+#                        SQLITE_DB_PATH, or DATA_DIR/edge/edge_admin.db by default.
 
 # Encryption at rest for sensitive Ecto columns.
 #
@@ -63,6 +63,8 @@ db_adapter =
     _ -> :postgres
   end
 
+data_dir = get_env("DATA_DIR", :string, "/app/data")
+
 repo_impl =
   case db_adapter do
     :sqlite -> SQLite
@@ -81,7 +83,7 @@ config :edge_admin, ecto_repos: [repo_impl]
 case db_adapter do
   :sqlite ->
     config :edge_admin, SQLite,
-      database: get_env("SQLITE_DB_PATH", :string, "/app/data/edge/edge_admin.db"),
+      database: get_env("SQLITE_DB_PATH", :string, Path.join([data_dir, "edge", "edge_admin.db"])),
       pool_size: get_env("DB_POOL_SIZE", :integer, 5)
 
   :postgres ->

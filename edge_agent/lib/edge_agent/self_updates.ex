@@ -13,11 +13,10 @@ defmodule EdgeAgent.SelfUpdates do
     how old the admin-side request is. A fresh agent that joins a cluster
     with an old self-update record on file will pull and restart on first
     poll. There is no "older than N" guard today.
-  - **`trigger_update_async/0` is unsupervised**: the spawned `Task.start/1`
-    is not linked or monitored. If the trigger crashes the caller is not
-    notified. Acceptable in the current call site (controller fire-and-
-    forget; the agent is expected to restart anyway), but watch for it if
-    the call site changes.
+  - **`trigger_update_async/0` is fire-and-forget**: the spawned task contains
+    unexpected failures and logs them instead of surfacing them to the HTTP
+    caller. Acceptable in the current call site because the agent may restart
+    mid-call after Watchtower accepts the update.
   """
 
   alias EdgeAgent.EdgeClusters.AdminClient
@@ -53,31 +52,37 @@ defmodule EdgeAgent.SelfUpdates do
   def trigger_update do
     watchtower_url = Application.get_env(:edge_agent, :watchtower_url, "")
     api_token = Application.get_env(:edge_agent, :watchtower_http_api_token, "")
-    update_endpoint = "#{watchtower_url}/v1/update?async=true"
 
-    Logger.info("Calling Watchtower service at #{update_endpoint}")
+    case build_update_endpoint(watchtower_url) do
+      {:ok, update_endpoint} ->
+        Logger.info("Calling Watchtower service at #{update_endpoint}")
 
-    # POST to Watchtower's POST-only /v1/update with its async query parameter.
-    # The accepted response arrives before Watchtower restarts the agent.
-    headers =
-      if api_token == "" do
-        []
-      else
-        [{"authorization", "Bearer #{api_token}"}]
-      end
+        # POST to Watchtower's POST-only /v1/update with its async query parameter.
+        # The accepted response arrives before Watchtower restarts the agent.
+        headers =
+          if api_token == "" do
+            []
+          else
+            [{"authorization", "Bearer #{api_token}"}]
+          end
 
-    case Req.post(update_endpoint, headers: headers, receive_timeout: 10_000, retry: false) do
-      {:ok, %{status: 202, body: body}} ->
-        Logger.info("Self-update accepted successfully")
-        {:ok, body}
+        case Req.post(update_endpoint, headers: headers, receive_timeout: 10_000, retry: false) do
+          {:ok, %{status: 202, body: body}} ->
+            Logger.info("Self-update accepted successfully")
+            {:ok, body}
 
-      {:ok, %{status: status, body: body}} ->
-        error_msg = "Watchtower returned status #{status}: #{inspect(body)}"
-        Logger.error(error_msg)
-        {:error, error_msg}
+          {:ok, %{status: status, body: body}} ->
+            error_msg = "Watchtower returned status #{status}: #{inspect(body)}"
+            Logger.error(error_msg)
+            {:error, error_msg}
 
-      {:error, reason} ->
-        error_msg = "Failed to call Watchtower: #{inspect(reason)}"
+          {:error, reason} ->
+            error_msg = "Failed to call Watchtower: #{inspect(reason)}"
+            Logger.error(error_msg)
+            {:error, error_msg}
+        end
+
+      {:error, error_msg} ->
         Logger.error(error_msg)
         {:error, error_msg}
     end
@@ -91,12 +96,48 @@ defmodule EdgeAgent.SelfUpdates do
   """
   @spec trigger_update_async :: :ok
   def trigger_update_async do
+    case Application.get_env(:edge_agent, :self_update_async_trigger) do
+      trigger when is_function(trigger, 0) -> trigger.()
+      _ -> start_update_task()
+    end
+
+    :ok
+  end
+
+  @doc false
+  @spec start_update_task() :: :ok
+  def start_update_task do
     Task.start(fn ->
       Logger.info("Triggering self-update asynchronously")
-      trigger_update()
+
+      try do
+        trigger_update()
+      rescue
+        error ->
+          Logger.error("Self-update task failed: #{Exception.message(error)}")
+          {:error, Exception.message(error)}
+      end
     end)
 
     :ok
+  end
+
+  @doc false
+  @spec build_update_endpoint(String.t()) :: {:ok, String.t()} | {:error, String.t()}
+  def build_update_endpoint(watchtower_url) when is_binary(watchtower_url) do
+    trimmed_url = String.trim_trailing(watchtower_url, "/")
+    uri = URI.parse(trimmed_url)
+
+    cond do
+      uri.scheme not in ["http", "https"] ->
+        {:error, "Invalid WATCHTOWER_URL: expected http or https URL, got #{inspect(watchtower_url)}"}
+
+      is_nil(uri.host) or uri.host == "" ->
+        {:error, "Invalid WATCHTOWER_URL: host is required, got #{inspect(watchtower_url)}"}
+
+      true ->
+        {:ok, "#{trimmed_url}/v1/update?async=true"}
+    end
   end
 
   @doc """

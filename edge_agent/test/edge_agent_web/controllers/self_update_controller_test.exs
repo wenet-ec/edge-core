@@ -15,7 +15,10 @@ defmodule EdgeAgentWeb.Controllers.SelfUpdateControllerTest do
 
   defp with_self_update_enabled(value, fun) do
     old = Application.get_env(:edge_agent, :self_update_enabled)
+    old_trigger = Application.get_env(:edge_agent, :self_update_async_trigger)
+
     Application.put_env(:edge_agent, :self_update_enabled, value)
+    Application.put_env(:edge_agent, :self_update_async_trigger, fn -> :ok end)
 
     try do
       fun.()
@@ -24,6 +27,12 @@ defmodule EdgeAgentWeb.Controllers.SelfUpdateControllerTest do
         Application.delete_env(:edge_agent, :self_update_enabled)
       else
         Application.put_env(:edge_agent, :self_update_enabled, old)
+      end
+
+      if old_trigger == nil do
+        Application.delete_env(:edge_agent, :self_update_async_trigger)
+      else
+        Application.put_env(:edge_agent, :self_update_async_trigger, old_trigger)
       end
     end
   end

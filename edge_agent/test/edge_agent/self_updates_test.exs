@@ -77,4 +77,24 @@ defmodule EdgeAgent.SelfUpdatesTest do
       assert SelfUpdates.parse_datetime("2026-04-13") == nil
     end
   end
+
+  describe "build_update_endpoint/1" do
+    test "builds Watchtower async update endpoint from absolute URL" do
+      assert SelfUpdates.build_update_endpoint("http://localhost:58080") ==
+               {:ok, "http://localhost:58080/v1/update?async=true"}
+    end
+
+    test "trims trailing slash before appending update path" do
+      assert SelfUpdates.build_update_endpoint("https://watchtower.example.com/") ==
+               {:ok, "https://watchtower.example.com/v1/update?async=true"}
+    end
+
+    test "rejects relative URL before Req can raise" do
+      assert {:error, message} = SelfUpdates.build_update_endpoint("")
+      assert message =~ "Invalid WATCHTOWER_URL"
+
+      assert {:error, message} = SelfUpdates.build_update_endpoint("/v1/update?async=true")
+      assert message =~ "Invalid WATCHTOWER_URL"
+    end
+  end
 end

@@ -11,18 +11,7 @@ defmodule EdgeAdminWeb.Plugs.ApiDocsEnabled do
   - `/api/openapi` — OpenAPI JSON spec
   - `/api/asyncapi` — AsyncAPI JSON spec
 
-  This plug checks the API_DOCS_ENABLED configuration and returns 404 if disabled.
-  Useful for production environments where you want to disable API documentation exposure.
-
-  ## Configuration
-
-  Set in config/runtime.exs:
-
-      config :edge_admin, api_docs_enabled: true
-
-  Or via environment variable:
-
-      API_DOCS_ENABLED=false
+  Returns 404 when `API_DOCS_ENABLED=false`.
   """
 
   import Plug.Conn

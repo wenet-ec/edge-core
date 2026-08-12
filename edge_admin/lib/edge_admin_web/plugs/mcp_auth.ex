@@ -6,12 +6,6 @@ defmodule EdgeAdminWeb.Plugs.McpAuth do
   Validates that requests include either a master key or MCP key in the Authorization header.
   Can be disabled globally via AUTH_ENABLED=false configuration.
 
-  ## Usage
-
-      plug EdgeAdminWeb.Plugs.McpAuth
-
-  ## Authentication
-
   Accepts either:
   - `Authorization: Bearer <MASTER_KEY>` (omnipotent fallback)
   - `Authorization: Bearer <MCP_KEY>` (scoped to MCP endpoint)

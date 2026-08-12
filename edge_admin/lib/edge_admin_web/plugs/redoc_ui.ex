@@ -5,10 +5,6 @@ defmodule EdgeAdminWeb.Plugs.RedocUI do
   Replaces the external `redoc_ui_plug` Hex package because that plug doesn't
   expose ReDoc's `theme` attribute. The brand theme is baked in.
 
-  ## Usage
-
-      get "/redoc", EdgeAdminWeb.Plugs.RedocUI, spec_url: "/api/openapi"
-
   ## Security
 
   The HTML response body is built **entirely from compile-time constants** —

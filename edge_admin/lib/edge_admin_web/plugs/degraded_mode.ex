@@ -10,18 +10,10 @@ defmodule EdgeAdminWeb.Plugs.DegradedMode do
   Returns 503 Service Unavailable during degraded mode.
   Clients can check `/api/v1/admins/my_admin_cluster` for degraded status.
 
-  ## Usage in controllers
-
-      # Block actions during degraded mode
-      plug EdgeAdminWeb.Plugs.DegradedMode, :block when action in [:create, :delete]
-
-      # Explicitly allow actions (documentation only - this is the default)
-      plug EdgeAdminWeb.Plugs.DegradedMode, :allow when action in [:index, :show]
-
   ## Modes
 
   - `:block` - Returns 503 Service Unavailable during degraded mode
-  - `:allow` - No-op (default behavior, for documentation/clarity)
+  - `:allow` - No-op used to document intentionally allowed actions
   """
 
   import Phoenix.Controller
@@ -37,7 +29,6 @@ defmodule EdgeAdminWeb.Plugs.DegradedMode do
   def init(mode), do: mode
 
   def call(conn, :allow) do
-    # No-op - explicitly allowed (for documentation)
     conn
   end
 

@@ -6,12 +6,6 @@ defmodule EdgeAdminWeb.Plugs.ApiKeyAuth do
   Validates that requests include either a master key or API key in the Authorization header.
   Can be disabled globally via AUTH_ENABLED=false configuration.
 
-  ## Usage
-
-      plug EdgeAdminWeb.Plugs.ApiKeyAuth
-
-  ## Authentication
-
   Accepts either:
   - `Authorization: Bearer <MASTER_KEY>` (omnipotent fallback)
   - `Authorization: Bearer <API_KEY>` (scoped to REST API endpoints)

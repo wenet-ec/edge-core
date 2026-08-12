@@ -311,10 +311,6 @@ defmodule EdgeAdminWeb.Live.MembershipDashboard do
     {:noreply, socket}
   end
 
-  # ---------------------------------------------------------------------------
-  # RPC fan-out — reads ETS on the selected node, not the local node
-  # ---------------------------------------------------------------------------
-
   defp fetch_snapshot(node) do
     :erpc.call(node, __MODULE__, :remote_snapshot, [], @rpc_timeout)
   rescue

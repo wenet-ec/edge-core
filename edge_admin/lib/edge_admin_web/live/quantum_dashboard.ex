@@ -282,10 +282,6 @@ defmodule EdgeAdminWeb.Live.QuantumDashboard do
     """
   end
 
-  # ---------------------------------------------------------------------------
-  # Events — node-aware, dispatched via :erpc to the selected node
-  # ---------------------------------------------------------------------------
-
   @impl true
   def handle_event("run_now", %{"job" => name}, socket) do
     invoke_action(socket, name, :run_job, "Triggered #{name}")
@@ -322,10 +318,6 @@ defmodule EdgeAdminWeb.Live.QuantumDashboard do
   def handle_refresh(socket) do
     {:noreply, socket}
   end
-
-  # ---------------------------------------------------------------------------
-  # RPC fan-out — reads jobs + history from the selected node
-  # ---------------------------------------------------------------------------
 
   defp fetch_snapshot(node) do
     case :erpc.call(node, __MODULE__, :remote_snapshot, [], @rpc_timeout) do
@@ -409,10 +401,6 @@ defmodule EdgeAdminWeb.Live.QuantumDashboard do
   end
 
   defp naive_now_in_tz(now, _), do: DateTime.to_naive(now)
-
-  # ---------------------------------------------------------------------------
-  # Formatters (page-side, run on the calling node)
-  # ---------------------------------------------------------------------------
 
   @doc false
   # Public for unit testing.

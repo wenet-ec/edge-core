@@ -78,7 +78,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterController do
   operation(:create,
     summary: "Create a new cluster",
     description:
-      "Create a new edge cluster with optional IP range. The name `default` is reserved (used as a URL keyword on convenience routes) and will be rejected with HTTP 422.\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
+      "Create a new edge cluster with optional IP range. The name `default` is reserved (used as a URL keyword on convenience routes) and will be rejected with HTTP 422.",
     request_body:
       {"Cluster creation parameters", "application/json", ClusterSchemas.ClusterCreateRequest, required: true},
     responses: %{
@@ -103,8 +103,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterController do
 
   operation(:update,
     summary: "Update a cluster",
-    description:
-      "Update a cluster's settings. Only provided fields are changed. Pass null to unset a nullable field.\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
+    description: "Update a cluster's settings. Only provided fields are changed. Pass null to unset a nullable field.",
     parameters: [PathParams.cluster_name(:name, "Cluster name")],
     request_body:
       {"Cluster update parameters", "application/json", ClusterSchemas.ClusterUpdateRequest, required: true},
@@ -128,7 +127,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterController do
   operation(:delete,
     summary: "Delete a cluster",
     description:
-      "Delete an empty cluster (must have no nodes). The cluster stops appearing in normal cluster reads once deletion is accepted; removal completes asynchronously.\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
+      "Delete an empty cluster (must have no nodes). The cluster stops appearing in normal cluster reads once deletion is accepted; removal completes asynchronously.",
     parameters: [PathParams.cluster_name(:name, "Cluster name")],
     responses: %{
       202 => {"Cluster deletion accepted", "", nil},

@@ -106,8 +106,6 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
     environment variable on the agent to allow it to join the cluster's VPN network.
 
     Keys can be limited by use count (`uses_remaining`) or by expiry time (`expires_at`). Omit both for a single-use key with no expiry.
-
-    **Note:** This endpoint is unavailable during degraded mode (503).
     """,
     parameters: [PathParams.cluster_name(:cluster_name, "Cluster name")],
     request_body: {"Enrollment key parameters", "application/json", EnrollmentKeySchemas.EnrollmentKeyCreateRequest},
@@ -131,8 +129,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
 
   operation(:create_for_default,
     summary: "Create an enrollment key for the default cluster",
-    description:
-      "Convenience endpoint for the default cluster (configured via DEFAULT_CLUSTER_NAME env).\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
+    description: "Convenience endpoint for the default cluster (configured via DEFAULT_CLUSTER_NAME env).",
     request_body: {"Enrollment key parameters", "application/json", EnrollmentKeySchemas.EnrollmentKeyCreateRequest},
     responses: %{
       201 => {"Enrollment key created", "application/json", EnrollmentKeySchemas.EnrollmentKeySingleResponse},
@@ -159,8 +156,6 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
     description: """
     Public endpoint (no authentication required). Only enabled when both
     PUBLIC_ENROLLMENT_KEY_ENABLED=true and DEFAULT_CLUSTER_NAME are configured.
-
-    **Note:** This endpoint is unavailable during degraded mode (503).
     """,
     responses: %{
       201 => {"Enrollment key created", "application/json", EnrollmentKeySchemas.EnrollmentKeySingleResponse},
@@ -182,8 +177,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
 
   operation(:update,
     summary: "Update an enrollment key",
-    description:
-      "Update expires_at or uses_remaining. Pass null to unset a nullable field.\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
+    description: "Update expires_at or uses_remaining. Pass null to unset a nullable field.",
     parameters: [PathParams.uuid(:id, "Enrollment key ID")],
     request_body: {"Update parameters", "application/json", EnrollmentKeySchemas.EnrollmentKeyUpdateRequest},
     responses: %{
@@ -203,8 +197,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
 
   operation(:delete,
     summary: "Delete an enrollment key",
-    description:
-      "Permanently deletes an enrollment key. **Note:** This endpoint is unavailable during degraded mode (503).",
+    description: "Permanently deletes an enrollment key.",
     parameters: [PathParams.uuid(:id, "Enrollment key ID")],
     responses: %{
       204 => {"Enrollment key deleted", "", nil},

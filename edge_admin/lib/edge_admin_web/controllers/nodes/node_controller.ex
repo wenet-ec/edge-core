@@ -57,7 +57,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeController do
   operation(:change_cluster,
     summary: "Change a node's cluster",
     description:
-      "Move a node to a different cluster. This clears the node's existing recovery key and removes its cluster-specific aliases; create a new recovery key explicitly if needed. The returned node reflects the saved cluster assignment immediately; network connectivity may briefly reflect the previous assignment while it converges.\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
+      "Move a node to a different cluster. This clears the node's existing recovery key and removes its cluster-specific aliases; create a new recovery key explicitly if needed. The returned node reflects the saved cluster assignment immediately; network connectivity may briefly reflect the previous assignment while it converges.",
     parameters: [PathParams.uuid(:id, "Node ID")],
     request_body: {"Cluster change parameters", "application/json", NodeSchemas.ChangeClusterRequest, required: true},
     responses: %{
@@ -80,8 +80,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeController do
 
   operation(:delete,
     summary: "Delete a node",
-    description:
-      "Delete a node and its associated Edge Core records. Command-execution history is retained.\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
+    description: "Delete a node and its associated Edge Core records. Command-execution history is retained.",
     parameters: [PathParams.uuid(:id, "Node ID")],
     responses: %{
       204 => {"Node deleted successfully", "", nil},

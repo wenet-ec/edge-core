@@ -1,7 +1,7 @@
 # edge_admin/lib/edge_admin/prom_ex/edge_admin_plugin.ex
 defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
   @moduledoc """
-  Custom PromEx plugin for edge_admin specific metrics.
+  Custom PromEx plugin for Edge Admin metrics.
 
   Provides business-level metrics for:
   - Membership process (admin-cluster join)

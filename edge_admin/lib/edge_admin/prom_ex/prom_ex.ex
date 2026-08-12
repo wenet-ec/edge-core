@@ -1,7 +1,7 @@
 # edge_admin/lib/edge_admin/prom_ex/prom_ex.ex
 defmodule EdgeAdmin.PromEx do
   @moduledoc """
-  PromEx configuration for EdgeAdmin application.
+  PromEx configuration for Edge Admin.
   """
 
   use PromEx, otp_app: :edge_admin
@@ -15,7 +15,6 @@ defmodule EdgeAdmin.PromEx do
     Logger.info("PromEx: Loading plugins...")
 
     [
-      # PromEx built in plugins
       Plugins.Application,
       Plugins.Beam,
       {Plugins.Phoenix, endpoint: EdgeAdminWeb.Endpoint, router: EdgeAdminWeb.Router},
@@ -36,7 +35,6 @@ defmodule EdgeAdmin.PromEx do
   @impl true
   def dashboards do
     [
-      # PromEx built in Grafana dashboards
       {:prom_ex, "application.json"},
       {:prom_ex, "beam.json"},
       {:prom_ex, "phoenix.json"},

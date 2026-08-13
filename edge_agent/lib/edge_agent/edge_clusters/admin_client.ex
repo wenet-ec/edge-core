@@ -441,8 +441,6 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
   Registers an alias (friendly name) for this node with admin.
 
   Called during bootstrap for each name in the ALIASES env var.
-  Treats both 201 (created) and 409 (name already taken by another node) as
-  `:ok` — alias registration is best-effort and silent conflicts are expected.
 
   POST /api/v1/agents/aliases
   """
@@ -455,8 +453,11 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
       opts = Keyword.merge([json: payload, headers: headers], http_options())
 
       case Req.post(url, opts) do
-        {:ok, %{status: status}} when status in [201, 409] ->
+        {:ok, %{status: 201}} ->
           :ok
+
+        {:ok, %{status: 409, body: body}} ->
+          {:error, {:conflict, body}}
 
         {:ok, %{status: status, body: body}} ->
           {:error, {:http_error, status, body}}

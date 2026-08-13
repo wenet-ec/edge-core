@@ -199,8 +199,14 @@ defmodule EdgeAgent.Bootstrap do
 
       Enum.each(aliases, fn name ->
         case AdminClient.register_alias(name) do
-          :ok -> Logger.info("Alias registered: #{name}")
-          {:error, reason} -> Logger.warning("Failed to register alias #{inspect(name)}: #{inspect(reason)}")
+          :ok ->
+            Logger.info("Alias registered: #{name}")
+
+          {:error, {:conflict, _reason}} ->
+            Logger.warning("Alias already registered: #{inspect(name)}")
+
+          {:error, reason} ->
+            Logger.warning("Failed to register alias #{inspect(name)}: #{inspect(reason)}")
         end
       end)
     end

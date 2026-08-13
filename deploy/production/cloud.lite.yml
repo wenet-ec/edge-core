@@ -32,6 +32,9 @@ services:
       - ./.envs/.edge_admin
     environment:
       - DB_ADAPTER=sqlite
+      - DB_POOL_SIZE=5
+      - NODE_HEALTH_CHECK_CONCURRENCY=25
+      - COMMAND_DELIVERY_CONCURRENCY=20
     ports:
       - "34000:44000" # API
       - "33128:43128" # HTTP proxy

@@ -9,7 +9,7 @@ recovery_key = get_env("RECOVERY_KEY", :string)
 
 config :edge_agent, EdgeAgent.Repo,
   database: "#{data_dir}/agent/edge_agent.db",
-  pool_size: get_env("DB_POOL_SIZE", :integer, 10),
+  pool_size: get_env("DB_POOL_SIZE", :integer, 5),
   busy_timeout: 30_000,
   queue_target: 100,
   queue_interval: 2_000
@@ -85,7 +85,7 @@ config :edge_agent, Oban,
   repo: EdgeAgent.Repo,
   queues: [
     enqueue_executions: 1,
-    execute_command: [limit: 10],
+    execute_command: [limit: 4],
     report_executions: 1
   ],
   plugins: [

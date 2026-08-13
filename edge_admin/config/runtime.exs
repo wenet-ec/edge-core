@@ -84,7 +84,8 @@ case db_adapter do
   :sqlite ->
     config :edge_admin, SQLite,
       database: get_env("SQLITE_DB_PATH", :string, Path.join([data_dir, "edge", "edge_admin.db"])),
-      pool_size: get_env("DB_POOL_SIZE", :integer, 5)
+      pool_size: get_env("DB_POOL_SIZE", :integer, 5),
+      busy_timeout: 30_000
 
   :postgres ->
     # Postgres has two configuration styles, all-or-nothing per repo:
@@ -296,6 +297,18 @@ execution_pruning_enabled = get_env("EXECUTION_PRUNING_ENABLED", :boolean, false
 execution_pruning_schedule = get_env("EXECUTION_PRUNING_SCHEDULE", :string, "0 0 * * *")
 execution_retention_days = get_env("EXECUTION_RETENTION_DAYS", :integer, 30)
 
+default_node_health_check_concurrency =
+  case db_adapter do
+    :sqlite -> 25
+    :postgres -> 100
+  end
+
+default_command_delivery_concurrency =
+  case db_adapter do
+    :sqlite -> 20
+    :postgres -> 50
+  end
+
 # PromEx Grafana integration.
 grafana_config =
   case System.get_env("GRAFANA_HOST") do
@@ -338,6 +351,31 @@ oban_notifier =
   case db_adapter do
     :sqlite -> Oban.Notifiers.PG
     _ -> {Oban.Notifiers.Postgres, repo: Notifier}
+  end
+
+oban_queues =
+  case db_adapter do
+    :sqlite ->
+      [
+        execution_creation: 1,
+        execution_pruning: 1,
+        cluster_reconciliation: 1,
+        cluster_deletion: 1,
+        self_updates: 1,
+        event_broker: 1,
+        webhooks: 1
+      ]
+
+    :postgres ->
+      [
+        execution_creation: 2,
+        execution_pruning: 1,
+        cluster_reconciliation: 1,
+        cluster_deletion: 1,
+        self_updates: 1,
+        event_broker: 2,
+        webhooks: 2
+      ]
   end
 
 config :edge_admin, EdgeAdmin.LocalScheduler,
@@ -395,15 +433,7 @@ config :edge_admin, EdgeAdmin.PromEx,
 #                          than broker publish latency)
 config :edge_admin, Oban,
   engine: oban_engine,
-  queues: [
-    execution_creation: 2,
-    execution_pruning: 1,
-    cluster_reconciliation: 1,
-    cluster_deletion: 1,
-    self_updates: 1,
-    event_broker: 2,
-    webhooks: 2
-  ],
+  queues: oban_queues,
   # Oban needs a real Ecto.Repo (calls __adapter__/0, config/0, etc.) so we
   # hand it the impl module directly, not the dispatcher.
   repo: repo_impl,
@@ -494,7 +524,9 @@ config :edge_admin,
   metrics_scrape_timeout: get_env("METRICS_SCRAPE_TIMEOUT_MS", :integer, 10_000),
   # Command delivery — agent may be busy, allow a bit more time.
   command_delivery_timeout: get_env("COMMAND_DELIVERY_TIMEOUT_MS", :integer, 10_000),
-  node_health_check_concurrency: get_env("NODE_HEALTH_CHECK_CONCURRENCY", :integer, 100),
+  node_health_check_concurrency:
+    get_env("NODE_HEALTH_CHECK_CONCURRENCY", :integer, default_node_health_check_concurrency),
+  command_delivery_concurrency: get_env("COMMAND_DELIVERY_CONCURRENCY", :integer, default_command_delivery_concurrency),
   http_proxy_port: get_env("HTTP_PROXY_PORT", :integer, 43_128),
   socks5_proxy_port: get_env("SOCKS5_PROXY_PORT", :integer, 41_080),
   metrics_base_url: get_env!("METRICS_BASE_URL"),

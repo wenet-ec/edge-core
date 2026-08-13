@@ -227,6 +227,8 @@ defmodule EdgeAdmin.Commands.Workflows.Delivery do
   """
   @spec deliver_local_command_executions() :: :ok
   def deliver_local_command_executions do
+    concurrency = Application.get_env(:edge_admin, :command_delivery_concurrency, 50)
+
     my_clusters = Metadata.get_my_clusters()
     my_cluster_network_names = Map.keys(my_clusters)
 
@@ -279,7 +281,7 @@ defmodule EdgeAdmin.Commands.Workflows.Delivery do
             node = hd(executions).node
             deliver_executions_to_node(node, executions)
           end,
-          max_concurrency: 50,
+          max_concurrency: concurrency,
           timeout: 30_000,
           on_timeout: :kill_task
         )

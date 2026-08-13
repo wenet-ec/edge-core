@@ -2,14 +2,18 @@
 
 # Database
 # DB_ADAPTER selects the engine at runtime — no rebuild needed.
-#   postgres (default) — required for multi-admin Erlang clustering
-#   sqlite             — single-instance only, no external DB needed
+#   postgres (default) — required for multi-admin Erlang clustering.
+#                        Recommended DB_POOL_SIZE: 10+ in production, lower is fine locally.
+#   sqlite             — single-instance only, no external DB needed.
+#                        Recommended DB_POOL_SIZE: 5.
 DB_ADAPTER=postgres
 
 # PostgreSQL connection (DB_ADAPTER=postgres).
 # Use either fragment form (the DB_* vars below) or URL form (DATABASE_URL).
 # All-or-nothing per repo: when DATABASE_URL is set, every DB_* fragment is
 # ignored. DB_POOL_SIZE / DB_SSL / DB_IPV6 always apply, regardless of form.
+# DB_POOL_SIZE also applies to SQLite; use 5 for SQLite unless you have
+# measured a need for more read concurrency.
 
 # DATABASE_URL=postgresql://edge_admin_user:edge_admin_password@edge_admin_db:5432/edge_admin_local
 DB_HOST=edge_admin_db
@@ -26,7 +30,8 @@ DB_SSL=false
 # Unified Admin data root. SQLite defaults to ${DATA_DIR}/edge/edge_admin.db.
 # Admin VPN state is not persisted here; the Edge VPN CLI state is reset every boot.
 # DATA_DIR=/app/data
-# SQLITE_DB_PATH=/app/data/edge/edge_admin.db  # overrides DATA_DIR-derived default if set
+# Overrides DATA_DIR-derived default if set.
+# SQLITE_DB_PATH=/app/data/edge/edge_admin.db
 
 # Migrations (postgres only).
 # Lock strategy. Default: pg_advisory_lock.
@@ -79,10 +84,10 @@ AUTH_ENABLED=true
 MASTER_KEY=supersecretkey123456789
 
 # Optional scoped keys. All default to MASTER_KEY if unset.
-# API_KEY=      # REST API endpoints (nodes, commands, SSH, clusters)
-# METRICS_KEY=  # Read-only: metrics endpoints
-# PROXY_KEY=    # Proxy tunnel endpoints
-# MCP_KEY=      # MCP server endpoint
+# API_KEY=        # REST API endpoints (nodes, commands, SSH, clusters)
+# METRICS_KEY=    # Read-only: metrics endpoints
+# PROXY_KEY=      # Proxy tunnel endpoints
+# MCP_KEY=        # MCP server endpoint
 
 # Encryption at rest for sensitive Ecto columns
 # ENCRYPTION_KEY: 32 bytes of base64 (generate with: openssl rand -base64 32)
@@ -96,8 +101,8 @@ ENCRYPTION_TAG=AES.GCM.V1
 # Rotation env vars. All four required to trigger rotation; if any is missing
 # the release task logs "skip" and exits cleanly. Operators set these, run
 # the rotation task (auto on `start`, or one-off via the `rotate_encryption_key`
-# script), verify, then strip these and update ENCRYPTION_KEY/ENCRYPTION_TAG to the
-# new values on the next deploy. Idempotent — safe to re-run.
+# script), verify, then strip these and update ENCRYPTION_KEY/ENCRYPTION_TAG
+# to the new values on the next deploy. Idempotent — safe to re-run.
 # ROTATE_OLD_ENCRYPTION_KEY=
 # ROTATE_OLD_ENCRYPTION_TAG=
 # ROTATE_NEW_ENCRYPTION_KEY=
@@ -111,9 +116,12 @@ SOCKS5_PROXY_PORT=41080
 # PROXY_CONNECTION_TIMEOUT_MS=2000        # TCP connect to target host (default: 2s)
 # PROXY_HANDSHAKE_TIMEOUT_MS=10000        # SOCKS5/HTTP proxy handshake (default: 10s)
 # PROXY_READ_TIMEOUT_MS=10000             # Socket read (default: 10s)
-# PROXY_RECV_TIMEOUT_MS=300000            # Forwarding loop inactivity — closes half-open connections (default: 5min)
-# PROXY_TUNNEL_TOTAL_TIMEOUT_MS=21600000  # Absolute ceiling on a tunnel's lifetime (default: 6h, slowloris defence)
-# PROXY_DRAIN_GRACE_TIMEOUT_MS=30000      # Grace window for tunnels during graceful drain on shutdown (default: 30s)
+# Forwarding loop inactivity; closes half-open connections (default: 5min).
+# PROXY_RECV_TIMEOUT_MS=300000
+# Absolute ceiling on a tunnel's lifetime (default: 6h, slowloris defence).
+# PROXY_TUNNEL_TOTAL_TIMEOUT_MS=21600000
+# Grace window for tunnels during graceful drain on shutdown (default: 30s).
+# PROXY_DRAIN_GRACE_TIMEOUT_MS=30000
 # PROXY_NUM_ACCEPTORS=100                 # Ranch acceptor processes per listener (default: 100)
 
 # Observability
@@ -124,7 +132,8 @@ METRICS_BASE_URL=edge_admin_a1:44000
 SENTRY_ENVIRONMENT_NAME=local
 
 # PromEx metrics collection.
-# ADMIN_METRICS_ENABLED=true   # Set to false to disable all admin metrics collection (default: true)
+# Set to false to disable all admin metrics collection (default: true).
+# ADMIN_METRICS_ENABLED=true
 
 # Grafana dashboard upload (optional).
 # When GRAFANA_HOST is set, PromEx uploads all dashboards to Grafana on startup.
@@ -137,9 +146,9 @@ SENTRY_ENVIRONMENT_NAME=local
 # GRAFANA_AUTH_TOKEN=glsa_xxxxxxxxxxxxxxxxxxxx
 # GRAFANA_USERNAME=admin
 # GRAFANA_PASSWORD=admin
-# GRAFANA_FOLDER_NAME=Edge Core          # Folder name in Grafana (default: "Edge Core")
-# GRAFANA_UPLOAD_ON_START=true           # Upload dashboards on each boot (default: true)
-# GRAFANA_ANNOTATE_LIFECYCLE=false       # Annotate app start/stop events (default: false)
+# GRAFANA_FOLDER_NAME=Edge Core     # Folder name in Grafana (default: "Edge Core")
+# GRAFANA_UPLOAD_ON_START=true      # Upload dashboards on each boot (default: true)
+# GRAFANA_ANNOTATE_LIFECYCLE=false  # Annotate app start/stop events (default: false)
 
 # Edge VPN
 
@@ -169,7 +178,8 @@ EDGE_VPN_API_SCHEME=http
 # CLUSTER_AUTO_GENERATED_V6_RANGES=fd7a:91c2:4e8b::/48
 # CLUSTER_V6_SUBNET_PREFIX=64
 
-# Slots reserved for admin gateway nodes (e.g. split-brain flooding) — tune to match admin instance count per core.
+# Slots reserved for admin gateway nodes (e.g. split-brain flooding) — tune
+# to match admin instance count per core.
 # ADMIN_SLOT_RESERVATION=10
 
 # Pre-create a named default cluster so agents can enroll without specifying a cluster.
@@ -179,7 +189,8 @@ EDGE_VPN_API_SCHEME=http
 DEFAULT_CLUSTER_NAME=test
 # DEFAULT_CLUSTER_V4_SUBNET=100.64.0.0/24
 # DEFAULT_CLUSTER_V6_SUBNET=fd7a:91c2:4e8b::/64
-# DEFAULT_CLUSTER_NODE_LIMIT=   # Max nodes allowed in the default cluster (unset = no limit)
+# Max nodes allowed in the default cluster (unset = no limit).
+# DEFAULT_CLUSTER_NODE_LIMIT=
 
 # Allow agent enrollment without a signed token — dev/testing only, never production.
 PUBLIC_ENROLLMENT_KEY_ENABLED=true
@@ -250,15 +261,16 @@ VPN_CLUSTER_PORT=49125
 # Port on which admin instances expose their discovery/health endpoint to each other.
 ADMIN_DISCOVERY_PORT=44000
 
-
 # Event delivery (shared by broker + webhook channels)
 
-# CORE_NAME=                            # included in every envelope; defaults to "default"
-# EVENT_DELIVERY_MAX_AGE_SECONDS=3600   # drop publish/delivery jobs older than N seconds; 0 disables (default: 3600)
+# CORE_NAME=                          # Included in every envelope; defaults to "default"
+# Drop publish/delivery jobs older than N seconds; 0 disables (default: 3600).
+# EVENT_DELIVERY_MAX_AGE_SECONDS=3600
 
 # Webhooks (always-on delivery channel; per-row config via /api/v1/webhooks):
-# WEBHOOK_MAX_ATTEMPTS=3                 # total HTTP delivery attempts per event before drop (default: 3)
-WEBHOOK_ALLOW_PRIVATE_IPS=true        # set true ONLY for homelab/dev — disables SSRF deny list (default: false)
+# WEBHOOK_MAX_ATTEMPTS=3              # Total HTTP delivery attempts per event before drop (default: 3)
+# Set true ONLY for homelab/dev — disables SSRF deny list (default: false).
+WEBHOOK_ALLOW_PRIVATE_IPS=true
 
 # Event Broker
 
@@ -266,69 +278,81 @@ WEBHOOK_ALLOW_PRIVATE_IPS=true        # set true ONLY for homelab/dev — disabl
 
 # NATS:
 # EVENT_BROKER_ADAPTER=nats
-# EVENT_BROKER_NATS_URLS=nats://edge_event_broker_nats:4222   # comma-separated for cluster
-# EVENT_BROKER_NATS_JETSTREAM=true                            # durable JetStream log (default: false)
-# EVENT_BROKER_NATS_TOKEN=                                    # shared token
-# EVENT_BROKER_NATS_USERNAME=                                 # username + password
+# EVENT_BROKER_NATS_URLS=nats://edge_event_broker_nats:4222  # Comma-separated for cluster
+# EVENT_BROKER_NATS_JETSTREAM=true                           # Durable JetStream log (default: false)
+# EVENT_BROKER_NATS_TOKEN=                                   # Shared token
+# EVENT_BROKER_NATS_USERNAME=                                # Username + password
 # EVENT_BROKER_NATS_PASSWORD=
-# EVENT_BROKER_NATS_NKEY_SEED=                                # NKey seed (standalone or with JWT)
-# EVENT_BROKER_NATS_JWT=                                      # JWT credential, alongside NKEY_SEED
+# EVENT_BROKER_NATS_NKEY_SEED=                               # NKey seed (standalone or with JWT)
+# EVENT_BROKER_NATS_JWT=                                     # JWT credential, alongside NKEY_SEED
 
 # Kafka / Redpanda:
 # EVENT_BROKER_ADAPTER=kafka
-# EVENT_BROKER_KAFKA_URLS=edge_event_broker_kafka:9092        # comma-separated host:port list for cluster
+# EVENT_BROKER_KAFKA_URLS=edge_event_broker_kafka:9092       # Comma-separated host:port list for cluster
 # EVENT_BROKER_KAFKA_USERNAME=
 # EVENT_BROKER_KAFKA_PASSWORD=
-# EVENT_BROKER_KAFKA_SASL_MECHANISM=plain                     # plain | scram_sha_256 | scram_sha_512
-# EVENT_BROKER_KAFKA_SSL=true                                 # TLS, required for public/external brokers
+# EVENT_BROKER_KAFKA_SASL_MECHANISM=plain                    # plain | scram_sha_256 | scram_sha_512
+# EVENT_BROKER_KAFKA_SSL=true                                # TLS, required for public/external brokers
 
 # AMQP 0-9-1 (RabbitMQ / LavinMQ / AmazonMQ for RabbitMQ / CloudAMQP):
-# EVENT_BROKER_ADAPTER=amqp091     # alias `rabbitmq` also accepted
-# EVENT_BROKER_RABBITMQ_URL=amqp://edge_event_broker_rabbitmq:5672   # embed credentials: amqp://user:pass@host:port
-# EVENT_BROKER_RABBITMQ_SSL=true                              # TLS, required for public/external brokers
+# Alias `rabbitmq` also accepted.
+# EVENT_BROKER_ADAPTER=amqp091
+# Embed credentials: amqp://user:pass@host:port
+# EVENT_BROKER_RABBITMQ_URL=amqp://edge_event_broker_rabbitmq:5672
+# EVENT_BROKER_RABBITMQ_SSL=true                             # TLS, required for public/external brokers
 
 # Redis:
 # EVENT_BROKER_ADAPTER=redis
-# EVENT_BROKER_REDIS_URL=redis://edge_event_broker_redis:6379   # embed credentials: redis://:pass@host:port
-# EVENT_BROKER_REDIS_SSL=true                                 # TLS, required for public/external brokers
+# Embed credentials: redis://:pass@host:port
+# EVENT_BROKER_REDIS_URL=redis://edge_event_broker_redis:6379
+# EVENT_BROKER_REDIS_SSL=true                                # TLS, required for public/external brokers
 
 # MQTT (EMQX, Mosquitto, HiveMQ, AWS IoT, etc.):
 # EVENT_BROKER_ADAPTER=mqtt
-# EVENT_BROKER_MQTT_URL=edge_event_broker_mqtt:1883           # single host:port (no scheme)
-# EVENT_BROKER_MQTT_QOS=1                                     # 0|1|2, default 1
-# EVENT_BROKER_MQTT_JWT=                                      # JWT bearer (CONNECT password slot)
+# EVENT_BROKER_MQTT_URL=edge_event_broker_mqtt:1883          # Single host:port (no scheme)
+# EVENT_BROKER_MQTT_QOS=1                                    # 0|1|2, default 1
+# EVENT_BROKER_MQTT_JWT=                                     # JWT bearer (CONNECT password slot)
 # EVENT_BROKER_MQTT_USERNAME=
 # EVENT_BROKER_MQTT_PASSWORD=
-# EVENT_BROKER_MQTT_SSL=true                                  # TLS, required for public/external brokers
-# EVENT_BROKER_MQTT_CACERT_FILE=                              # custom CA bundle / pinning
-# EVENT_BROKER_MQTT_CLIENT_CERT_FILE=                         # mTLS, requires SSL=true
-# EVENT_BROKER_MQTT_CLIENT_KEY_FILE=                          # mTLS, requires SSL=true
+# EVENT_BROKER_MQTT_SSL=true                                 # TLS, required for public/external brokers
+# EVENT_BROKER_MQTT_CACERT_FILE=                             # Custom CA bundle / pinning
+# EVENT_BROKER_MQTT_CLIENT_CERT_FILE=                        # mTLS, requires SSL=true
+# EVENT_BROKER_MQTT_CLIENT_KEY_FILE=                         # mTLS, requires SSL=true
 
 # AWS SNS:
 # EVENT_BROKER_ADAPTER=aws_sns
 # EVENT_BROKER_AWS_SNS_REGION=us-east-1
-# EVENT_BROKER_AWS_SNS_TOPIC_ARN_PREFIX=arn:aws:sns:us-east-1:000000000000:   # LocalStack uses account 000000000000
-# EVENT_BROKER_AWS_SNS_ENDPOINT_URL=http://edge_event_broker_aws_sns:4566     # leave UNSET in prod
+# LocalStack uses account 000000000000.
+# EVENT_BROKER_AWS_SNS_TOPIC_ARN_PREFIX=arn:aws:sns:us-east-1:000000000000:
+# Leave UNSET in prod.
+# EVENT_BROKER_AWS_SNS_ENDPOINT_URL=http://edge_event_broker_aws_sns:4566
 # AWS_ACCESS_KEY_ID=test
 # AWS_SECRET_ACCESS_KEY=test
-# AWS_SESSION_TOKEN=                                          # optional, when assuming an IAM role via STS
+# AWS_SESSION_TOKEN=                                         # Optional, when assuming an IAM role via STS
 
 # Google Cloud Pub/Sub:
 # EVENT_BROKER_ADAPTER=google_pubsub
-# EVENT_BROKER_GOOGLE_PUBSUB_PROJECT=edge-local               # any string works against the emulator
-# EVENT_BROKER_GOOGLE_PUBSUB_TOPIC_ID_PREFIX=                 # optional, e.g. "edge-prod-"
-# EVENT_BROKER_GOOGLE_PUBSUB_EMULATOR_HOST=edge_event_broker_google_pubsub:8085   # leave UNSET in prod
-# GOOGLE_APPLICATION_CREDENTIALS=                             # service-account JSON path, real GCP only
+# EVENT_BROKER_GOOGLE_PUBSUB_PROJECT=edge-local              # Any string works against the emulator
+# EVENT_BROKER_GOOGLE_PUBSUB_TOPIC_ID_PREFIX=                # Optional, e.g. "edge-prod-"
+# Leave UNSET in prod.
+# EVENT_BROKER_GOOGLE_PUBSUB_EMULATOR_HOST=edge_event_broker_google_pubsub:8085
+# GOOGLE_APPLICATION_CREDENTIALS=                            # Service-account JSON path, real GCP only
 
 # Background Workers & Schedulers
 
 # Quantum LocalScheduler runs on every admin instance.
-# ADMIN_DISCOVERY_SCHEDULE=*/5 * * * *        # Scan VPN for other admin peers (default: every 5min)
-# METADATA_RECOMPUTATION_SCHEDULE=* * * * *   # Recompute cluster ownership assignments (default: every 1min)
-# NODE_HEALTH_CHECK_SCHEDULE=* * * * *           # Ping owned nodes to detect unhealthy status (default: every 1min)
+# Scan VPN for other admin peers (default: every 5min).
+# ADMIN_DISCOVERY_SCHEDULE=*/5 * * * *
+# Recompute cluster ownership assignments (default: every 1min).
+# METADATA_RECOMPUTATION_SCHEDULE=* * * * *
+# Ping owned nodes to detect unhealthy status (default: every 1min).
+# NODE_HEALTH_CHECK_SCHEDULE=* * * * *
+# Default: 100 for Postgres, 25 for SQLite.
 # NODE_HEALTH_CHECK_CONCURRENCY=100
-# EXECUTION_DELIVERY_SCHEDULE=* * * * *        # Deliver pending commands to agents (default: every 1min)
-# EXECUTION_EXPIRATION_SCHEDULE=* * * * *      # Sweep and expire stale command executions (default: every 1min)
+# Deliver pending commands to agents (default: every 1min).
+# EXECUTION_DELIVERY_SCHEDULE=* * * * *
+# Sweep and expire stale command executions (default: every 1min).
+# EXECUTION_EXPIRATION_SCHEDULE=* * * * *
 
 # Periodic netclient pull — decoupled from reconciliation, independent consistency backstop.
 # VPN_CONFIG_SYNC_SCHEDULE=*/5 * * * *
@@ -349,7 +373,7 @@ WEBHOOK_ALLOW_PRIVATE_IPS=true        # set true ONLY for homelab/dev — disabl
 
 # Cluster Reconciliation: heals drift between DB and the Edge VPN
 # CLUSTER_RECONCILIATION_ENABLED=true
-# CLUSTER_RECONCILIATION_SCHEDULE=0 */6 * * *  # default: every 6 hours
+# CLUSTER_RECONCILIATION_SCHEDULE=0 */6 * * *  # Default: every 6 hours
 
 # Rogue Host Eviction: delete hosts in a cluster network with no DB record
 # Disable temporarily if you need direct Edge VPN access (e.g. manual debugging).
@@ -361,10 +385,15 @@ WEBHOOK_ALLOW_PRIVATE_IPS=true        # set true ONLY for homelab/dev — disabl
 # (pending, sent) and unsettled cancelled/expired rows (nil exit_code, agent
 # may still report back) are never deleted regardless of age.
 # EXECUTION_PRUNING_ENABLED=false
-# EXECUTION_PRUNING_SCHEDULE=0 0 * * *   # default: daily at 00:00
-# EXECUTION_RETENTION_DAYS=30            # default: 30 days
+# EXECUTION_PRUNING_SCHEDULE=0 0 * * *  # Default: daily at 00:00
+# EXECUTION_RETENTION_DAYS=30           # Default: 30 days
 
 # HTTP timeouts for Admin to Agent calls.
-# HEALTH_CHECK_TIMEOUT_MS=5000        # Health check pings (every minute, all owned nodes; geo-friendly)
-# METRICS_SCRAPE_TIMEOUT_MS=10000     # Metrics scraping from agent exporters
-# COMMAND_DELIVERY_TIMEOUT_MS=10000   # Command delivery to agents
+# Health check pings (every minute, all owned nodes; geo-friendly).
+# HEALTH_CHECK_TIMEOUT_MS=5000
+# Metrics scraping from agent exporters.
+# METRICS_SCRAPE_TIMEOUT_MS=10000
+# Command delivery to agents.
+# COMMAND_DELIVERY_TIMEOUT_MS=10000
+# Default: 50 for Postgres, 20 for SQLite.
+# COMMAND_DELIVERY_CONCURRENCY=50

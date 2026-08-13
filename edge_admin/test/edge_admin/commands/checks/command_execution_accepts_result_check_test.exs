@@ -7,6 +7,11 @@ defmodule EdgeAdmin.Commands.Checks.CommandExecutionAcceptsResultCheckTest do
   # check/1 — pure struct pattern match, no DB
 
   describe "check/1 — updatable executions" do
+    test "pending execution returns :ok because an Agent result proves delivery" do
+      execution = %CommandExecution{status: :pending, exit_code: nil}
+      assert :ok = CommandExecutionAcceptsResultCheck.check(execution)
+    end
+
     test "sent execution returns :ok" do
       execution = %CommandExecution{status: :sent, exit_code: nil}
       assert :ok = CommandExecutionAcceptsResultCheck.check(execution)
@@ -24,12 +29,6 @@ defmodule EdgeAdmin.Commands.Checks.CommandExecutionAcceptsResultCheckTest do
   end
 
   describe "check/1 — non-updatable executions" do
-    test "pending execution returns conflict error" do
-      execution = %CommandExecution{status: :pending, exit_code: nil}
-      assert {:error, {:conflict, reason}} = CommandExecutionAcceptsResultCheck.check(execution)
-      assert reason =~ "pending"
-    end
-
     test "completed execution with exit_code 0 returns conflict error" do
       execution = %CommandExecution{status: :completed, exit_code: 0}
       assert {:error, {:conflict, reason}} = CommandExecutionAcceptsResultCheck.check(execution)
@@ -60,9 +59,9 @@ defmodule EdgeAdmin.Commands.Checks.CommandExecutionAcceptsResultCheckTest do
     end
 
     test "error message includes the actual status and exit_code" do
-      execution = %CommandExecution{status: :pending, exit_code: nil}
+      execution = %CommandExecution{status: :completed, exit_code: nil}
       {:error, {:conflict, reason}} = CommandExecutionAcceptsResultCheck.check(execution)
-      assert reason =~ "pending"
+      assert reason =~ "completed"
     end
   end
 end

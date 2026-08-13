@@ -80,4 +80,32 @@ defmodule EdgeAdmin.Commands.Workflows.CommandExecutionLifecycleTest do
       assert Repo.get!(CommandExecution, completed.id).status == :completed
     end
   end
+
+  describe "update_command_execution_result/2" do
+    test "accepts an Agent result while Admin still has the execution pending" do
+      cluster = insert_cluster()
+      node = insert_node(cluster)
+      command = insert_command()
+      execution = insert_execution(command, node, :pending)
+      completed_at = DateTime.truncate(DateTime.utc_now(), :second)
+
+      assert {:ok, updated} =
+               CommandExecutionLifecycle.update_command_execution_result(execution, %{
+                 "status" => "completed",
+                 "output" => "hello\n",
+                 "exit_code" => 0,
+                 "completed_at" => DateTime.to_iso8601(completed_at)
+               })
+
+      assert updated.status == :completed
+      assert updated.output == "hello\n"
+      assert updated.exit_code == 0
+      assert updated.completed_at == completed_at
+      assert updated.sent_at == nil
+
+      persisted = Repo.get!(CommandExecution, execution.id)
+      assert persisted.status == :completed
+      assert persisted.sent_at == nil
+    end
+  end
 end

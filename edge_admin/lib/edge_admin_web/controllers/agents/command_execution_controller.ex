@@ -88,7 +88,7 @@ defmodule EdgeAdminWeb.Controllers.Agents.CommandExecutionController do
   operation(:report_result,
     summary: "Report command execution result",
     description:
-      "Agent reports command results (output, exit_code, status). Verifies the command belongs to the authenticated node. If an administrative cancellation or expiry raced with execution, a real result may still be accepted and becomes the final result.",
+      "Agent reports command results (output, exit_code, status). Verifies the command belongs to the authenticated node. A result can finalize a pending execution when Admin missed the delivery acknowledgement. If an administrative cancellation or expiry raced with execution, a real result may still be accepted and becomes the final result.",
     parameters: [PathParams.uuid(:id, "Command execution UUID")],
     request_body:
       {"Command execution result", "application/json", CommandExecutionSchemas.UpdateCommandExecutionResultRequest,

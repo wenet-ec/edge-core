@@ -129,10 +129,13 @@ defmodule EdgeAdmin.Commands.Workflows.CommandExecutionLifecycle do
   @doc """
   Updates command execution result from agent.
 
-  Validates execution status and updates with the agent-reported result. The
-  agent is the source of truth for terminal status: an `exit_code: 143`
-  (SIGTERM) is rewritten to `:cancelled`, an agent-reported `status: :expired`
-  passes through, and everything else is recorded as `:completed`.
+  Validates execution status and updates with the agent-reported result. A
+  valid result from the authenticated owning Agent may finalize a `:pending`
+  row because the result proves delivery even when Admin missed the delivery
+  acknowledgement. The agent is the source of truth for terminal status: an
+  `exit_code: 143` (SIGTERM) is rewritten to `:cancelled`, an agent-reported
+  `status: :expired` passes through, and everything else is recorded as
+  `:completed`.
 
   ## Parameters
   - `execution` - The execution struct
@@ -309,8 +312,9 @@ defmodule EdgeAdmin.Commands.Workflows.CommandExecutionLifecycle do
   end
 
   # Result-report transition. The "accepts a result" predicate is dynamic:
-  # :sent (normal) OR :cancelled / :expired with exit_code IS NULL
-  # (race-window placeholders).
+  # :pending (Agent result proves delivery even if Admin missed the delivery
+  # acknowledgement) OR :sent (normal) OR :cancelled / :expired with
+  # exit_code IS NULL (race-window placeholders).
   #
   # Paired predicate: the same rule is encoded as a pure struct check in
   # `EdgeAdmin.Commands.Checks.CommandExecutionAcceptsResultCheck`, which runs first
@@ -324,7 +328,7 @@ defmodule EdgeAdmin.Commands.Workflows.CommandExecutionLifecycle do
     accepts_result =
       dynamic(
         [ce],
-        ce.status == :sent or
+        ce.status in [:pending, :sent] or
           (ce.status in [:cancelled, :expired] and is_nil(ce.exit_code))
       )
 

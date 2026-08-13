@@ -4,6 +4,9 @@ defmodule EdgeAdmin.Commands.Checks.CommandExecutionAcceptsResultCheck do
   Checks that an execution is in a state that accepts a result update from an agent.
 
   An execution result can be updated when:
+  - Status is "pending" (Admin did not record delivery acknowledgement, but
+    the authenticated owning Agent's result proves it received and ran the
+    execution)
   - Status is "sent" (normal case)
   - Status is "cancelled" with nil exit_code (race condition: pending execution
     was cancelled by admin before agent ran it, but agent picked it up via sync
@@ -26,6 +29,8 @@ defmodule EdgeAdmin.Commands.Checks.CommandExecutionAcceptsResultCheck do
 
   @doc "Checks whether an execution may accept a result from an Agent."
   @spec check(CommandExecution.t()) :: :ok | {:error, {:conflict, String.t()}}
+  def check(%CommandExecution{status: :pending}), do: :ok
+
   def check(%CommandExecution{status: :sent}), do: :ok
 
   def check(%CommandExecution{status: :cancelled, exit_code: nil}), do: :ok

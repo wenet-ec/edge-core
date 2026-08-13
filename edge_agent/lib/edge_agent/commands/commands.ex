@@ -54,10 +54,10 @@ defmodule EdgeAgent.Commands do
   Validates params, creates the execution record, and triggers the execution pipeline.
   """
   @spec create_command_execution_and_enqueue_worker(map()) ::
-          {:ok, CommandExecution.t()} | {:error, Ecto.Changeset.t()}
+          {:ok, CommandExecution.t()} | {:error, Ecto.Changeset.t()} | {:error, {:conflict, String.t()}}
   def create_command_execution_and_enqueue_worker(params \\ %{}) do
     with {:ok, attrs} <- CreateCommandExecutionForm.changeset(params),
-         {:ok, command_execution} <- create_command_execution(attrs) do
+         {:ok, command_execution} <- get_or_create_command_execution(attrs) do
       enqueue_worker(
         EdgeAgent.Commands.Workers.EnqueueExecutionWorker,
         "EnqueueExecutionWorker"
@@ -74,11 +74,22 @@ defmodule EdgeAgent.Commands do
   Most callers should use `create_command_execution_and_enqueue_worker/1` instead.
   """
   @spec create_command_execution(map()) ::
-          {:ok, CommandExecution.t()} | {:error, Ecto.Changeset.t()}
+          {:ok, CommandExecution.t()} | {:error, Ecto.Changeset.t()} | {:error, {:conflict, String.t()}}
   def create_command_execution(attrs \\ %{}) do
     %CommandExecution{}
     |> CommandExecution.changeset(attrs)
     |> Repo.insert()
+    |> Repo.normalize_conflict([:id])
+  end
+
+  defp get_or_create_command_execution(attrs) do
+    case get_command_execution(attrs["id"]) do
+      {:ok, command_execution} ->
+        {:ok, command_execution}
+
+      {:error, :not_found} ->
+        create_command_execution(attrs)
+    end
   end
 
   @doc """

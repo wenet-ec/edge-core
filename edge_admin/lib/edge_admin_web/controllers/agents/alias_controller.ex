@@ -17,8 +17,8 @@ defmodule EdgeAdminWeb.Controllers.Agents.AliasController do
       "Register a friendly name alias for the calling node. Returns 409 if the name is already taken in this cluster.",
     request_body: {"Alias name", "application/json", AliasSchemas.CreateAliasRequest, required: true},
     responses: %{
-      201 => {"Alias created", "application/json", AliasSchemas.AliasSingleResponse},
-      409 => {"Name already taken in this cluster (agent ignores)", "application/json", CommonSchemas.ConflictResponse},
+      201 => {"Alias created successfully", "application/json", AliasSchemas.AliasSingleResponse},
+      409 => {"Name already taken in this cluster", "application/json", CommonSchemas.ConflictResponse},
       422 => {"Validation error", "application/json", CommonSchemas.ChangesetErrorResponse},
       503 => {"Service Unavailable", "application/json", CommonSchemas.ServiceUnavailableResponse}
     }

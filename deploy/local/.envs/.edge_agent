@@ -123,3 +123,5 @@ EDGE_VPN_API_SCHEME=http
 #
 # DATA_DIR=/app/data
 # DB_POOL_SIZE=5
+# Maximum number of command executions the Agent runs concurrently.
+# COMMAND_EXECUTION_CONCURRENCY=4

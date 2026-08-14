@@ -6,6 +6,7 @@ alias EdgeAgent.LocalScheduler.Tasks
 
 data_dir = get_env("DATA_DIR", :string, "/app/data")
 recovery_key = get_env("RECOVERY_KEY", :string)
+command_execution_concurrency = get_env("COMMAND_EXECUTION_CONCURRENCY", :integer, 4)
 
 config :edge_agent, EdgeAgent.Repo,
   database: "#{data_dir}/agent/edge_agent.db",
@@ -85,7 +86,7 @@ config :edge_agent, Oban,
   repo: EdgeAgent.Repo,
   queues: [
     enqueue_executions: 1,
-    execute_command: [limit: 4],
+    execute_command: [limit: command_execution_concurrency],
     report_executions: 1
   ],
   plugins: [

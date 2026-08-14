@@ -8,6 +8,10 @@ defmodule EdgeAgent.Commands.Forms.CreateCommandExecutionForm do
   """
   use EdgeAgent.Form
 
+  alias EdgeAgent.Commands.Enums.CommandExecutionStatuses
+
+  @incoming_statuses CommandExecutionStatuses.incoming_statuses()
+
   embedded_schema do
     field(:id, :binary_id)
     field(:command_id, :binary_id)
@@ -15,7 +19,7 @@ defmodule EdgeAgent.Commands.Forms.CreateCommandExecutionForm do
     field(:command_text, :string)
     field(:timeout, :integer)
     field(:expires_at, :utc_datetime)
-    field(:status, Ecto.Enum, values: [:pending])
+    field(:status, Ecto.Enum, values: @incoming_statuses)
     field(:output, :string)
     field(:exit_code, :integer)
     field(:completed_at, :utc_datetime)

@@ -13,6 +13,7 @@ defmodule EdgeAgent.Commands do
 
   alias EdgeAgent.Commands.CommandExecutionOutput
   alias EdgeAgent.Commands.CommandExecutionResults
+  alias EdgeAgent.Commands.Enums.CommandExecutionStatuses
   alias EdgeAgent.Commands.ExecutionRegistry
   alias EdgeAgent.Commands.Forms.CreateCommandExecutionForm
   alias EdgeAgent.Commands.Schemas.CommandExecution
@@ -408,7 +409,7 @@ defmodule EdgeAgent.Commands do
   end
 
   defp get_executions_by_status(status), do: get_executions_by_status([status])
-  defp get_recoverable_executions, do: get_executions_by_status([:pending, :running])
+  defp get_recoverable_executions, do: get_executions_by_status(CommandExecutionStatuses.recoverable_statuses())
   defp get_completed_executions, do: get_executions_by_status(:completed)
 
   @doc """
@@ -479,9 +480,11 @@ defmodule EdgeAgent.Commands do
   end
 
   defp cancel_pending_or_running_execution(execution_id) do
+    recoverable_statuses = CommandExecutionStatuses.recoverable_statuses()
+
     query =
       from(ce in CommandExecution,
-        where: ce.id == ^execution_id and ce.status in [:pending, :running]
+        where: ce.id == ^execution_id and ce.status in ^recoverable_statuses
       )
 
     now = DateTime.truncate(DateTime.utc_now(), :second)

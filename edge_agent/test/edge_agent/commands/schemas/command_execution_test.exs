@@ -2,6 +2,7 @@
 defmodule EdgeAgent.Commands.Schemas.CommandExecutionTest do
   use ExUnit.Case, async: true
 
+  alias EdgeAgent.Commands.Enums.CommandExecutionStatuses
   alias EdgeAgent.Commands.Schemas.CommandExecution
 
   defp valid_attrs(overrides \\ %{}) do
@@ -116,7 +117,7 @@ defmodule EdgeAgent.Commands.Schemas.CommandExecutionTest do
 
   describe "changeset/2 — status inclusion" do
     test "accepts the four locally-tracked statuses" do
-      for status <- ["pending", "running", "completed", "expired"] do
+      for status <- CommandExecutionStatuses.status_strings() do
         changeset =
           CommandExecution.changeset(%CommandExecution{}, valid_attrs(%{status: status}))
 

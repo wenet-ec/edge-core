@@ -3,13 +3,11 @@ defmodule EdgeAgent.Commands.Schemas.CommandExecution do
   @moduledoc "Ecto schema for a command execution tracked locally by the Agent."
   use EdgeAgent.Schema
 
-  # Lifecycle status registry. The agent only sees four states locally
-  # (`:sent` and `:cancelled` are admin-only). The schema's `Ecto.Enum`
-  # cast derives from this list. The incoming Admin form deliberately accepts
-  # only `:pending`; `:running` is Agent-internal lifecycle state.
-  @statuses [:pending, :running, :completed, :expired]
+  alias EdgeAgent.Commands.Enums.CommandExecutionStatuses
 
-  @type status :: :pending | :running | :completed | :expired
+  @statuses CommandExecutionStatuses.statuses()
+
+  @type status :: CommandExecutionStatuses.t()
 
   @type t :: %__MODULE__{
           id: Ecto.UUID.t() | nil,
@@ -72,12 +70,4 @@ defmodule EdgeAgent.Commands.Schemas.CommandExecution do
       end
     end)
   end
-
-  @doc "All locally-tracked statuses, in canonical order."
-  @spec statuses() :: [status()]
-  def statuses, do: @statuses
-
-  @doc "Wire-format strings for OpenAPI / form / sync surfaces."
-  @spec status_strings() :: [String.t()]
-  def status_strings, do: Enum.map(@statuses, &Atom.to_string/1)
 end

@@ -2,6 +2,7 @@
 defmodule EdgeAgent.Commands.Forms.CreateCommandExecutionFormTest do
   use ExUnit.Case, async: true
 
+  alias EdgeAgent.Commands.Enums.CommandExecutionStatuses
   alias EdgeAgent.Commands.Forms.CreateCommandExecutionForm
 
   @valid_id "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
@@ -28,6 +29,12 @@ defmodule EdgeAgent.Commands.Forms.CreateCommandExecutionFormTest do
   # Happy path
 
   describe "changeset/1 — valid inputs" do
+    test "accepts every incoming status" do
+      for status <- CommandExecutionStatuses.incoming_status_strings() do
+        assert {:ok, _result} = CreateCommandExecutionForm.changeset(valid_attrs(%{"status" => status}))
+      end
+    end
+
     test "returns {:ok, map} for minimal valid attrs" do
       assert {:ok, result} = CreateCommandExecutionForm.changeset(valid_attrs())
       assert is_map(result)

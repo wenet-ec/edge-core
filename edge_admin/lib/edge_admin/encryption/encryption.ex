@@ -24,27 +24,7 @@ defmodule EdgeAdmin.Encryption do
   and gated on the four `ROTATE_*` env vars; if any is missing it logs skip
   and returns. Adding the four envs and re-running the task is safe whether
   the rows are pre-rotation, post-rotation, or partially migrated.
-
-  ## Encrypted schemas
-
-  `encrypted_schemas/0` returns the list of schemas the rotation task should
-  walk. Add new schemas here when they declare encrypted fields — keeping the
-  list in one place keeps the rotation task agnostic of which features have
-  shipped.
   """
 
   use Cloak.Vault, otp_app: :edge_admin
-
-  @doc """
-  Returns the schemas that have at least one encrypted column.
-
-  The rotation task (`EdgeAdmin.Release.rotate_encryption_key/0`) walks each
-  schema in this list and re-encrypts every row through the active ciphers.
-  """
-  @spec encrypted_schemas() :: [module()]
-  def encrypted_schemas do
-    [
-      EdgeAdmin.Events.Webhooks.Schemas.Webhook
-    ]
-  end
 end

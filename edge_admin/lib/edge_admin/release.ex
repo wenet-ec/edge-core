@@ -18,6 +18,7 @@ defmodule EdgeAdmin.Release do
 
   alias Cloak.Ciphers.AES.GCM
   alias Ecto.Migrator
+  alias EdgeAdmin.Encryption.SchemaRegistry
   alias EdgeAdmin.Vpn
 
   require Logger
@@ -247,7 +248,7 @@ defmodule EdgeAdmin.Release do
   Idempotent — safe to run multiple times. Reads four env vars; if any is
   missing, logs skip and returns `:ok` without touching the DB. When all four
   are present, re-encrypts every row in every schema returned by
-  `EdgeAdmin.Encryption.encrypted_schemas/0` through `old → new`.
+  `EdgeAdmin.Encryption.SchemaRegistry.schemas/0` through `old → new`.
 
   Required env vars (all four, or none):
     - `ROTATE_OLD_ENCRYPTION_KEY`  — old key, base64-encoded 32 bytes
@@ -289,7 +290,7 @@ defmodule EdgeAdmin.Release do
         {:ok, _} = Application.ensure_all_started(:cloak_ecto)
         {:ok, _} = EdgeAdmin.Encryption.start_link()
 
-        do_rotate(EdgeAdmin.Encryption.encrypted_schemas())
+        do_rotate(SchemaRegistry.schemas())
     end
   end
 

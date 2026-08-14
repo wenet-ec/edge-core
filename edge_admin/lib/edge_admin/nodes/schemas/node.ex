@@ -26,6 +26,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
   alias Ecto.Association.NotLoaded
   alias EdgeAdmin.Commands.Schemas.CommandExecution
   alias EdgeAdmin.Metrics.Schemas.NodeMetricsCache
+  alias EdgeAdmin.Nodes.Enums.NodeStatuses
   alias EdgeAdmin.Nodes.Schemas.Alias
   alias EdgeAdmin.Nodes.Schemas.Cluster
   alias EdgeAdmin.Nodes.Schemas.EnrollmentKey
@@ -34,11 +35,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
   alias EdgeAdmin.Ssh.Schemas.SshUsername
   alias EdgeAdmin.Vpn
 
-  # Health status registry. The schema's `Ecto.Enum` cast, the public predicate
-  # functions, and external surfaces (controller / MCP / OpenAPI / AsyncAPI
-  # enums) all derive from these lists — single source of truth.
-  @statuses [:healthy, :unhealthy, :unreachable]
-  @reachable_statuses [:healthy, :unhealthy]
+  @statuses NodeStatuses.statuses()
   @port_fields [
     :http_port,
     :ssh_port,
@@ -48,7 +45,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
     :socks5_proxy_port
   ]
 
-  @type status :: :healthy | :unhealthy | :unreachable
+  @type status :: NodeStatuses.t()
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -257,20 +254,4 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
   def mdns_hostname(%__MODULE__{id: id}) do
     "node-#{id}.local"
   end
-
-  @doc "All node health statuses, in canonical order."
-  @spec statuses() :: [status()]
-  def statuses, do: @statuses
-
-  @doc "Statuses for which the node was reached recently (excludes :unreachable)."
-  @spec reachable_statuses() :: [status()]
-  def reachable_statuses, do: @reachable_statuses
-
-  @doc "Wire-format strings (sorted to match `statuses/0`). For OpenAPI / MCP / AsyncAPI enums."
-  @spec status_strings() :: [String.t()]
-  def status_strings, do: Enum.map(@statuses, &Atom.to_string/1)
-
-  @doc "Wire-format strings for reachable statuses only."
-  @spec reachable_status_strings() :: [String.t()]
-  def reachable_status_strings, do: Enum.map(@reachable_statuses, &Atom.to_string/1)
 end

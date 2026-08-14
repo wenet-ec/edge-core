@@ -10,6 +10,7 @@ defmodule EdgeAdmin.Commands.Workflows.Retention do
   import Ecto.Query, warn: false
 
   alias EdgeAdmin.Admins.Metadata
+  alias EdgeAdmin.Commands.Enums.CommandExecutionStatuses
   alias EdgeAdmin.Commands.Schemas.CommandExecution
   alias EdgeAdmin.Commands.Workflows.CommandExecutionLifecycle
   alias EdgeAdmin.Events
@@ -89,7 +90,7 @@ defmodule EdgeAdmin.Commands.Workflows.Retention do
   end
 
   defp get_stale_executions(now, cluster_names) do
-    cancellable = CommandExecution.cancellable_statuses()
+    cancellable = CommandExecutionStatuses.cancellable_statuses()
 
     Repo.all(
       from(ce in CommandExecution,

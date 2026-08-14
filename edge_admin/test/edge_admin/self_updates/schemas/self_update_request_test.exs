@@ -2,6 +2,7 @@
 defmodule EdgeAdmin.SelfUpdates.Schemas.SelfUpdateRequestTest do
   use ExUnit.Case, async: true
 
+  alias EdgeAdmin.SelfUpdates.Enums.SelfUpdateRequestStatuses
   alias EdgeAdmin.SelfUpdates.Schemas.SelfUpdateRequest
 
   defp valid_attrs(overrides \\ %{}) do
@@ -47,8 +48,8 @@ defmodule EdgeAdmin.SelfUpdates.Schemas.SelfUpdateRequestTest do
       refute Map.has_key?(changeset.changes, :summary)
     end
 
-    test "status accepts the three documented values" do
-      for status <- ["pending", "processing", "completed"] do
+    test "status accepts every self-update request status from the enum registry" do
+      for status <- SelfUpdateRequestStatuses.status_strings() do
         changeset = SelfUpdateRequest.changeset(%SelfUpdateRequest{}, valid_attrs(%{status: status}))
 
         assert changeset.valid?, "expected status #{inspect(status)} to be valid"

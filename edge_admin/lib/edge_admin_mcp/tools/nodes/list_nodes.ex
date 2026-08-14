@@ -23,11 +23,11 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListNodes do
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.Nodes
-  alias EdgeAdmin.Nodes.Schemas.Node
+  alias EdgeAdmin.Nodes.Enums.NodeStatuses
   alias EdgeAdmin.Nodes.Views.NodeView
   alias EdgeAdminMcp.FlopParams
 
-  @status_enum Node.status_strings()
+  @status_enum NodeStatuses.status_strings()
   @impl true
   def title, do: "List Nodes"
   @impl true

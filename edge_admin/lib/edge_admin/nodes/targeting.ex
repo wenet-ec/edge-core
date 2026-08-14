@@ -59,11 +59,12 @@ defmodule EdgeAdmin.Nodes.Targeting do
   """
 
   alias EdgeAdmin.Nodes
+  alias EdgeAdmin.Nodes.Enums.NodeStatuses
   alias EdgeAdmin.Nodes.Schemas.Node
 
   require Logger
 
-  @node_status_enum Node.status_strings()
+  @node_status_enum NodeStatuses.status_strings()
   @node_status_in_regex EdgeAdmin.Naming.enum_in_regex(@node_status_enum)
 
   # The `__gte`/`__lte` fields accept ISO 8601 *date* OR *datetime* strings

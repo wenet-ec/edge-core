@@ -4,19 +4,16 @@ defmodule EdgeAdmin.Commands.Schemas.CommandExecution do
   use EdgeAdmin.Schema
 
   alias Ecto.Association.NotLoaded
+  alias EdgeAdmin.Commands.Enums.CommandExecutionStatuses
   alias EdgeAdmin.Commands.Schemas.Command
   alias EdgeAdmin.Nodes.Schemas.Cluster
   alias EdgeAdmin.Nodes.Schemas.Node
 
-  # Lifecycle status registry. The schema's `Ecto.Enum` cast, the
-  # `validate_inclusion`-equivalent enforcement, the public predicate
-  # functions, and external surfaces (controller / MCP / AsyncAPI enums)
-  # all derive from these lists — single source of truth.
-  @statuses [:pending, :sent, :completed, :cancelled, :expired, :dropped]
-  @terminal_statuses [:completed, :cancelled, :expired, :dropped]
-  @cancellable_statuses [:pending, :sent]
+  @statuses CommandExecutionStatuses.statuses()
+  @terminal_statuses CommandExecutionStatuses.terminal_statuses()
+  @cancellable_statuses CommandExecutionStatuses.cancellable_statuses()
 
-  @type status :: :pending | :sent | :completed | :cancelled | :expired | :dropped
+  @type status :: CommandExecutionStatuses.t()
 
   @type t :: %__MODULE__{
           id: String.t() | nil,
@@ -144,24 +141,6 @@ defmodule EdgeAdmin.Commands.Schemas.CommandExecution do
   @spec expires_at(t()) :: DateTime.t() | nil
   def expires_at(%__MODULE__{command: %{expires_at: expires_at}}), do: expires_at
   def expires_at(%__MODULE__{}), do: nil
-
-  # Status registry
-
-  @doc "All lifecycle statuses, in canonical order."
-  @spec statuses() :: [status()]
-  def statuses, do: @statuses
-
-  @doc "Statuses that represent a finished execution (no further transitions)."
-  @spec terminal_statuses() :: [status()]
-  def terminal_statuses, do: @terminal_statuses
-
-  @doc "Statuses from which a cancellation request is accepted."
-  @spec cancellable_statuses() :: [status()]
-  def cancellable_statuses, do: @cancellable_statuses
-
-  @doc "Wire-format strings (sorted to match `statuses/0`). For OpenAPI / MCP enums."
-  @spec status_strings() :: [String.t()]
-  def status_strings, do: Enum.map(@statuses, &Atom.to_string/1)
 
   @doc "True when the execution is in a terminal status."
   @spec terminal?(t()) :: boolean()

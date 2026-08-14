@@ -3,6 +3,7 @@ defmodule EdgeAdmin.Commands.Schemas.CommandExecutionTest do
   use ExUnit.Case, async: true
 
   alias Ecto.Association.NotLoaded
+  alias EdgeAdmin.Commands.Enums.CommandExecutionStatuses
   alias EdgeAdmin.Commands.Schemas.Command
   alias EdgeAdmin.Commands.Schemas.CommandExecution
   alias EdgeAdmin.Nodes.Schemas.Cluster
@@ -15,6 +16,46 @@ defmodule EdgeAdmin.Commands.Schemas.CommandExecutionTest do
 
   defp execution_without_command_preload do
     %CommandExecution{command: %NotLoaded{}}
+  end
+
+  defp valid_attrs(overrides) do
+    Map.merge(
+      %{
+        status: :pending,
+        node_id: Ecto.UUID.generate()
+      },
+      overrides
+    )
+  end
+
+  describe "changeset/2" do
+    test "accepts every command execution status from the enum registry" do
+      for status <- CommandExecutionStatuses.statuses() do
+        changeset = CommandExecution.changeset(%CommandExecution{}, valid_attrs(%{status: status}))
+
+        assert changeset.valid?, "expected status #{inspect(status)} to be valid"
+      end
+    end
+
+    test "rejects statuses outside the enum registry" do
+      for status <- [:running, "done", "PENDING"] do
+        changeset = CommandExecution.changeset(%CommandExecution{}, valid_attrs(%{status: status}))
+
+        refute changeset.valid?, "expected status #{inspect(status)} to be rejected"
+      end
+    end
+
+    test "requires status and node_id" do
+      changeset = CommandExecution.changeset(%CommandExecution{}, %{})
+
+      refute changeset.valid?
+      assert "can't be blank" in errors_on(changeset).status
+      assert "can't be blank" in errors_on(changeset).node_id
+    end
+  end
+
+  defp errors_on(changeset) do
+    Ecto.Changeset.traverse_errors(changeset, fn {message, _opts} -> message end)
   end
 
   # command_text/1
@@ -92,6 +133,40 @@ defmodule EdgeAdmin.Commands.Schemas.CommandExecutionTest do
       # Executions for "target all" commands may not be tied to a single
       # cluster, in which case cluster_id and cluster are both nil.
       assert CommandExecution.cluster_name(%CommandExecution{cluster: nil}) == nil
+    end
+  end
+
+  describe "terminal?/1" do
+    test "returns true for terminal enum statuses" do
+      for status <- CommandExecutionStatuses.terminal_statuses() do
+        assert CommandExecution.terminal?(%CommandExecution{status: status})
+      end
+    end
+
+    test "returns false for non-terminal enum statuses" do
+      non_terminal_statuses =
+        CommandExecutionStatuses.statuses() -- CommandExecutionStatuses.terminal_statuses()
+
+      for status <- non_terminal_statuses do
+        refute CommandExecution.terminal?(%CommandExecution{status: status})
+      end
+    end
+  end
+
+  describe "cancellable?/1" do
+    test "returns true for cancellable enum statuses" do
+      for status <- CommandExecutionStatuses.cancellable_statuses() do
+        assert CommandExecution.cancellable?(%CommandExecution{status: status})
+      end
+    end
+
+    test "returns false for non-cancellable enum statuses" do
+      non_cancellable_statuses =
+        CommandExecutionStatuses.statuses() -- CommandExecutionStatuses.cancellable_statuses()
+
+      for status <- non_cancellable_statuses do
+        refute CommandExecution.cancellable?(%CommandExecution{status: status})
+      end
     end
   end
 end

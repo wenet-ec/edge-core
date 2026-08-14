@@ -4,13 +4,13 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionController do
   use OpenApiSpex.ControllerSpecs
 
   alias EdgeAdmin.Commands
-  alias EdgeAdmin.Commands.Schemas.CommandExecution
+  alias EdgeAdmin.Commands.Enums.CommandExecutionStatuses
   alias EdgeAdminWeb.Schemas.Commands.CommandExecutionSchemas
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias EdgeAdminWeb.Schemas.PathParams
   alias EdgeAdminWeb.Schemas.QueryParams
 
-  @status_enum CommandExecution.status_strings()
+  @status_enum CommandExecutionStatuses.status_strings()
 
   action_fallback(EdgeAdminWeb.Controllers.FallbackController)
 

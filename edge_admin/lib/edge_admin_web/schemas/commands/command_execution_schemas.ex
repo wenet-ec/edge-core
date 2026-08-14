@@ -6,14 +6,14 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandExecutionSchemas do
 
   use EdgeAdminWeb.Schema
 
-  alias EdgeAdmin.Commands.Schemas.CommandExecution
+  alias EdgeAdmin.Commands.Enums.CommandExecutionStatuses
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias OpenApiSpex.Schema
 
   defmodule CommandExecutionResponse do
     @moduledoc false
 
-    @status_enum CommandExecution.status_strings()
+    @status_enum CommandExecutionStatuses.status_strings()
 
     schema(%{
       title: "CommandExecutionResponse",

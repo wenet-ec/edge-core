@@ -2,10 +2,10 @@
 defmodule EdgeAdminWeb.Schemas.Nodes.NodeQueryParams do
   @moduledoc false
 
-  alias EdgeAdmin.Nodes.Schemas.Node
+  alias EdgeAdmin.Nodes.Enums.NodeStatuses
   alias EdgeAdminWeb.Schemas.QueryParams
 
-  @status_enum Node.status_strings()
+  @status_enum NodeStatuses.status_strings()
 
   @doc "Returns the shared REST filter contract for node collections."
   @spec filters() :: keyword()

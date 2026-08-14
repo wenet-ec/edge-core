@@ -4,6 +4,7 @@ defmodule EdgeAdminWeb.Controllers.SelfUpdates.SelfUpdateRequestController do
   use OpenApiSpex.ControllerSpecs
 
   alias EdgeAdmin.SelfUpdates
+  alias EdgeAdmin.SelfUpdates.Enums.SelfUpdateRequestStatuses
   alias EdgeAdmin.SelfUpdates.Schemas.SelfUpdateRequest
   alias EdgeAdminWeb.Plugs.DegradedMode
   alias EdgeAdminWeb.Schemas.CommonSchemas
@@ -11,7 +12,7 @@ defmodule EdgeAdminWeb.Controllers.SelfUpdates.SelfUpdateRequestController do
   alias EdgeAdminWeb.Schemas.QueryParams
   alias EdgeAdminWeb.Schemas.SelfUpdates.SelfUpdateRequestSchemas
 
-  @status_enum SelfUpdateRequest.status_strings()
+  @status_enum SelfUpdateRequestStatuses.status_strings()
 
   action_fallback(EdgeAdminWeb.Controllers.FallbackController)
 

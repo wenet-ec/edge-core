@@ -6,7 +6,7 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
 
   use EdgeAdminWeb.Schema
 
-  alias EdgeAdmin.Nodes.Schemas.Node
+  alias EdgeAdmin.Nodes.Enums.NodeStatuses
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias OpenApiSpex.Schema
 
@@ -99,7 +99,7 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
   defmodule CommandCreateRequest do
     @moduledoc false
 
-    @node_status_enum Node.status_strings()
+    @node_status_enum NodeStatuses.status_strings()
     @node_status_in_pattern EdgeAdmin.Naming.enum_in_pattern(@node_status_enum)
 
     schema(%{

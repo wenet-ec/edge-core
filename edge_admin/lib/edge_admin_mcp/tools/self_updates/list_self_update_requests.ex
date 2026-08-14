@@ -14,11 +14,11 @@ defmodule EdgeAdminMcp.Tools.SelfUpdates.ListSelfUpdateRequests do
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.SelfUpdates
-  alias EdgeAdmin.SelfUpdates.Schemas.SelfUpdateRequest
+  alias EdgeAdmin.SelfUpdates.Enums.SelfUpdateRequestStatuses
   alias EdgeAdmin.SelfUpdates.Views.SelfUpdateRequestView
   alias EdgeAdminMcp.FlopParams
 
-  @status_enum SelfUpdateRequest.status_strings()
+  @status_enum SelfUpdateRequestStatuses.status_strings()
 
   @impl true
   def title, do: "List Self-Update Requests"

@@ -6,15 +6,15 @@ defmodule EdgeAdminWeb.Schemas.SelfUpdates.SelfUpdateRequestSchemas do
 
   use EdgeAdminWeb.Schema
 
-  alias EdgeAdmin.Nodes.Schemas.Node
-  alias EdgeAdmin.SelfUpdates.Schemas.SelfUpdateRequest
+  alias EdgeAdmin.Nodes.Enums.NodeStatuses
+  alias EdgeAdmin.SelfUpdates.Enums.SelfUpdateRequestStatuses
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias OpenApiSpex.Schema
 
   defmodule SelfUpdateRequestResponse do
     @moduledoc false
 
-    @status_enum SelfUpdateRequest.status_strings()
+    @status_enum SelfUpdateRequestStatuses.status_strings()
 
     schema(%{
       title: "SelfUpdateRequestResponse",
@@ -117,7 +117,7 @@ defmodule EdgeAdminWeb.Schemas.SelfUpdates.SelfUpdateRequestSchemas do
   defmodule SelfUpdateRequestCreateRequest do
     @moduledoc false
 
-    @node_status_enum Node.status_strings()
+    @node_status_enum NodeStatuses.status_strings()
     @node_status_in_pattern EdgeAdmin.Naming.enum_in_pattern(@node_status_enum)
 
     schema(%{

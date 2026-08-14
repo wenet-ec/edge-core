@@ -27,11 +27,11 @@ defmodule EdgeAdminMcp.Tools.Commands.ListCommandExecutions do
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.Commands
-  alias EdgeAdmin.Commands.Schemas.CommandExecution
+  alias EdgeAdmin.Commands.Enums.CommandExecutionStatuses
   alias EdgeAdmin.Commands.Views.CommandExecutionView
   alias EdgeAdminMcp.FlopParams
 
-  @status_enum CommandExecution.status_strings()
+  @status_enum CommandExecutionStatuses.status_strings()
 
   @impl true
   def title, do: "List Command Executions"

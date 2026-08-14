@@ -12,6 +12,7 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
   """
 
   alias EdgeAdmin.Events.Catalog
+  alias EdgeAdmin.Nodes.Enums.NodeStatuses
 
   @doc "Returns the AsyncAPI 3.1.0 document as a map (ready for Jason.encode!)."
   @spec spec() :: map()
@@ -465,7 +466,7 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
         "type" => ["string", "null"],
         "format" => "uuid"
       },
-      "status" => %{"type" => "string", "enum" => EdgeAdmin.Nodes.Schemas.Node.status_strings()},
+      "status" => %{"type" => "string", "enum" => NodeStatuses.status_strings()},
       "version" => %{"type" => "string"},
       "http_port" => %{"type" => "integer"},
       "ssh_port" => %{"type" => "integer"},
@@ -547,7 +548,7 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
         "properties" =>
           Map.put(node_base_properties(), "previous_status", %{
             "type" => "string",
-            "enum" => EdgeAdmin.Nodes.Schemas.Node.status_strings(),
+            "enum" => NodeStatuses.status_strings(),
             "description" => "Status before this transition"
           })
       },
@@ -577,7 +578,10 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
           "cluster_name" => %{"type" => "string"},
           "command_text" => %{"type" => "string"},
           "timeout" => %{"type" => ["integer", "null"]},
-          "status" => %{"type" => "string", "enum" => EdgeAdmin.Commands.Schemas.CommandExecution.status_strings()},
+          "status" => %{
+            "type" => "string",
+            "enum" => EdgeAdmin.Commands.Enums.CommandExecutionStatuses.status_strings()
+          },
           "exit_code" => %{
             "type" => ["integer", "null"],
             "description" => "null until completed or cancelled; 143 on SIGTERM cancel"
@@ -627,7 +631,7 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
           "self_update_request_id" => %{"type" => "string", "format" => "uuid"},
           "status" => %{
             "type" => "string",
-            "enum" => EdgeAdmin.SelfUpdates.Schemas.SelfUpdateRequest.status_strings()
+            "enum" => EdgeAdmin.SelfUpdates.Enums.SelfUpdateRequestStatuses.status_strings()
           },
           "targeting" => %{
             "type" => "object",

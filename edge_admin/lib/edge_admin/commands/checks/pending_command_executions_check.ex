@@ -8,6 +8,7 @@ defmodule EdgeAdmin.Commands.Checks.PendingCommandExecutionsCheck do
 
   import Ecto.Query
 
+  alias EdgeAdmin.Commands.Enums.CommandExecutionStatuses
   alias EdgeAdmin.Commands.Schemas.Command
   alias EdgeAdmin.Commands.Schemas.CommandExecution
   alias EdgeAdmin.Repo
@@ -15,7 +16,7 @@ defmodule EdgeAdmin.Commands.Checks.PendingCommandExecutionsCheck do
   @doc "Ensures a command has no pending or in-flight executions."
   @spec check(Command.t()) :: :ok | {:error, {:conflict, String.t()}}
   def check(%Command{id: command_id}) do
-    cancellable = CommandExecution.cancellable_statuses()
+    cancellable = CommandExecutionStatuses.cancellable_statuses()
 
     count =
       Repo.one(

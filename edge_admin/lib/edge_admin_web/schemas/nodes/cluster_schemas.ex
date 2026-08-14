@@ -7,14 +7,14 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
   use EdgeAdminWeb.Schema
 
   alias EdgeAdmin.Naming
-  alias EdgeAdmin.Nodes.Schemas.Node
+  alias EdgeAdmin.Nodes.Enums.NodeStatuses
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias OpenApiSpex.Schema
 
   defmodule NodeSummary do
     @moduledoc false
 
-    @status_enum Node.status_strings()
+    @status_enum NodeStatuses.status_strings()
 
     schema(%{
       title: "NodeSummary",

@@ -6,7 +6,7 @@ defmodule EdgeAdminWeb.Schemas.Agents.CommandExecutionSchemas do
 
   use EdgeAdminWeb.Schema
 
-  alias EdgeAdmin.Commands.Schemas.CommandExecution
+  alias EdgeAdmin.Commands.Enums.CommandExecutionStatuses
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias OpenApiSpex.Schema
 
@@ -44,7 +44,7 @@ defmodule EdgeAdminWeb.Schemas.Agents.CommandExecutionSchemas do
   defmodule AgentCommandExecutionResponse do
     @moduledoc false
 
-    @status_enum CommandExecution.status_strings()
+    @status_enum CommandExecutionStatuses.status_strings()
 
     schema(%{
       title: "Internal.AgentCommandExecutionResponse",

@@ -14,12 +14,11 @@ defmodule EdgeAdmin.SelfUpdates.Schemas.SelfUpdateRequest do
   """
   use EdgeAdmin.Schema
 
-  # Status registry. Schema's Ecto.Enum, registry helpers, and external
-  # surfaces (controller / MCP / OpenAPI / AsyncAPI enums) all derive from
-  # these lists — single source of truth.
-  @statuses [:pending, :processing, :completed]
+  alias EdgeAdmin.SelfUpdates.Enums.SelfUpdateRequestStatuses
 
-  @type status :: :pending | :processing | :completed
+  @statuses SelfUpdateRequestStatuses.statuses()
+
+  @type status :: SelfUpdateRequestStatuses.t()
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -54,12 +53,4 @@ defmodule EdgeAdmin.SelfUpdates.Schemas.SelfUpdateRequest do
     |> cast(attrs, [:targeting, :status, :summary])
     |> validate_required([:targeting])
   end
-
-  @doc "All request statuses, in canonical lifecycle order."
-  @spec statuses() :: [status()]
-  def statuses, do: @statuses
-
-  @doc "Wire-format strings (sorted to match `statuses/0`). For OpenAPI / MCP / AsyncAPI enums."
-  @spec status_strings() :: [String.t()]
-  def status_strings, do: Enum.map(@statuses, &Atom.to_string/1)
 end

@@ -3,6 +3,7 @@ defmodule EdgeAdmin.Nodes.Schemas.NodeTest do
   use ExUnit.Case, async: true
 
   alias EdgeAdmin.Metrics.Schemas.NodeMetricsCache
+  alias EdgeAdmin.Nodes.Enums.NodeStatuses
   alias EdgeAdmin.Nodes.Schemas.Cluster
   alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.Nodes.Schemas.NodeDiagnostic
@@ -69,6 +70,22 @@ defmodule EdgeAdmin.Nodes.Schemas.NodeTest do
 
     test "accepts a recovery key" do
       assert Node.changeset(%Node{}, valid_attrs(%{recovery_key: "recovery-key"})).valid?
+    end
+
+    test "accepts every node status from the enum registry" do
+      for status <- NodeStatuses.statuses() do
+        changeset = Node.changeset(%Node{}, valid_attrs(%{status: status}))
+
+        assert changeset.valid?, "expected status #{inspect(status)} to be valid"
+      end
+    end
+
+    test "rejects statuses outside the enum registry" do
+      for status <- [:degraded, "healthy-ish", "HEALTHY"] do
+        changeset = Node.changeset(%Node{}, valid_attrs(%{status: status}))
+
+        refute changeset.valid?, "expected status #{inspect(status)} to be rejected"
+      end
     end
 
     test "requires a VPN host ID" do

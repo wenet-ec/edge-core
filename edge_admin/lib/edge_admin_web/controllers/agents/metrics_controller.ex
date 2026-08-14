@@ -4,7 +4,6 @@ defmodule EdgeAdminWeb.Controllers.Agents.MetricsController do
   use OpenApiSpex.ControllerSpecs
 
   alias EdgeAdmin.Metrics
-  alias EdgeAdmin.Metrics.Forms.PushMetricsCacheForm
   alias EdgeAdminWeb.Schemas.Agents.MetricsSchemas
   alias EdgeAdminWeb.Schemas.CommonSchemas
 
@@ -29,13 +28,7 @@ defmodule EdgeAdminWeb.Controllers.Agents.MetricsController do
     node = conn.assigns.current_node
     merged = Map.merge(params, conn.body_params)
 
-    with {:ok, validated_attrs} <- PushMetricsCacheForm.changeset(merged),
-         {:ok, cache} <-
-           Metrics.upsert_metrics_cache(
-             node.id,
-             validated_attrs["metrics_type"],
-             validated_attrs["metrics_text"]
-           ) do
+    with {:ok, cache} <- Metrics.push_metrics_cache(node.id, merged) do
       render(conn, :show, conn: conn, cache: cache)
     end
   end

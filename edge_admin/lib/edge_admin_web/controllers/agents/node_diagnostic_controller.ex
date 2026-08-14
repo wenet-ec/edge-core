@@ -4,7 +4,6 @@ defmodule EdgeAdminWeb.Controllers.Agents.NodeDiagnosticController do
   use OpenApiSpex.ControllerSpecs
 
   alias EdgeAdmin.Nodes
-  alias EdgeAdmin.Nodes.Forms.PushNodeDiagnosticForm
   alias EdgeAdminWeb.Plugs.DegradedMode
   alias EdgeAdminWeb.Schemas.Agents.NodeDiagnosticSchemas
   alias EdgeAdminWeb.Schemas.CommonSchemas
@@ -31,9 +30,7 @@ defmodule EdgeAdminWeb.Controllers.Agents.NodeDiagnosticController do
     node = conn.assigns.current_node
     merged = Map.merge(params, conn.body_params)
 
-    with {:ok, validated_attrs} <- PushNodeDiagnosticForm.changeset(merged),
-         {:ok, cached_diagnostic} <-
-           Nodes.upsert_node_diagnostic(node.id, validated_attrs["diagnostic"]) do
+    with {:ok, cached_diagnostic} <- Nodes.push_node_diagnostic(node.id, merged) do
       render(conn, :show, conn: conn, diagnostic: cached_diagnostic)
     end
   end

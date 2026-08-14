@@ -91,6 +91,7 @@ defmodule EdgeAdmin.Nodes do
 
   """
 
+  alias EdgeAdmin.Nodes.Forms.PushNodeDiagnosticForm
   alias EdgeAdmin.Nodes.Resources.Aliases
   alias EdgeAdmin.Nodes.Resources.Clusters
   alias EdgeAdmin.Nodes.Resources.Diagnostics
@@ -358,6 +359,14 @@ defmodule EdgeAdmin.Nodes do
   @spec upsert_node_diagnostic(String.t(), map()) ::
           {:ok, NodeDiagnostic.t()} | {:error, Ecto.Changeset.t()}
   defdelegate upsert_node_diagnostic(node_id, report), to: Diagnostics
+
+  @doc "Validates and stores an agent-pushed diagnostic report."
+  @spec push_node_diagnostic(String.t(), map()) :: {:ok, NodeDiagnostic.t()} | {:error, Ecto.Changeset.t()}
+  def push_node_diagnostic(node_id, params) do
+    with {:ok, attrs} <- PushNodeDiagnosticForm.changeset(params) do
+      upsert_node_diagnostic(node_id, attrs["diagnostic"])
+    end
+  end
 
   @doc "Returns a recent cached diagnostic report for a node, if available."
   @spec get_cached_node_diagnostic(String.t()) ::

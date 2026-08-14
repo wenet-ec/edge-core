@@ -33,6 +33,7 @@ defmodule EdgeAdmin.Metrics do
 
   alias EdgeAdmin.Admins.Metadata
   alias EdgeAdmin.EdgeClusters.Gateway
+  alias EdgeAdmin.Metrics.Forms.PushMetricsCacheForm
   alias EdgeAdmin.Metrics.Parsers.AdminMetricsParser
   alias EdgeAdmin.Metrics.Parsers.AgentMetricsParser
   alias EdgeAdmin.Metrics.Parsers.HostMetricsParser
@@ -48,6 +49,14 @@ defmodule EdgeAdmin.Metrics do
   require Logger
 
   @cache_staleness_minutes 5
+
+  @doc "Validates and stores metrics pushed by an agent through HTTP fallback mode."
+  @spec push_metrics_cache(binary(), map()) :: {:ok, NodeMetricsCache.t()} | {:error, Ecto.Changeset.t()}
+  def push_metrics_cache(node_id, params) do
+    with {:ok, attrs} <- PushMetricsCacheForm.changeset(params) do
+      upsert_metrics_cache(node_id, attrs["metrics_type"], attrs["metrics_text"])
+    end
+  end
 
   @doc """
   Scrapes raw Prometheus admin metrics directly from PromEx module.

@@ -18,6 +18,10 @@ defmodule EdgeAdmin.Ssh do
   @spec get_ssh_username(String.t()) :: {:ok, SshUsername.t()} | {:error, :not_found}
   defdelegate get_ssh_username(id), to: SshUsernames, as: :get
 
+  @doc "Preloads public keys for an SSH username."
+  @spec preload_ssh_public_keys(SshUsername.t()) :: SshUsername.t()
+  defdelegate preload_ssh_public_keys(username), to: SshUsernames, as: :preload_public_keys
+
   @doc "Creates an SSH username from validated attributes."
   @spec create_ssh_username(map()) :: {:ok, SshUsername.t()} | {:error, Ecto.Changeset.t()}
   defdelegate create_ssh_username(attrs \\ %{}), to: SshUsernames, as: :create

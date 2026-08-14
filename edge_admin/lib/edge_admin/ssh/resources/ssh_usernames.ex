@@ -25,6 +25,10 @@ defmodule EdgeAdmin.Ssh.Resources.SshUsernames do
     CastError -> {:error, :not_found}
   end
 
+  @doc "Preloads public keys for an SSH username."
+  @spec preload_public_keys(SshUsername.t()) :: SshUsername.t()
+  def preload_public_keys(%SshUsername{} = username), do: Repo.preload(username, :ssh_public_keys)
+
   @doc "Creates an SSH username."
   @spec create(map()) :: {:ok, SshUsername.t()} | {:error, Ecto.Changeset.t()}
   def create(attrs \\ %{}),

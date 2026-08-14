@@ -81,7 +81,7 @@ defmodule EdgeAdminWeb.Controllers.Ssh.SshUsernameController do
     with {:ok, node} <- Nodes.get_node(node_id),
          {:ok, %SshUsername{} = ssh_username} <-
            Ssh.create_ssh_username_with_keys(node, Map.merge(params, conn.body_params)) do
-      ssh_username = EdgeAdmin.Repo.preload(ssh_username, :ssh_public_keys)
+      ssh_username = Ssh.preload_ssh_public_keys(ssh_username)
 
       conn
       |> put_status(:created)

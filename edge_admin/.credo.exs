@@ -8,7 +8,7 @@
         excluded: [~r"/_build/", ~r"/deps/"]
       },
       plugins: [],
-      requires: [],
+      requires: ["priv/credo_checks/**/*.ex"],
       strict: true,
       parse_timeout: 5000,
       color: true,
@@ -28,7 +28,13 @@
           {CredoNaming.Check.Warning.AvoidSpecificTermsInModuleNames,
            terms: ["Manager", "Fetcher", "Builder", "Persister", "Serializer", ~r/^Helpers?$/i, ~r/^Utils?$/i]},
           {CredoNaming.Check.Consistency.ModuleFilename,
-           excluded_paths: ["config", "mix.exs", "priv", "test/support", "lib/edge_admin_web/live"], acronyms: []}
+           excluded_paths: ["config", "mix.exs", "priv", "test/support", "lib/edge_admin_web/live"], acronyms: []},
+
+          # Edge Core architecture checks
+          {EdgeAdmin.CredoChecks.NoRepoInTransport, []},
+          {EdgeAdmin.CredoChecks.NoDomainInternalsInTransport, []},
+          {EdgeAdmin.CredoChecks.NoSchemaChangesetsInTransport, []},
+          {EdgeAdmin.CredoChecks.NoNexmakerOutsideVpnBoundary, []}
         ],
         disabled: [
           # Disable overly strict checks for pragmatic API development

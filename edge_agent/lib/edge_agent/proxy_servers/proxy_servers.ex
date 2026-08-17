@@ -28,6 +28,8 @@ defmodule EdgeAgent.ProxyServers do
 
   require Logger
 
+  @listener_retry_interval 2_000
+
   def start_link(opts \\ []) do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)
   end
@@ -37,9 +39,9 @@ defmodule EdgeAgent.ProxyServers do
 
   This only confirms `init/1` returned, not that the Ranch listeners
   are actually accepting connections — listener-startup errors are logged
-  but don't block the GenServer from coming up. Use `status/0` for a
-  liveness signal that reflects the actual listeners. Returns `false` if
-  the process is missing or the call times out (1s).
+  and retried in the background without blocking the GenServer from coming
+  up. Use `status/0` for a liveness signal that reflects the actual listeners.
+  Returns `false` if the process is missing or the call times out (1s).
   """
   def initialized? do
     case Process.whereis(__MODULE__) do
@@ -58,9 +60,9 @@ defmodule EdgeAgent.ProxyServers do
   @doc """
   Returns the listener status:
 
-  - `:running` — both Ranch listeners came up cleanly in `init/1`
-  - `:error` — one or both listeners failed to start (logged at error level
-    in `init/1`)
+  - `:running` — both Ranch listeners are accepting connections
+  - `:error` — one or both listeners failed to start; background retries
+    continue until both listeners recover
   - `:not_started` — the GenServer process is missing
   - `:unknown` — call timed out
 
@@ -107,7 +109,8 @@ defmodule EdgeAgent.ProxyServers do
         {:ok, %{new_state | initialized: true, status: :running}}
 
       {:error, reason, new_state} ->
-        Logger.error("Failed to start proxy servers: #{inspect(reason)}")
+        Logger.warning("Failed to start proxy servers: #{inspect(reason)}; retrying")
+        schedule_listener_retry()
         {:ok, %{new_state | initialized: true, status: :error}}
     end
   end
@@ -121,6 +124,22 @@ defmodule EdgeAgent.ProxyServers do
   def handle_call(:status, _from, state) do
     {:reply, Map.get(state, :status, :error), state}
   end
+
+  @impl true
+  def handle_info(:retry_listener_start, %{http_listener_ref: nil, socks5_listener_ref: nil} = state) do
+    case start_proxy_servers(state) do
+      {:ok, new_state} ->
+        Logger.info("Proxy servers recovered")
+        {:noreply, %{new_state | status: :running}}
+
+      {:error, reason, new_state} ->
+        Logger.warning("Proxy servers are still unavailable: #{inspect(reason)}; retrying")
+        schedule_listener_retry()
+        {:noreply, new_state}
+    end
+  end
+
+  def handle_info(:retry_listener_start, state), do: {:noreply, state}
 
   @impl true
   def terminate(_reason, state) do
@@ -151,19 +170,29 @@ defmodule EdgeAgent.ProxyServers do
   end
 
   defp start_proxy_servers(state) do
-    with {:ok, http_ref} <- start_http_proxy(state),
-         {:ok, socks5_ref} <- start_socks5_proxy(state) do
-      {:ok,
-       %{
-         state
-         | http_listener_ref: http_ref,
-           socks5_listener_ref: socks5_ref
-       }}
-    else
+    case start_http_proxy(state) do
+      {:ok, http_ref} ->
+        case start_socks5_proxy(state) do
+          {:ok, socks5_ref} ->
+            {:ok,
+             %{
+               state
+               | http_listener_ref: http_ref,
+                 socks5_listener_ref: socks5_ref
+             }}
+
+          {:error, reason} ->
+            :ranch.stop_listener(http_ref)
+            {:error, reason, %{state | http_listener_ref: nil, socks5_listener_ref: nil}}
+        end
+
       {:error, reason} ->
-        Logger.error("Failed to start proxy servers: #{inspect(reason)}")
-        {:error, reason, state}
+        {:error, reason, %{state | http_listener_ref: nil, socks5_listener_ref: nil}}
     end
+  end
+
+  defp schedule_listener_retry do
+    Process.send_after(self(), :retry_listener_start, @listener_retry_interval)
   end
 
   defp start_http_proxy(state) do

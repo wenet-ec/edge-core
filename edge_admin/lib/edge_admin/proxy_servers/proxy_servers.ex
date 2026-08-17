@@ -52,6 +52,8 @@ defmodule EdgeAdmin.ProxyServers do
 
   require Logger
 
+  @listener_retry_interval 2_000
+
   def start_link(opts \\ []) do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)
   end
@@ -101,7 +103,8 @@ defmodule EdgeAdmin.ProxyServers do
         {:ok, %{new_state | initialized: true}}
 
       {:error, reason, new_state} ->
-        Logger.error("Failed to start proxy servers: #{inspect(reason)}")
+        Logger.warning("Failed to start proxy servers: #{inspect(reason)}; retrying")
+        schedule_listener_retry()
         {:ok, %{new_state | initialized: true}}
     end
   end
@@ -110,6 +113,22 @@ defmodule EdgeAdmin.ProxyServers do
   def handle_call(:initialized?, _from, state) do
     {:reply, Map.get(state, :initialized, false), state}
   end
+
+  @impl true
+  def handle_info(:retry_listener_start, %{http_listener_ref: nil, socks5_listener_ref: nil} = state) do
+    case start_proxy_servers(state) do
+      {:ok, new_state} ->
+        Logger.info("Admin proxy servers recovered")
+        {:noreply, new_state}
+
+      {:error, reason, new_state} ->
+        Logger.warning("Admin proxy servers are still unavailable: #{inspect(reason)}; retrying")
+        schedule_listener_retry()
+        {:noreply, new_state}
+    end
+  end
+
+  def handle_info(:retry_listener_start, state), do: {:noreply, state}
 
   @impl true
   def terminate(_reason, state) do
@@ -142,19 +161,29 @@ defmodule EdgeAdmin.ProxyServers do
   end
 
   defp start_proxy_servers(state) do
-    with {:ok, http_ref} <- start_http_proxy(state),
-         {:ok, socks5_ref} <- start_socks5_proxy(state) do
-      {:ok,
-       %{
-         state
-         | http_listener_ref: http_ref,
-           socks5_listener_ref: socks5_ref
-       }}
-    else
+    case start_http_proxy(state) do
+      {:ok, http_ref} ->
+        case start_socks5_proxy(state) do
+          {:ok, socks5_ref} ->
+            {:ok,
+             %{
+               state
+               | http_listener_ref: http_ref,
+                 socks5_listener_ref: socks5_ref
+             }}
+
+          {:error, reason} ->
+            :ranch.stop_listener(http_ref)
+            {:error, reason, %{state | http_listener_ref: nil, socks5_listener_ref: nil}}
+        end
+
       {:error, reason} ->
-        Logger.error("Failed to start proxy servers: #{inspect(reason)}")
-        {:error, reason, state}
+        {:error, reason, %{state | http_listener_ref: nil, socks5_listener_ref: nil}}
     end
+  end
+
+  defp schedule_listener_retry do
+    Process.send_after(self(), :retry_listener_start, @listener_retry_interval)
   end
 
   defp start_http_proxy(state) do

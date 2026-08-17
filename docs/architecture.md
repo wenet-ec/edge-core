@@ -1,6 +1,6 @@
 # Edge Core — Architecture
 
-**Last Updated: 2026-08-11**
+**Last Updated: 2026-08-17**
 
 Edge Core is an infrastructure management platform for fleets of Linux machines you don't physically touch — cloud VMs, on-premises servers, factory-floor equipment, Raspberry Pis, homelab boxes, IoT devices. Anywhere you have N machines and want a single HTTP API to operate them, the same primitives apply: a secure WireGuard mesh, remote command execution, SSH without exposing port 22, HTTP/SOCKS5 forward proxying through any node, Prometheus metrics aggregation.
 
@@ -299,7 +299,7 @@ Two proxy modes:
 - **Mode 1** (username `_`): Admin routes directly to a VPN node. Used to reach services inside the mesh.
 - **Mode 2** (username = node DNS hostname): Admin chains through a specific agent as the exit node. The agent opens the final TCP connection. Used to reach internet targets via an agent's network location.
 
-Cross-admin routing is transparent: a client connecting to any admin proxy gets correctly routed to the agent it wants, regardless of which admin owns that cluster. `Gateway.lookup/1` uses `:syn.lookup` to resolve the Gateway PID for the owning admin — Erlang distribution then routes the subsequent `GenServer.call` transparently to whichever node that PID lives on. Local connections (Gateway on same node as caller) use zero-copy socket ownership transfer via `:gen_tcp.controlling_process/2`; remote connections spawn a `RemoteTunnel` proxy process on the Gateway node that forwards data back to the caller via Erlang distribution messages.
+Cross-admin routing is transparent: a client connecting to any admin proxy gets correctly routed to the agent it wants, regardless of which admin owns that cluster. The owning Admin is resolved from the distributed metadata snapshot. Local traffic connects directly through that Admin's VPN; remote traffic opens the private Admin TCP tunnel, which performs an authenticated handshake and then carries raw bytes. Erlang distribution remains responsible for Admin topology and Gateway control operations, not proxy stream data.
 
 Admin never acts as an exit node — only agents can. This prevents SSRF.
 

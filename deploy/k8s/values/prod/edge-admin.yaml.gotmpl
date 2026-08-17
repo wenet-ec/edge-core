@@ -26,6 +26,7 @@ secrets:
   dbPassword: {{ requiredEnv "DB_PASSWORD" | quote }}
   edgeVpnMasterKey: {{ requiredEnv "EDGE_VPN_MASTER_KEY" | quote }}
   edgeVpnBootstrapPassword: {{ requiredEnv "EDGE_VPN_BOOTSTRAP_PASSWORD" | quote }}
+  adminTcpTunnelSecret: {{ env "EDGE_ADMIN_TCP_TUNNEL_SECRET" | default "" | quote }}
   encryptionKey: {{ requiredEnv "EDGE_ADMIN_ENCRYPTION_KEY" | quote }}
   encryptionTag: {{ env "EDGE_ADMIN_ENCRYPTION_TAG" | default "AES.GCM.V1" | quote }}
   rotateOldEncryptionKey: {{ env "EDGE_ADMIN_ROTATE_OLD_ENCRYPTION_KEY" | default "" | quote }}

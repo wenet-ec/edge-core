@@ -52,6 +52,7 @@ CLUSTER_AUTO_GENERATED_V6_RANGES=fd7a:91c2:4e8b::/48
 # Proxy configuration
 HTTP_PROXY_PORT=43128
 SOCKS5_PROXY_PORT=41080
+ADMIN_TCP_TUNNEL_SECRET=test-admin-tunnel-secret
 
 # Erlang distribution
 VPN_CLUSTER_COOKIE=test_cookie

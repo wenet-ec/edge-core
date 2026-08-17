@@ -64,6 +64,7 @@ The minimum you must change:
 - `change-me` passwords and keys — use strong random values
 - `SECRET_KEY_BASE` — generate with `openssl rand -base64 48`
 - `ENCRYPTION_KEY` — generate with `openssl rand -base64 32` (encryption-at-rest for sensitive columns; back it up with the rest of your secrets — losing it means losing every encrypted row)
+- `ADMIN_TCP_TUNNEL_SECRET` — optional shared secret for private Admin-to-Admin proxy tunnels; when unset the Admin uses a built-in default and logs a warning. Single-instance Lite deployments can leave this as-is.
 
 ### Private network (no TLS)?
 

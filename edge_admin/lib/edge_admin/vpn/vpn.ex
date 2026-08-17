@@ -373,6 +373,12 @@ defmodule EdgeAdmin.Vpn do
     |> normalize_netmaker_error()
   end
 
+  @doc "Reads the locally active netclient network memberships and addresses."
+  @spec read_local_vpn_nodes() :: {:ok, [map()]} | {:error, term()}
+  def read_local_vpn_nodes do
+    Nexmaker.Cli.read_nodes()
+  end
+
   @doc """
   Removes a host from a Netmaker network.
 

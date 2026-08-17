@@ -72,6 +72,7 @@ Key things to configure:
 - `MASTER_KEY` — omnipotent key, fallback for all scoped keys
 - `API_KEY` — scoped to REST API clients (optional, defaults to `MASTER_KEY`)
 - `METRICS_KEY` — scoped to metrics scrapers (optional, defaults to `MASTER_KEY`)
+- `ADMIN_TCP_TUNNEL_SECRET` — optional shared secret for private Admin-to-Admin proxy tunnels; when unset the Admin uses a built-in default and logs a warning. Use the same value on every Admin in one cluster.
 - `VPN_CLUSTER_COOKIE` — optional; if set, use the same value across admin instances in the same admin cluster
 - `MQ_PASSWORD` and `EMQX_DASHBOARD_PASSWORD` — must match each other
 - Update `configs/prometheus.yml` — replace `change-me-your-metrics-key` with your actual `METRICS_KEY`

@@ -378,6 +378,9 @@ oban_queues =
       ]
   end
 
+admin_tcp_tunnel_secret =
+  get_env("ADMIN_TCP_TUNNEL_SECRET", :string, "edge_admin_default_tcp_tunnel_secret")
+
 config :edge_admin, EdgeAdmin.LocalScheduler,
   jobs: [
     admin_discovery: [
@@ -473,6 +476,8 @@ config :edge_admin,
   admin_wireguard_port: get_env("ADMIN_WIREGUARD_PORT", :integer),
   vpn_cluster_cookie: get_env("VPN_CLUSTER_COOKIE", :atom, :edge_admin_default_cookie),
   admin_discovery_port: get_env("ADMIN_DISCOVERY_PORT", :integer, 44_000),
+  admin_tcp_tunnel_port: get_env("ADMIN_TCP_TUNNEL_PORT", :integer, 45_207),
+  admin_tcp_tunnel_secret: admin_tcp_tunnel_secret,
   # IPv4 subnet size for auto-generated clusters (e.g., 24 = /24 = 254 hosts)
   cluster_v4_subnet_prefix: get_env("CLUSTER_V4_SUBNET_PREFIX", :integer, 24),
   # IPv4 CIDR ranges to use for auto-generated cluster subnets (CGNAT space)

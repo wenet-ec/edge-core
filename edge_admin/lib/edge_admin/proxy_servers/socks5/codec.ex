@@ -3,7 +3,7 @@ defmodule EdgeAdmin.ProxyServers.Socks5.Codec do
   @moduledoc """
   Pure SOCKS5 encoder/decoder (RFC 1928 + RFC 1929) with no I/O.
 
-  Split out so handlers (passive `:gen_tcp.recv`) and `RemoteTunnel`
+  Split out so handlers (passive `:gen_tcp.recv`) and tunnel sessions
   (active `{:tcp, socket, data}` messages) can share parsing code.
 
   Every decoder returns one of:

@@ -1,32 +1,24 @@
 # edge_admin/lib/edge_admin/proxy_servers/tunnel/tcp_tunnel.ex
 defmodule EdgeAdmin.ProxyServers.Tunnel.TcpTunnel do
   @moduledoc """
-  TCP tunnel for admin proxy forwarding.
+  Connection router for Admin proxy forwarding.
 
-  Connects to a target through either:
-
-    1. Direct VPN path — dispatch via cluster-owning Gateway
-    2. Proxy chaining — dial agent proxy and handshake through it
+  Routes a proxy connection through the local VPN Gateway or through the
+  owning Admin's private TCP tunnel, with optional Agent proxy chaining.
 
   Callers use this module in two phases:
 
-    * `connect/4` returns a tunnel handle (local socket or remote proxy pid)
-      without starting byte-forwarding. The caller can send the appropriate
-      success response to the client first.
-    * `start_forwarding/3` hands off to `Forwarder` (local) or expects the
-      caller to run its own receive loop for the remote handle.
+    * `connect/3` returns a socket without starting byte-forwarding.
+    * `start_forwarding/3` hands the socket to `Forwarder`.
   """
 
-  alias EdgeAdmin.EdgeClusters.Gateway
+  alias EdgeAdmin.Admins.Metadata
+  alias EdgeAdmin.ProxyServers.AdminTunnel.Client, as: AdminTunnelClient
   alias EdgeAdmin.ProxyServers.Config
   alias EdgeAdmin.ProxyServers.ErrorHandler
   alias EdgeAdmin.ProxyServers.Socks5.Codec, as: Socks5Codec
   alias EdgeAdmin.ProxyServers.Transport.BufferedReader
   alias EdgeAdmin.ProxyServers.Transport.Forwarder
-
-  @type handle ::
-          {:local, :gen_tcp.socket()}
-          | {:remote, pid()}
 
   @doc """
   Establish a tunnel to `target_host:target_port`.
@@ -36,27 +28,24 @@ defmodule EdgeAdmin.ProxyServers.Tunnel.TcpTunnel do
     * `:protocol` — `:http` | `:socks5` (chain protocol, default `:http`)
     * `:initial_data` — bytes to send to the target immediately after connect
 
-  Returns `{:ok, handle}` or `{:error, reason}`.
+  Returns `{:ok, socket}` or `{:error, reason}`.
   """
-  @spec connect(String.t(), 1..65_535, pid(), keyword()) :: {:ok, handle()} | {:error, term()}
-  def connect(target_host, target_port, caller_pid, opts \\ []) do
+  @spec connect(String.t(), 1..65_535, keyword()) :: {:ok, :gen_tcp.socket()} | {:error, term()}
+  def connect(target_host, target_port, opts \\ []) do
     initial_data = Keyword.get(opts, :initial_data)
 
     case Keyword.get(opts, :exit_node) do
       nil ->
-        connect_direct(target_host, target_port, caller_pid, initial_data)
+        connect_direct(target_host, target_port, initial_data)
 
       exit_node ->
         protocol = Keyword.get(opts, :protocol, :http)
-        connect_via_agent_proxy(exit_node, target_host, target_port, caller_pid, initial_data, protocol)
+        connect_via_agent_proxy(exit_node, target_host, target_port, initial_data, protocol)
     end
   end
 
   @doc """
-  Start bidirectional forwarding for a local handle. Blocks until both sides close.
-
-  For remote handles, the caller runs its own streaming loop — see
-  `handle_remote_streaming/3` in `HttpHandler` / `Socks5Handler`.
+  Start bidirectional forwarding between the client and target sockets.
   """
   @spec start_forwarding(:gen_tcp.socket(), :gen_tcp.socket(), map()) :: :ok
   def start_forwarding(client_socket, target_socket, metadata) do
@@ -75,12 +64,37 @@ defmodule EdgeAdmin.ProxyServers.Tunnel.TcpTunnel do
 
   # Direct VPN routing
 
-  defp connect_direct(target_host, target_port, caller_pid, initial_data) do
+  defp connect_direct(target_host, target_port, initial_data) do
     with {:ok, cluster_name} <- parse_cluster_from_hostname(target_host),
-         {:ok, gateway_pid} <- lookup_gateway(cluster_name),
-         {:ok, handle} <- gateway_connect(gateway_pid, target_host, target_port, caller_pid) do
-      maybe_send_initial(handle, initial_data)
-      {:ok, handle}
+         {:ok, socket} <- connect_through_cluster_owner(cluster_name, target_host, target_port) do
+      maybe_send_initial(socket, initial_data)
+      {:ok, socket}
+    end
+  end
+
+  defp connect_through_cluster_owner(cluster_name, target_host, target_port) do
+    owner_name = Metadata.get_cluster_owner(cluster_name)
+    local_name = Application.get_env(:edge_admin, :admin_name)
+
+    cond do
+      is_nil(owner_name) ->
+        ErrorHandler.log_error(:no_cluster_owner, %{cluster_name: cluster_name})
+        {:error, :no_owner}
+
+      owner_name == local_name ->
+        connect_local_target(target_host, target_port)
+
+      true ->
+        with {:ok, admin_hostname} <- owner_hostname(owner_name) do
+          AdminTunnelClient.connect(admin_hostname, target_host, target_port)
+        end
+    end
+  end
+
+  defp owner_hostname(owner_name) do
+    case Enum.find(Metadata.get_peer_admins(), &(&1.name == owner_name)) do
+      %{vpn_hostname: hostname} when is_binary(hostname) -> {:ok, hostname}
+      _ -> {:error, :gateway_not_found}
     end
   end
 
@@ -98,63 +112,35 @@ defmodule EdgeAdmin.ProxyServers.Tunnel.TcpTunnel do
     end
   end
 
-  defp lookup_gateway(cluster_name) do
-    case Gateway.lookup(cluster_name) do
-      {:ok, pid} ->
-        {:ok, pid}
+  defp connect_local_target(target_host, target_port) do
+    case :gen_tcp.connect(
+           String.to_charlist(target_host),
+           target_port,
+           [:binary, packet: :raw, active: false],
+           Config.connection_timeout()
+         ) do
+      {:ok, socket} ->
+        {:ok, socket}
 
-      {:error, :no_owner} = err ->
-        ErrorHandler.log_error(:no_cluster_owner, %{cluster_name: cluster_name})
-        err
-
-      {:error, :gateway_not_found} = err ->
-        ErrorHandler.log_error(:no_gateway, %{cluster_name: cluster_name})
-        err
+      {:error, reason} = error ->
+        ErrorHandler.log_error(reason, %{target_host: target_host, target_port: target_port, source: :gateway})
+        error
     end
   end
 
-  defp gateway_connect(gateway_pid, target_host, target_port, caller_pid) do
-    case Gateway.tcp_connect(gateway_pid, target_host, target_port, caller_pid) do
-      {:ok, target_socket} ->
-        {:ok, {:local, target_socket}}
-
-      {:ok, :remote, proxy_pid} ->
-        {:ok, {:remote, proxy_pid}}
-
-      {:error, reason} = err ->
-        ErrorHandler.log_error(reason, %{
-          target_host: target_host,
-          target_port: target_port,
-          source: :gateway
-        })
-
-        err
-    end
-  end
-
-  defp maybe_send_initial(_handle, nil), do: :ok
-
-  defp maybe_send_initial({:local, socket}, data) do
-    :gen_tcp.send(socket, data)
-    :ok
-  end
-
-  defp maybe_send_initial({:remote, proxy_pid}, data) do
-    send(proxy_pid, {:send_to_target, data})
-    :ok
-  end
+  defp maybe_send_initial(_socket, nil), do: :ok
+  defp maybe_send_initial(socket, data), do: :gen_tcp.send(socket, data)
 
   # Proxy chaining
 
-  defp connect_via_agent_proxy(exit_node, target_host, target_port, caller_pid, initial_data, protocol) do
+  defp connect_via_agent_proxy(exit_node, target_host, target_port, initial_data, protocol) do
     node_dns = EdgeAdmin.Nodes.Schemas.Node.vpn_hostname(exit_node)
     agent_proxy_port = agent_proxy_port(protocol)
 
     with {:ok, cluster_name} <- parse_cluster_from_hostname(node_dns),
-         {:ok, gateway_pid} <- lookup_gateway(cluster_name),
-         {:ok, handle} <- gateway_connect(gateway_pid, node_dns, agent_proxy_port, caller_pid),
-         :ok <- handshake(handle, protocol, target_host, target_port, exit_node.proxy_password, initial_data) do
-      {:ok, handle}
+         {:ok, socket} <- connect_through_cluster_owner(cluster_name, node_dns, agent_proxy_port),
+         :ok <- handshake(socket, protocol, target_host, target_port, exit_node.proxy_password, initial_data) do
+      {:ok, socket}
     else
       {:error, _} = err -> err
     end
@@ -163,9 +149,7 @@ defmodule EdgeAdmin.ProxyServers.Tunnel.TcpTunnel do
   defp agent_proxy_port(:http), do: Application.get_env(:edge_agent, :http_proxy_port, 43_128)
   defp agent_proxy_port(:socks5), do: Application.get_env(:edge_agent, :socks5_proxy_port, 41_080)
 
-  # Local handle handshake
-
-  defp handshake({:local, socket}, :http, target_host, target_port, proxy_password, initial_data) do
+  defp handshake(socket, :http, target_host, target_port, proxy_password, initial_data) do
     auth_header = "Proxy-Authorization: Basic #{Base.encode64("_:#{proxy_password}")}\r\n"
 
     request =
@@ -186,7 +170,7 @@ defmodule EdgeAdmin.ProxyServers.Tunnel.TcpTunnel do
     end
   end
 
-  defp handshake({:local, socket}, :socks5, target_host, target_port, proxy_password, initial_data) do
+  defp handshake(socket, :socks5, target_host, target_port, proxy_password, initial_data) do
     with {:ok, leftover1} <- socks5_negotiate_auth(socket),
          {:ok, leftover2} <- socks5_authenticate(socket, proxy_password, leftover1),
          :ok <- socks5_connect(socket, target_host, target_port, leftover2) do
@@ -197,35 +181,6 @@ defmodule EdgeAdmin.ProxyServers.Tunnel.TcpTunnel do
         ErrorHandler.log_error(:proxy_rejected, %{protocol: :socks5, reason: reason})
         :gen_tcp.close(socket)
         {:error, :proxy_rejected}
-    end
-  end
-
-  # Remote handle handshake — delegated to the RemoteTunnel proxy on the peer node.
-  defp handshake({:remote, proxy_pid}, protocol, target_host, target_port, proxy_password, initial_data) do
-    handshake = build_proxy_handshake(protocol, target_host, target_port, proxy_password)
-    send(proxy_pid, {:send_to_target, handshake})
-
-    {consume_msg, reply_msg} =
-      case protocol do
-        :http -> {:consume_http_response, :http_response_consumed}
-        :socks5 -> {:consume_socks5_response, :socks5_response_consumed}
-      end
-
-    send(proxy_pid, {consume_msg, self()})
-
-    receive do
-      {^reply_msg, ^proxy_pid, {:ok, :accepted}} ->
-        if initial_data, do: send(proxy_pid, {:send_to_target, initial_data})
-        :ok
-
-      {^reply_msg, ^proxy_pid, {:error, reason}} ->
-        ErrorHandler.log_error(:proxy_rejected, %{reason: reason, protocol: protocol, mode: :remote})
-        send(proxy_pid, :close)
-        {:error, :proxy_rejected}
-    after
-      Config.handshake_timeout() ->
-        send(proxy_pid, :close)
-        {:error, :timeout}
     end
   end
 
@@ -306,22 +261,5 @@ defmodule EdgeAdmin.ProxyServers.Tunnel.TcpTunnel do
            parse_or_read(socket, &Socks5Codec.parse_reply/1, leftover) do
       check_connect(rep)
     end
-  end
-
-  defp build_proxy_handshake(:http, target_host, target_port, proxy_password) do
-    auth_header = "Proxy-Authorization: Basic #{Base.encode64("_:#{proxy_password}")}\r\n"
-
-    "CONNECT #{target_host}:#{target_port} HTTP/1.1\r\n" <>
-      "Host: #{target_host}:#{target_port}\r\n" <>
-      auth_header <>
-      "\r\n"
-  end
-
-  defp build_proxy_handshake(:socks5, target_host, target_port, proxy_password) do
-    IO.iodata_to_binary([
-      Socks5Codec.encode_greeting_userpass(),
-      Socks5Codec.encode_auth_request("_", proxy_password),
-      Socks5Codec.encode_connect_request_domain(target_host, target_port)
-    ])
   end
 end

@@ -133,7 +133,7 @@ defmodule EdgeAdmin.ProxyServers.Socks5.CodecTest do
   end
 
   describe "fragmentation handling (round-trip)" do
-    # This is the scenario that broke RemoteTunnel previously: protocol records
+    # This is the fragmented-delivery scenario that tunnel sessions must tolerate:
     # arriving split across multiple TCP reads.
 
     test "method reply + auth status + connect reply can be assembled from fragments" do

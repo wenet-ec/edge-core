@@ -30,3 +30,4 @@ secrets:
   dbPassword: "edge_admin_password"
   edgeVpnMasterKey: "supersecretkey123456789"
   edgeVpnBootstrapPassword: "admin"
+  adminTcpTunnelSecret: "test-admin-tunnel-secret"

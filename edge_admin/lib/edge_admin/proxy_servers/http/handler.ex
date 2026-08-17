@@ -231,8 +231,8 @@ defmodule EdgeAdmin.ProxyServers.Http.Handler do
         cluster_name = TcpTunnel.cluster_name_from_hostname(host) || "unknown"
         metadata = forward_metadata(host, port, :connect, routing_mode, cluster_name)
 
-        case TcpTunnel.connect(host, port, self(), opts) do
-          {:ok, {:local, target_socket}} ->
+        case TcpTunnel.connect(host, port, opts) do
+          {:ok, target_socket} ->
             send_connect_success(socket, transport)
             :ok = TunnelRegistry.register(metadata)
 
@@ -242,20 +242,7 @@ defmodule EdgeAdmin.ProxyServers.Http.Handler do
               TunnelRegistry.unregister()
             end
 
-            {:ok, :local, proxy_mode, cluster_name}
-
-          {:ok, {:remote, proxy_pid}} ->
-            send_connect_success(socket, transport)
-            transport.setopts(socket, active: true)
-            :ok = TunnelRegistry.register(metadata)
-
-            try do
-              handle_remote_streaming(socket, transport, proxy_pid)
-            after
-              TunnelRegistry.unregister()
-            end
-
-            {:ok, :remote, proxy_mode, cluster_name}
+            {:ok, :stream, proxy_mode, cluster_name}
 
           {:error, reason} ->
             {status, message} = ErrorHandler.http_error_response(reason)
@@ -329,8 +316,8 @@ defmodule EdgeAdmin.ProxyServers.Http.Handler do
   end
 
   defp tunnel_http_request(socket, transport, host, port, opts, metadata, proxy_mode, cluster_name) do
-    case TcpTunnel.connect(host, port, self(), opts) do
-      {:ok, {:local, target_socket}} ->
+    case TcpTunnel.connect(host, port, opts) do
+      {:ok, target_socket} ->
         :ok = TunnelRegistry.register(metadata)
 
         try do
@@ -339,65 +326,12 @@ defmodule EdgeAdmin.ProxyServers.Http.Handler do
           TunnelRegistry.unregister()
         end
 
-        {:ok, :local, proxy_mode, cluster_name}
-
-      {:ok, {:remote, proxy_pid}} ->
-        transport.setopts(socket, active: true)
-        :ok = TunnelRegistry.register(metadata)
-
-        try do
-          handle_remote_streaming(socket, transport, proxy_pid)
-        after
-          TunnelRegistry.unregister()
-        end
-
-        {:ok, :remote, proxy_mode, cluster_name}
+        {:ok, :stream, proxy_mode, cluster_name}
 
       {:error, reason} ->
         {status, message} = ErrorHandler.http_error_response(reason)
         send_error(socket, transport, status, message)
         {:error, reason}
-    end
-  end
-
-  # Remote streaming loop (message-based via RemoteTunnel proxy on peer node)
-  defp handle_remote_streaming(socket, transport, proxy_pid) do
-    handle_remote_streaming(socket, transport, proxy_pid, Config.recv_timeout())
-  end
-
-  defp handle_remote_streaming(socket, transport, proxy_pid, timeout) do
-    receive do
-      {:tcp, ^socket, data} ->
-        send(proxy_pid, {:send_to_target, data})
-        handle_remote_streaming(socket, transport, proxy_pid, timeout)
-
-      {:remote_target_data, ^proxy_pid, data} ->
-        transport.send(socket, data)
-        handle_remote_streaming(socket, transport, proxy_pid, timeout)
-
-      {:remote_target_closed, ^proxy_pid} ->
-        transport.close(socket)
-        :ok
-
-      {:remote_target_error, ^proxy_pid, _reason} ->
-        transport.close(socket)
-        :ok
-
-      {:tcp_closed, ^socket} ->
-        send(proxy_pid, :close)
-        :ok
-
-      {:tcp_error, ^socket, _reason} ->
-        send(proxy_pid, :close)
-        :ok
-
-      {:drain, grace_ms} ->
-        handle_remote_streaming(socket, transport, proxy_pid, min(timeout, grace_ms))
-    after
-      timeout ->
-        send(proxy_pid, :close)
-        transport.close(socket)
-        :ok
     end
   end
 

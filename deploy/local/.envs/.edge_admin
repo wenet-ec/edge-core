@@ -261,6 +261,12 @@ VPN_CLUSTER_PORT=49125
 # Port on which admin instances expose their discovery/health endpoint to each other.
 ADMIN_DISCOVERY_PORT=44000
 
+# Dedicated Admin-to-Admin raw TCP tunnel. Binds only to Admin-cluster VPN addresses.
+# ADMIN_TCP_TUNNEL_PORT=45207
+# Optional; when unset the admin uses a built-in default and logs a warning.
+# Single-instance local deployments can leave this as-is.
+ADMIN_TCP_TUNNEL_SECRET=local-secret
+
 # Event delivery (shared by broker + webhook channels)
 
 # CORE_NAME=                          # Included in every envelope; defaults to "default"

@@ -30,13 +30,9 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
 
   alias EdgeAdmin.Admins.Metadata
   alias EdgeAdmin.EdgeClusters.AgentClient
-  alias EdgeAdmin.ProxyServers.Tunnel.RemoteTunnel
   alias EdgeAdmin.Vpn
 
   require Logger
-
-  defp tcp_connect_timeout,
-    do: :edge_admin |> Application.get_env(:proxy_timeouts, []) |> Keyword.get(:connection, 5_000)
 
   defp telemetry_result({:ok, _}), do: :success
   defp telemetry_result(_), do: :error
@@ -128,37 +124,6 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   @doc "Cancels a command execution on an agent."
   def cancel_execution(gateway_pid, node, execution_id) do
     GenServer.call(gateway_pid, {:cancel_execution, node, execution_id}, AgentClient.command_call_timeout())
-  end
-
-  @doc """
-  Establishes TCP connection to a target through the Gateway's VPN.
-
-  Gateway is a pure network abstraction - it only handles VPN connectivity.
-
-  ## Returns
-
-  Two success shapes depending on where `caller_pid` lives:
-
-  - `{:ok, socket}` — `caller_pid` is on the same Erlang node as the Gateway.
-    The socket's controlling process is transferred to `caller_pid`; the
-    caller owns it from that point on.
-  - `{:ok, :remote, proxy_pid}` — `caller_pid` is on a different Erlang node.
-    Erlang distribution can't transfer socket ownership across nodes, so a
-    `RemoteTunnel` proxy process is spawned on the Gateway's node to own the
-    socket and forward bytes to/from `caller_pid`.
-  - `{:error, reason}` — `:gen_tcp.connect/4` failed.
-
-  The caller is responsible for:
-  - Managing the returned socket (or proxy pid)
-  - Setting up any streaming/forwarding logic
-
-  - target_host: VPN DNS hostname (e.g., node-*.cluster-*.nm.internal)
-  - target_port: Target port
-  - caller_pid: PID of the process that will own the socket
-  """
-  def tcp_connect(gateway_pid, target_host, target_port, caller_pid) do
-    # GenServer timeout must exceed the gen_tcp.connect timeout inside handle_call
-    GenServer.call(gateway_pid, {:tcp_connect, target_host, target_port, caller_pid}, tcp_connect_timeout() + 2_000)
   end
 
   @impl true
@@ -304,42 +269,6 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   def handle_call({:cancel_execution, node, execution_id}, from, state) do
     Task.start(fn ->
       GenServer.reply(from, AgentClient.cancel_execution(node, execution_id))
-    end)
-
-    {:noreply, state}
-  end
-
-  @impl true
-  def handle_call({:tcp_connect, target_host, target_port, caller_pid}, from, state) do
-    Task.start(fn ->
-      Logger.debug("Gateway connecting to #{target_host}:#{target_port}")
-
-      result =
-        case :gen_tcp.connect(
-               String.to_charlist(target_host),
-               target_port,
-               [:binary, packet: :raw, active: false],
-               tcp_connect_timeout()
-             ) do
-          {:ok, socket} ->
-            Logger.debug("Gateway established connection to #{target_host}:#{target_port}")
-
-            if node(caller_pid) == node() do
-              :gen_tcp.controlling_process(socket, caller_pid)
-              Logger.debug("Socket transferred to local caller")
-              {:ok, socket}
-            else
-              {:ok, proxy_pid} = RemoteTunnel.start_proxy(socket, caller_pid)
-              Logger.debug("Remote proxy started: #{inspect(proxy_pid)}")
-              {:ok, :remote, proxy_pid}
-            end
-
-          {:error, reason} ->
-            Logger.error("Gateway failed to connect to #{target_host}:#{target_port}: #{inspect(reason)}")
-            {:error, reason}
-        end
-
-      GenServer.reply(from, result)
     end)
 
     {:noreply, state}

@@ -180,8 +180,8 @@ defmodule EdgeAdmin.ProxyServers.Socks5.Handler do
       cluster: cluster_name
     }
 
-    case TcpTunnel.connect(target_host, target_port, self(), opts) do
-      {:ok, {:local, target_socket}} ->
+    case TcpTunnel.connect(target_host, target_port, opts) do
+      {:ok, target_socket} ->
         send_success_reply(socket, transport, target_socket)
         :ok = TunnelRegistry.register(metadata)
 
@@ -191,20 +191,7 @@ defmodule EdgeAdmin.ProxyServers.Socks5.Handler do
           TunnelRegistry.unregister()
         end
 
-        {:ok, :local, proxy_mode, cluster_name}
-
-      {:ok, {:remote, proxy_pid}} ->
-        send_success_reply(socket, transport, nil)
-        transport.setopts(socket, active: true)
-        :ok = TunnelRegistry.register(metadata)
-
-        try do
-          handle_remote_streaming(socket, transport, proxy_pid)
-        after
-          TunnelRegistry.unregister()
-        end
-
-        {:ok, :remote, proxy_mode, cluster_name}
+        {:ok, :stream, proxy_mode, cluster_name}
 
       {:error, reason} ->
         send_failure_reply(socket, transport, ErrorHandler.socks5_reply_code(reason))
@@ -214,51 +201,6 @@ defmodule EdgeAdmin.ProxyServers.Socks5.Handler do
 
   defp tunnel_opts(:direct, _exit_node), do: []
   defp tunnel_opts(:chain, exit_node), do: [exit_node: exit_node, protocol: :socks5]
-
-  defp handle_remote_streaming(socket, transport, proxy_pid) do
-    handle_remote_streaming(socket, transport, proxy_pid, Config.recv_timeout())
-  end
-
-  defp handle_remote_streaming(socket, transport, proxy_pid, timeout) do
-    receive do
-      {:tcp, ^socket, data} ->
-        send(proxy_pid, {:send_to_target, data})
-        handle_remote_streaming(socket, transport, proxy_pid, timeout)
-
-      {:remote_target_data, ^proxy_pid, data} ->
-        transport.send(socket, data)
-        handle_remote_streaming(socket, transport, proxy_pid, timeout)
-
-      {:remote_target_closed, ^proxy_pid} ->
-        transport.close(socket)
-        {:ok, :closed}
-
-      {:remote_target_error, ^proxy_pid, _reason} ->
-        transport.close(socket)
-        {:ok, :closed}
-
-      {:tcp_closed, ^socket} ->
-        send(proxy_pid, :close)
-        {:ok, :closed}
-
-      {:tcp_error, ^socket, _reason} ->
-        send(proxy_pid, :close)
-        {:ok, :closed}
-
-      {:drain, grace_ms} ->
-        # Let in-flight bytes through, but no more than grace_ms.
-        handle_remote_streaming(socket, transport, proxy_pid, min(timeout, grace_ms))
-    after
-      timeout ->
-        send(proxy_pid, :close)
-        transport.close(socket)
-        {:ok, :closed}
-    end
-  end
-
-  defp send_success_reply(socket, transport, nil) do
-    transport.send(socket, Socks5Codec.encode_reply(@reply_success, nil, 0))
-  end
 
   defp send_success_reply(socket, transport, target_socket) do
     {addr, port} =

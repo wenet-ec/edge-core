@@ -128,6 +128,7 @@ defmodule EdgeAdmin.Application do
     [
       EdgeAdmin.PromEx.Server,
       {EdgeAdminMcp.Server, transport: :streamable_http, registry: {Anubis.Server.Registry.PG, []}},
+      EdgeAdminMcp.HttpServer,
       EdgeAdminWeb.Endpoint
     ] ++ event_broker_children()
   end

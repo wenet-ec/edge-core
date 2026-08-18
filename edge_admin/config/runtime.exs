@@ -229,9 +229,14 @@ cors_headers =
 
 admin_api_port = get_env("ADMIN_API_PORT", :integer, 44_000)
 admin_metrics_port = get_env("ADMIN_METRICS_PORT", :integer, nil)
+admin_mcp_port = get_env("ADMIN_MCP_PORT", :integer, nil)
 
 if is_integer(admin_metrics_port) and admin_metrics_port == admin_api_port do
   raise "ADMIN_METRICS_PORT must differ from ADMIN_API_PORT when dedicated metrics are enabled"
+end
+
+if is_integer(admin_mcp_port) and admin_mcp_port in [admin_api_port, admin_metrics_port] do
+  raise "ADMIN_MCP_PORT must differ from ADMIN_API_PORT and ADMIN_METRICS_PORT when dedicated MCP is enabled"
 end
 
 token_auth_enabled =
@@ -550,7 +555,9 @@ config :edge_admin,
 
 config :edge_admin,
   admin_metrics_port: admin_metrics_port,
-  admin_metrics_dedicated: is_integer(admin_metrics_port)
+  admin_metrics_dedicated: is_integer(admin_metrics_port),
+  admin_mcp_port: admin_mcp_port,
+  admin_mcp_dedicated: is_integer(admin_mcp_port)
 
 # Event delivery — applies to both broker and webhook channels
 # CORE_NAME stamps every envelope with the publishing instance's identity.

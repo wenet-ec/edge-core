@@ -24,6 +24,7 @@ defmodule EdgeAdminWeb.Router do
   end
 
   pipeline :mcp do
+    plug(:mcp_dedicated_guard)
     plug(EdgeAdminWeb.Plugs.McpAuth)
   end
 
@@ -62,6 +63,12 @@ defmodule EdgeAdminWeb.Router do
     get("/guide/ssh", EdgeAdminWeb.Controllers.Guide.SshController, :show)
     get("/guide/metrics", EdgeAdminWeb.Controllers.Guide.MetricsController, :show)
     get("/guide/events", EdgeAdminWeb.Controllers.Guide.EventController, :show)
+  end
+
+  scope "/" do
+    pipe_through(:mcp)
+
+    forward("/mcp", Anubis.Server.Transport.StreamableHTTP.Plug, server: EdgeAdminMcp.Server)
   end
 
   scope "/" do
@@ -229,12 +236,6 @@ defmodule EdgeAdminWeb.Router do
     resources("/self_update_requests", SelfUpdates.SelfUpdateRequestController, only: [:index, :create, :show, :delete])
   end
 
-  scope "/" do
-    pipe_through(:mcp)
-
-    forward("/mcp", Anubis.Server.Transport.StreamableHTTP.Plug, server: EdgeAdminMcp.Server)
-  end
-
   # Admin Debug Dashboard authentication helper.
   #
   # Behaviour is controlled by `:admin_debug_auth_enabled` (default `true`):
@@ -254,6 +255,17 @@ defmodule EdgeAdminWeb.Router do
       end
 
       Plug.BasicAuth.basic_auth(conn, dashboard_auth)
+    else
+      conn
+    end
+  end
+
+  defp mcp_dedicated_guard(conn, _opts) do
+    if Application.get_env(:edge_admin, :admin_mcp_dedicated, false) do
+      conn
+      |> put_resp_content_type("text/plain")
+      |> send_resp(404, "Not Found")
+      |> halt()
     else
       conn
     end

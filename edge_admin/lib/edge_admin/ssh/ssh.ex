@@ -8,7 +8,7 @@ defmodule EdgeAdmin.Ssh do
   """
 
   alias EdgeAdmin.Nodes.Schemas.Node
-  alias EdgeAdmin.Ssh.Resources.Credentials
+  alias EdgeAdmin.Ssh.Credentials.Verification
   alias EdgeAdmin.Ssh.Resources.SshPublicKeys
   alias EdgeAdmin.Ssh.Resources.SshUsernames
   alias EdgeAdmin.Ssh.Schemas.SshPublicKey
@@ -40,7 +40,7 @@ defmodule EdgeAdmin.Ssh do
 
   @doc "Verifies a password or public-key SSH credential for a node."
   @spec verify_ssh_credentials(String.t(), map()) :: {:ok, boolean()} | {:error, Ecto.Changeset.t()}
-  defdelegate verify_ssh_credentials(node_id, params), to: Credentials, as: :verify
+  defdelegate verify_ssh_credentials(node_id, params), to: Verification, as: :verify
 
   @doc "Gets an SSH public key by ID."
   @spec get_ssh_public_key(String.t()) :: {:ok, SshPublicKey.t()} | {:error, :not_found}

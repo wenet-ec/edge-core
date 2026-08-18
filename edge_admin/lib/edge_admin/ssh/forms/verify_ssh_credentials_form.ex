@@ -8,6 +8,8 @@ defmodule EdgeAdmin.Ssh.Forms.VerifySshCredentialsForm do
   """
   use EdgeAdmin.Form
 
+  alias EdgeAdmin.Ssh.Validators.CredentialRequestValidators
+
   embedded_schema do
     field(:username, :string)
     field(:password, :string)
@@ -46,15 +48,9 @@ defmodule EdgeAdmin.Ssh.Forms.VerifySshCredentialsForm do
     password = get_field(changeset, :password)
     public_key = get_field(changeset, :public_key)
 
-    cond do
-      is_nil(password) and is_nil(public_key) ->
-        add_error(changeset, :base, "either password or public_key must be provided")
-
-      not is_nil(password) and not is_nil(public_key) ->
-        add_error(changeset, :base, "only one of password or public_key should be provided")
-
-      true ->
-        changeset
+    case CredentialRequestValidators.error(password, public_key) do
+      :ok -> changeset
+      {:error, message} -> add_error(changeset, :base, message)
     end
   end
 

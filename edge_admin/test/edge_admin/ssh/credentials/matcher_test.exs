@@ -1,9 +1,9 @@
-# edge_admin/test/edge_admin/ssh/credential_matcher_test.exs
-defmodule EdgeAdmin.Ssh.CredentialMatcherTest do
+# edge_admin/test/edge_admin/ssh/credentials/matcher_test.exs
+defmodule EdgeAdmin.Ssh.Credentials.MatcherTest do
   use ExUnit.Case, async: true
 
   alias EdgeAdmin.PasswordHashers
-  alias EdgeAdmin.Ssh.CredentialMatcher
+  alias EdgeAdmin.Ssh.Credentials.Matcher, as: CredentialMatcher
   # check/3 — auth method semantics. The auth_method returned distinguishes
   # "wrong username" (:unknown) from "wrong credential" (:password / :public_key)
   # so the audit trail can tell them apart. Failure cases still return the

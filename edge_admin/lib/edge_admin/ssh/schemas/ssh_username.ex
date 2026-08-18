@@ -4,9 +4,9 @@ defmodule EdgeAdmin.Ssh.Schemas.SshUsername do
   use EdgeAdmin.Schema
 
   alias Ecto.Association.NotLoaded
-  alias EdgeAdmin.Naming
   alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.Ssh.Schemas.SshPublicKey
+  alias EdgeAdmin.Ssh.Validators.SshUsernameValidators
 
   @type t :: %__MODULE__{
           id: String.t() | nil,
@@ -52,12 +52,17 @@ defmodule EdgeAdmin.Ssh.Schemas.SshUsername do
     ssh_username
     |> cast(attrs, [:username, :password_hash, :node_id])
     |> validate_required([:username, :node_id])
-    |> validate_length(:username, min: Naming.ssh_username_min_length(), max: Naming.ssh_username_max_length())
-    |> validate_format(:username, Naming.ssh_username_regex(),
-      message:
-        "must start with a letter or underscore and contain only lowercase letters, digits, hyphens, or underscores"
-    )
+    |> validate_username()
     |> unique_constraint([:username, :node_id], name: :ssh_usernames_node_id_username_index)
     |> foreign_key_constraint(:node_id)
+  end
+
+  defp validate_username(changeset) do
+    validate_change(changeset, :username, fn :username, value ->
+      case SshUsernameValidators.username_error(value) do
+        :ok -> []
+        {:error, message} -> [username: message]
+      end
+    end)
   end
 end

@@ -7,7 +7,7 @@ defmodule EdgeAdmin.Ssh.Forms.CreateSshPublicKeyForm do
   """
   use EdgeAdmin.Form
 
-  alias EdgeAdmin.Ssh.Schemas.SshPublicKey
+  alias EdgeAdmin.Ssh.Validators.SshPublicKeyValidators
 
   embedded_schema do
     field(:key_name, :string)
@@ -25,7 +25,7 @@ defmodule EdgeAdmin.Ssh.Forms.CreateSshPublicKeyForm do
     %__MODULE__{}
     |> cast(attrs, [:key_name, :public_key])
     |> validate_required([:key_name, :public_key])
-    |> validate_length(:key_name, min: 1, max: 255)
+    |> validate_key_name()
     |> validate_ssh_public_key_format()
     |> apply_action(:insert)
     |> case do
@@ -45,9 +45,18 @@ defmodule EdgeAdmin.Ssh.Forms.CreateSshPublicKeyForm do
 
   defp validate_ssh_public_key_format(changeset) do
     validate_change(changeset, :public_key, fn :public_key, public_key ->
-      case SshPublicKey.validate_key_format(public_key) do
+      case SshPublicKeyValidators.validate_key_format(public_key) do
         {:ok, _algorithm} -> []
         {:error, reason} -> [public_key: reason]
+      end
+    end)
+  end
+
+  defp validate_key_name(changeset) do
+    validate_change(changeset, :key_name, fn :key_name, value ->
+      case SshPublicKeyValidators.key_name_error(value) do
+        :ok -> []
+        {:error, message} -> [key_name: message]
       end
     end)
   end

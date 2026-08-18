@@ -1,5 +1,5 @@
-# edge_admin/lib/edge_admin/ssh/credential_matcher.ex
-defmodule EdgeAdmin.Ssh.CredentialMatcher do
+# edge_admin/lib/edge_admin/ssh/credentials/matcher.ex
+defmodule EdgeAdmin.Ssh.Credentials.Matcher do
   @moduledoc """
   Pure credential-matching primitives for SSH authentication.
 

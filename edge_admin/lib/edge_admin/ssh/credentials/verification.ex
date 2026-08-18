@@ -1,12 +1,12 @@
-# edge_admin/lib/edge_admin/ssh/resources/credentials.ex
-defmodule EdgeAdmin.Ssh.Resources.Credentials do
-  @moduledoc "Explicit SSH credential verification workflow."
+# edge_admin/lib/edge_admin/ssh/credentials/verification.ex
+defmodule EdgeAdmin.Ssh.Credentials.Verification do
+  @moduledoc "Workflow for verifying SSH credentials against persisted accounts."
 
   alias EdgeAdmin.Events
   alias EdgeAdmin.Events.Catalog
   alias EdgeAdmin.PasswordHashers
   alias EdgeAdmin.Repo
-  alias EdgeAdmin.Ssh.CredentialMatcher
+  alias EdgeAdmin.Ssh.Credentials.Matcher
   alias EdgeAdmin.Ssh.Forms
   alias EdgeAdmin.Ssh.Resources.SshUsernames
   alias EdgeAdmin.Ssh.Schemas.SshUsername
@@ -25,7 +25,7 @@ defmodule EdgeAdmin.Ssh.Resources.Credentials do
           _ -> nil
         end
 
-      {verified, auth_method, hash_status} = CredentialMatcher.check_detailed(ssh_username, password, public_key)
+      {verified, auth_method, hash_status} = Matcher.check_detailed(ssh_username, password, public_key)
       maybe_upgrade(ssh_username, password, hash_status)
       result = if verified, do: :success, else: :failure
       :telemetry.execute([:edge_admin, :ssh, :verification], %{count: 1}, %{result: result, auth_method: auth_method})

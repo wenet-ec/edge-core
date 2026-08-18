@@ -7,8 +7,8 @@ defmodule EdgeAdmin.Ssh.Forms.CreateSshUsernameForm do
   """
   use EdgeAdmin.Form
 
-  alias EdgeAdmin.Naming
   alias EdgeAdmin.Ssh.Forms.CreateSshPublicKeyForm
+  alias EdgeAdmin.Ssh.Validators.SshUsernameValidators
 
   embedded_schema do
     field(:username, :string)
@@ -54,17 +54,31 @@ defmodule EdgeAdmin.Ssh.Forms.CreateSshUsernameForm do
     %__MODULE__{}
     |> cast(attrs, [:username, :password])
     |> validate_required([:username])
-    |> validate_length(:username, min: Naming.ssh_username_min_length(), max: Naming.ssh_username_max_length())
-    |> validate_format(:username, Naming.ssh_username_regex(),
-      message:
-        "must start with a letter or underscore and contain only lowercase letters, digits, hyphens, or underscores"
-    )
-    |> validate_length(:password, min: Naming.ssh_password_min_length(), max: Naming.ssh_password_max_length())
+    |> validate_username_field()
+    |> validate_password()
     |> apply_action(:insert)
     |> case do
       {:ok, form} -> {:ok, to_map(form)}
       {:error, changeset} -> {:error, changeset}
     end
+  end
+
+  defp validate_username_field(changeset) do
+    validate_change(changeset, :username, fn :username, value ->
+      case SshUsernameValidators.username_error(value) do
+        :ok -> []
+        {:error, message} -> [username: message]
+      end
+    end)
+  end
+
+  defp validate_password(changeset) do
+    validate_change(changeset, :password, fn :password, value ->
+      case SshUsernameValidators.password_error(value) do
+        :ok -> []
+        {:error, message} -> [password: message]
+      end
+    end)
   end
 
   defp validate_public_keys([]), do: {:ok, []}

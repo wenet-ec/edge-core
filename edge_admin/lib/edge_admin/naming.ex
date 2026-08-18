@@ -47,6 +47,13 @@ defmodule EdgeAdmin.Naming do
 
   @ssh_public_key_pattern "^(ssh-ed25519|ecdsa-sha2-nistp(?:256|384|521)|ssh-rsa)\\s+([A-Za-z0-9+/]+=*)\\s*(.*)$"
   @ssh_public_key_regex ~r/^(ssh-ed25519|ecdsa-sha2-nistp(?:256|384|521)|ssh-rsa)\s+([A-Za-z0-9+\/]+=*)\s*(.*)$/
+  @ssh_public_key_algorithms [
+    "ssh-ed25519",
+    "ecdsa-sha2-nistp256",
+    "ecdsa-sha2-nistp384",
+    "ecdsa-sha2-nistp521",
+    "ssh-rsa"
+  ]
 
   @doc "Regex literal matching valid cluster names."
   def cluster_name_regex, do: @dns_label_regex
@@ -87,6 +94,9 @@ defmodule EdgeAdmin.Naming do
   and (optional) comment.
   """
   def ssh_public_key_regex, do: @ssh_public_key_regex
+
+  @doc "Supported SSH public-key algorithms."
+  def ssh_public_key_algorithms, do: @ssh_public_key_algorithms
 
   @doc "Inner regex string for OpenApiSpex `pattern:` field."
   def ssh_public_key_pattern, do: @ssh_public_key_pattern

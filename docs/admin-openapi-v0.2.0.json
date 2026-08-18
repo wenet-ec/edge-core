@@ -4829,6 +4829,14 @@
             },
             "description": "Cluster not found"
           },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ConflictResponse" }
+              }
+            },
+            "description": "Node limit cannot be less than the cluster's current node count"
+          },
           "422": {
             "content": {
               "application/json": {
@@ -4837,7 +4845,7 @@
                 }
               }
             },
-            "description": "Validation error or node_limit below current node count"
+            "description": "Validation error"
           },
           "503": {
             "content": {
@@ -5920,7 +5928,7 @@
                 "schema": { "$ref": "#/components/schemas/ConflictResponse" }
               }
             },
-            "description": "Alias name already exists in this cluster, or node is not yet enrolled/has no IP in the VPN network"
+            "description": "Alias name already exists, node state conflicts with the requested alias, or node is not yet enrolled/has no IP in the VPN network"
           },
           "422": {
             "content": {

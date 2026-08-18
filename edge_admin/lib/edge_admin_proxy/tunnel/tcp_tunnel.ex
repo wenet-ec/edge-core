@@ -12,7 +12,7 @@ defmodule EdgeAdminProxy.Tunnel.TcpTunnel do
     * `start_forwarding/3` hands the socket to `Forwarder`.
   """
 
-  alias EdgeAdmin.AdminGateway.Router, as: GatewayRouter
+  alias EdgeAdmin.GatewayRegistry
   alias EdgeAdminProxy.Config
   alias EdgeAdminProxy.ErrorHandler
   alias EdgeAdminProxy.Socks5.Codec, as: Socks5Codec
@@ -64,7 +64,7 @@ defmodule EdgeAdminProxy.Tunnel.TcpTunnel do
 
   defp connect_direct(target_host, target_port, initial_data) do
     with {:ok, cluster_name} <- parse_cluster_from_hostname(target_host),
-         {:ok, socket} <- GatewayRouter.open_stream(cluster_name, target_host, target_port) do
+         {:ok, socket} <- GatewayRegistry.open_stream(cluster_name, target_host, target_port) do
       maybe_send_initial(socket, initial_data)
       {:ok, socket}
     end
@@ -93,7 +93,7 @@ defmodule EdgeAdminProxy.Tunnel.TcpTunnel do
     agent_proxy_port = agent_proxy_port(protocol)
 
     with {:ok, cluster_name} <- parse_cluster_from_hostname(node_dns),
-         {:ok, socket} <- GatewayRouter.open_stream(cluster_name, node_dns, agent_proxy_port),
+         {:ok, socket} <- GatewayRegistry.open_stream(cluster_name, node_dns, agent_proxy_port),
          :ok <- handshake(socket, protocol, target_host, target_port, exit_node.proxy_password, initial_data) do
       {:ok, socket}
     else

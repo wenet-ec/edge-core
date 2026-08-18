@@ -1,5 +1,5 @@
-# edge_admin/lib/edge_admin/admin_gateway/reconciliation.ex
-defmodule EdgeAdmin.AdminGateway.Reconciliation do
+# edge_admin/lib/edge_admin/gateway_registry/reconciler.ex
+defmodule EdgeAdmin.GatewayRegistry.Reconciler do
   @moduledoc "Pure planner for Admin Gateway membership changes."
 
   @type plan :: %{

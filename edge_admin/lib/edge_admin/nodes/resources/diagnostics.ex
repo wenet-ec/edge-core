@@ -7,8 +7,8 @@ defmodule EdgeAdmin.Nodes.Resources.Diagnostics do
   import Ecto.Query, only: [where: 3]
 
   alias EdgeAdmin.AdminClustering.Metadata
-  alias EdgeAdmin.AdminGateway.Router, as: GatewayRouter
-  alias EdgeAdmin.AdminGateway.Worker, as: GatewayWorker
+  alias EdgeAdmin.GatewayRegistry
+  alias EdgeAdmin.GatewayRegistry.VirtualGateway
   alias EdgeAdmin.Nodes.Resources.Nodes, as: NodeResource
   alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.Nodes.Schemas.NodeDiagnostic
@@ -42,9 +42,9 @@ defmodule EdgeAdmin.Nodes.Resources.Diagnostics do
     node_name = Node.node_name(node)
 
     with {:ok, cluster_name, _owner} <- Metadata.find_node_cluster(node_name),
-         {:ok, gateway} <- GatewayRouter.resolve(cluster_name) do
+         {:ok, gateway} <- GatewayRegistry.resolve(cluster_name) do
       try do
-        GatewayWorker.get_diagnostics(gateway, node)
+        VirtualGateway.get_diagnostics(gateway, node)
       catch
         :exit, {:timeout, _} -> {:error, :timeout}
         :exit, reason -> {:error, {:gateway_exit, reason}}

@@ -1,11 +1,11 @@
-# edge_admin/test/edge_admin/admin_gateway/reconciliation_test.exs
-defmodule EdgeAdmin.AdminGateway.ReconciliationTest do
+# edge_admin/test/edge_admin/gateway_registry/reconciler_test.exs
+defmodule EdgeAdmin.GatewayRegistry.ReconcilerTest do
   use ExUnit.Case, async: true
 
-  alias EdgeAdmin.AdminGateway.Reconciliation
+  alias EdgeAdmin.GatewayRegistry.Reconciler
 
   test "plans joins and leaves from current and assigned clusters" do
-    plan = Reconciliation.plan(MapSet.new(["shared", "leaving"]), ["shared", "joining"])
+    plan = Reconciler.plan(MapSet.new(["shared", "leaving"]), ["shared", "joining"])
 
     assert plan.to_join == MapSet.new(["joining"])
     assert plan.to_leave == MapSet.new(["leaving"])
@@ -13,9 +13,9 @@ defmodule EdgeAdmin.AdminGateway.ReconciliationTest do
   end
 
   test "accepts ordinary enumerables and handles an empty topology" do
-    assert Reconciliation.plan([], []) == %{to_join: MapSet.new(), to_leave: MapSet.new(), retained: MapSet.new()}
+    assert Reconciler.plan([], []) == %{to_join: MapSet.new(), to_leave: MapSet.new(), retained: MapSet.new()}
 
-    assert Reconciliation.plan(["a", "b"], ["b", "c"]) == %{
+    assert Reconciler.plan(["a", "b"], ["b", "c"]) == %{
              to_join: MapSet.new(["c"]),
              to_leave: MapSet.new(["a"]),
              retained: MapSet.new(["b"])
@@ -23,8 +23,8 @@ defmodule EdgeAdmin.AdminGateway.ReconciliationTest do
   end
 
   test "is independent of input ordering" do
-    first = Reconciliation.plan(["a", "b"], ["b", "c"])
-    second = Reconciliation.plan(["b", "a"], ["c", "b"])
+    first = Reconciler.plan(["a", "b"], ["b", "c"])
+    second = Reconciler.plan(["b", "a"], ["c", "b"])
 
     assert first == second
   end

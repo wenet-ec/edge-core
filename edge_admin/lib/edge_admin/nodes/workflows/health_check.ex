@@ -11,11 +11,11 @@ defmodule EdgeAdmin.Nodes.Workflows.HealthCheck do
   import Ecto.Query, warn: false
 
   alias EdgeAdmin.AdminClustering.Metadata
-  alias EdgeAdmin.AdminGateway.AgentClient
-  alias EdgeAdmin.AdminGateway.Router, as: GatewayRouter
-  alias EdgeAdmin.AdminGateway.Worker, as: GatewayWorker
   alias EdgeAdmin.Events
   alias EdgeAdmin.Events.Catalog
+  alias EdgeAdmin.GatewayRegistry
+  alias EdgeAdmin.GatewayRegistry.AgentClient
+  alias EdgeAdmin.GatewayRegistry.VirtualGateway
   alias EdgeAdmin.Nodes.Forms
   alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.Repo
@@ -172,8 +172,8 @@ defmodule EdgeAdmin.Nodes.Workflows.HealthCheck do
   end
 
   defp ping_via_gateway(node) do
-    case GatewayRouter.resolve_node(node) do
-      {:ok, gateway} -> GatewayWorker.ping(gateway, node)
+    case GatewayRegistry.resolve_node(node) do
+      {:ok, gateway} -> VirtualGateway.ping(gateway, node)
       {:error, _reason} -> :unreachable
     end
   end

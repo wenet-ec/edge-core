@@ -3,10 +3,10 @@ defmodule EdgeAdmin.SelfUpdates.Workflows.Processing do
   @moduledoc "Processes self-update requests and delivers update triggers."
 
   alias EdgeAdmin.AdminClustering.Metadata
-  alias EdgeAdmin.AdminGateway.Router, as: GatewayRouter
-  alias EdgeAdmin.AdminGateway.Worker, as: GatewayWorker
   alias EdgeAdmin.Events
   alias EdgeAdmin.Events.Catalog
+  alias EdgeAdmin.GatewayRegistry
+  alias EdgeAdmin.GatewayRegistry.VirtualGateway
   alias EdgeAdmin.Nodes.Schemas.Cluster
   alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.Nodes.Targeting
@@ -72,8 +72,8 @@ defmodule EdgeAdmin.SelfUpdates.Workflows.Processing do
     name = Node.node_name(node)
 
     with {:ok, cluster_name, _} <- Metadata.find_node_cluster(name),
-         {:ok, gateway} <- GatewayRouter.resolve(cluster_name),
-         :ok <- GatewayWorker.trigger_self_update(gateway, node) do
+         {:ok, gateway} <- GatewayRegistry.resolve(cluster_name),
+         :ok <- VirtualGateway.trigger_self_update(gateway, node) do
       Events.publish(%Catalog.NodeUpdateTriggered{node: node, self_update_request_id: request_id})
       :ok
     else
@@ -87,7 +87,7 @@ defmodule EdgeAdmin.SelfUpdates.Workflows.Processing do
     nodes
     |> Enum.group_by(& &1.cluster)
     |> Enum.flat_map(fn {cluster, cluster_nodes} ->
-      case GatewayRouter.resolve(Cluster.network_name(cluster)) do
+      case GatewayRegistry.resolve(Cluster.network_name(cluster)) do
         {:ok, gateway} ->
           cluster_nodes
           |> Enum.map(fn node -> Task.async(fn -> trigger_node_with_gateway(node, gateway, request_id) end) end)
@@ -101,7 +101,7 @@ defmodule EdgeAdmin.SelfUpdates.Workflows.Processing do
   end
 
   defp trigger_node_with_gateway(node, gateway, request_id) do
-    case GatewayWorker.trigger_self_update(gateway, node) do
+    case VirtualGateway.trigger_self_update(gateway, node) do
       :ok ->
         Events.publish(%Catalog.NodeUpdateTriggered{node: node, self_update_request_id: request_id})
         :ok

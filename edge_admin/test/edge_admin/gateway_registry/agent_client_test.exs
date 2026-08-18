@@ -1,8 +1,8 @@
-# edge_admin/test/edge_admin/admin_gateway/agent_client_test.exs
-defmodule EdgeAdmin.AdminGateway.AgentClientTest do
+# edge_admin/test/edge_admin/gateway_registry/agent_client_test.exs
+defmodule EdgeAdmin.GatewayRegistry.AgentClientTest do
   use ExUnit.Case, async: false
 
-  alias EdgeAdmin.AdminGateway.AgentClient
+  alias EdgeAdmin.GatewayRegistry.AgentClient
 
   @keys [:command_delivery_timeout, :metrics_scrape_timeout, :health_check_timeout]
 

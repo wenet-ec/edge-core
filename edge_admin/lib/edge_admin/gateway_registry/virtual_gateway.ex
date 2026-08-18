@@ -1,5 +1,5 @@
-# edge_admin/lib/edge_admin/admin_gateway/worker.ex
-defmodule EdgeAdmin.AdminGateway.Worker do
+# edge_admin/lib/edge_admin/gateway_registry/virtual_gateway.ex
+defmodule EdgeAdmin.GatewayRegistry.VirtualGateway do
   @moduledoc """
   Admin Gateway GenServer managing VPN connection and HTTP communication with an edge cluster.
 
@@ -26,7 +26,7 @@ defmodule EdgeAdmin.AdminGateway.Worker do
   use GenServer
 
   alias EdgeAdmin.AdminClustering.Metadata
-  alias EdgeAdmin.AdminGateway.AgentClient
+  alias EdgeAdmin.GatewayRegistry.AgentClient
   alias EdgeAdmin.Vpn
 
   require Logger

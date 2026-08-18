@@ -1,18 +1,18 @@
-# edge_admin/lib/edge_admin/admin_gateway/coordinator.ex
-defmodule EdgeAdmin.AdminGateway.Coordinator do
+# edge_admin/lib/edge_admin/gateway_registry/coordinator.ex
+defmodule EdgeAdmin.GatewayRegistry.Coordinator do
   @moduledoc """
   Gateway coordinator that manages VPN connections to edge clusters.
 
   This GenServer subscribes to local metadata recomputation events, reads this
   Admin's assigned clusters from ETS, and starts/stops one Gateway process per
-  assigned cluster through `AdminGateway.Supervisor`.
+  assigned cluster through `GatewayRegistry.Supervisor`.
 
   **Race Condition Handling**: `init/1` only subscribes to local metadata events
   and starts with an empty `current_clusters` set — it does NOT pre-load ETS
   assignments. This is safe because `Metadata.init/1` always runs an initial
   recomputation that broadcasts `:metadata_recomputed` once it completes, which
   triggers our first reconciliation. So no matter the startup order between
-  `Metadata` and `AdminGateway`, the first event is never missed.
+  `Metadata` and `GatewayRegistry`, the first event is never missed.
 
   **Anti-Thrashing**: Simple boolean flag prevents rapid reconciliation cycles:
   - If reconciling, set `pending_reconcile: true` (don't interrupt)
@@ -23,8 +23,8 @@ defmodule EdgeAdmin.AdminGateway.Coordinator do
   use GenServer
 
   alias EdgeAdmin.AdminClustering.Metadata
-  alias EdgeAdmin.AdminGateway.Reconciliation
-  alias EdgeAdmin.AdminGateway.Supervisor, as: GatewaySupervisor
+  alias EdgeAdmin.GatewayRegistry.Reconciler
+  alias EdgeAdmin.GatewayRegistry.Supervisor, as: GatewaySupervisor
   alias EdgeAdmin.Vpn
 
   require Logger
@@ -40,7 +40,7 @@ defmodule EdgeAdmin.AdminGateway.Coordinator do
     admin_name = Application.get_env(:edge_admin, :admin_name)
     Metadata.Events.subscribe_local()
 
-    Logger.info("AdminGateway coordinator subscribed to local metadata events, waiting")
+    Logger.info("GatewayRegistry coordinator subscribed to local metadata events, waiting")
 
     {:ok,
      %{
@@ -55,11 +55,11 @@ defmodule EdgeAdmin.AdminGateway.Coordinator do
   @impl true
   def handle_info(:metadata_recomputed, state) do
     if state.reconciling? do
-      Logger.debug("AdminGateway coordinator: Metadata changed while reconciling, marked pending")
+      Logger.debug("GatewayRegistry coordinator: Metadata changed while reconciling, marked pending")
       {:noreply, %{state | pending_reconcile: true}}
     else
       spawn_reconciliation_task(state)
-      Logger.debug("AdminGateway coordinator: Starting reconciliation")
+      Logger.debug("GatewayRegistry coordinator: Starting reconciliation")
       {:noreply, %{state | reconciling?: true}}
     end
   end
@@ -68,10 +68,10 @@ defmodule EdgeAdmin.AdminGateway.Coordinator do
   def handle_info(:reconciliation_complete, state) do
     if state.pending_reconcile do
       spawn_reconciliation_task(state)
-      Logger.debug("AdminGateway coordinator: Pending reconciliation triggered")
+      Logger.debug("GatewayRegistry coordinator: Pending reconciliation triggered")
       {:noreply, %{state | reconciling?: true, pending_reconcile: false}}
     else
-      Logger.debug("AdminGateway coordinator: Reconciliation complete, idle")
+      Logger.debug("GatewayRegistry coordinator: Reconciliation complete, idle")
       {:noreply, %{state | reconciling?: false}}
     end
   end
@@ -89,7 +89,7 @@ defmodule EdgeAdmin.AdminGateway.Coordinator do
 
   @impl true
   def handle_info(msg, state) do
-    Logger.warning("AdminGateway coordinator received unexpected message: #{inspect(msg)}")
+    Logger.warning("GatewayRegistry coordinator received unexpected message: #{inspect(msg)}")
     {:noreply, state}
   end
 
@@ -108,11 +108,13 @@ defmodule EdgeAdmin.AdminGateway.Coordinator do
       new_clusters = get_assigned_clusters(state.admin_name)
       new_clusters_set = MapSet.new(new_clusters)
 
-      reconciliation = Reconciliation.plan(state.current_clusters, new_clusters_set)
+      reconciliation = Reconciler.plan(state.current_clusters, new_clusters_set)
       to_join = reconciliation.to_join
       to_leave = reconciliation.to_leave
 
-      Logger.info("AdminGateway reconciliation: +#{MapSet.size(to_join)} clusters, -#{MapSet.size(to_leave)} clusters")
+      Logger.info(
+        "GatewayRegistry reconciliation: +#{MapSet.size(to_join)} clusters, -#{MapSet.size(to_leave)} clusters"
+      )
 
       successful_joins = MapSet.new()
       new_gateway_pids = state.gateway_pids
@@ -155,7 +157,7 @@ defmodule EdgeAdmin.AdminGateway.Coordinator do
         |> MapSet.union(successful_joins)
 
       Logger.debug(
-        "AdminGateway state update: current_clusters=#{inspect(MapSet.to_list(new_current_clusters))}, gateway_pids=#{inspect(Map.keys(new_gateway_pids))}"
+        "GatewayRegistry state update: current_clusters=#{inspect(MapSet.to_list(new_current_clusters))}, gateway_pids=#{inspect(Map.keys(new_gateway_pids))}"
       )
 
       send(parent, {:update_clusters, new_current_clusters, new_gateway_pids})
@@ -168,7 +170,7 @@ defmodule EdgeAdmin.AdminGateway.Coordinator do
 
     child_spec = %{
       id: {:gateway, cluster_name},
-      start: {EdgeAdmin.AdminGateway.Worker, :start_link, [cluster_name]},
+      start: {EdgeAdmin.GatewayRegistry.VirtualGateway, :start_link, [cluster_name]},
       restart: :transient
     }
 

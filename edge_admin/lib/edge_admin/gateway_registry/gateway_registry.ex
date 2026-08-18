@@ -1,20 +1,21 @@
-# edge_admin/lib/edge_admin/admin_gateway/router.ex
-defmodule EdgeAdmin.AdminGateway.Router do
+# edge_admin/lib/edge_admin/gateway_registry/gateway_registry.ex
+defmodule EdgeAdmin.GatewayRegistry do
   @moduledoc """
-  Resolves clusters to the Admin Gateway responsible for them.
+  Registry and routing boundary for virtual gateways.
 
-  This is the routing boundary for Admin Gateway callers. The current runtime
-  uses the Gateway process directly; the lookup details remain contained here.
+  This module owns lookup of the virtual gateway responsible for a cluster and
+  exposes request/stream operations to callers. The lookup details remain
+  contained inside the registry.
   """
 
   alias EdgeAdmin.AdminClustering.Metadata
-  alias EdgeAdmin.AdminGateway.Worker
+  alias EdgeAdmin.GatewayRegistry.VirtualGateway
   alias EdgeAdminProxy.AdminTunnel.Client, as: AdminTunnelClient
   alias EdgeAdminProxy.Config, as: ProxyConfig
 
   @spec resolve(String.t()) :: {:ok, pid()} | {:error, :no_owner | :gateway_not_found}
   def resolve(cluster_name) when is_binary(cluster_name) do
-    Worker.lookup(cluster_name)
+    VirtualGateway.lookup(cluster_name)
   end
 
   @spec resolve_node(struct()) ::
@@ -27,7 +28,7 @@ defmodule EdgeAdmin.AdminGateway.Router do
           {:ok, :gen_tcp.socket()} | {:error, term()}
   def open_stream(cluster_name, target_host, target_port) do
     with owner when is_binary(owner) <- Metadata.get_cluster_owner(cluster_name),
-         {:ok, _gateway_pid} <- Worker.lookup(cluster_name) do
+         {:ok, _gateway_pid} <- VirtualGateway.lookup(cluster_name) do
       if owner == Application.get_env(:edge_admin, :admin_name) do
         connect_local_target(target_host, target_port)
       else

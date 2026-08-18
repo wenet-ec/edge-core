@@ -6,9 +6,15 @@ defmodule EdgeAdmin.Application do
   Two child-tree shapes selected by `EDGE_ADMIN_MODE`:
 
     * `EDGE_ADMIN_MODE=test` — minimal tree (Vault, Repo, PubSub, Oban,
-      Endpoint). Used by the test env; skips PromEx, Membership, AdminGateway,
+      Endpoint). Used by the test env; skips PromEx, Membership, GatewayRegistry,
       Metadata, LocalScheduler, EdgeAdminProxy, MCP, etc.
-    * unset (default) — full server tree.
+  * unset (default) — full server tree.
+
+  The full server tree is the default bundled Admin role. It currently runs
+  both architectural responsibilities in one application: the Admin Router
+  and the Gateway Registry. A future `ADMIN_ROLE` configuration may select
+  `default` (both responsibilities), `router`, or `gateway_registry`; that
+  role split is not active yet, so the current server tree always starts both.
 
   The active repo is selected by `DB_ADAPTER` via `:repo_impl` (Postgres or
   SQLite). Postgres mode also starts a Notifier sub-repo for Oban LISTEN.
@@ -80,7 +86,7 @@ defmodule EdgeAdmin.Application do
 
   defp build_children(:server) do
     router_foundation_children() ++
-      gateway_coordination_children() ++
+      gateway_registry_children() ++
       router_scheduler_children() ++
       gateway_proxy_children() ++
       router_endpoint_children()
@@ -99,12 +105,12 @@ defmodule EdgeAdmin.Application do
       ]
   end
 
-  # Gateway-owned children manage edge-cluster VPN memberships and data-plane
-  # proxy listeners.
-  defp gateway_coordination_children do
+  # Gateway Registry children manage edge-cluster VPN memberships and virtual
+  # Gateway lifecycles.
+  defp gateway_registry_children do
     [
-      EdgeAdmin.AdminGateway.Supervisor,
-      EdgeAdmin.AdminGateway.Coordinator
+      EdgeAdmin.GatewayRegistry.Supervisor,
+      EdgeAdmin.GatewayRegistry.Coordinator
     ]
   end
 
@@ -112,8 +118,8 @@ defmodule EdgeAdmin.Application do
     [EdgeAdmin.AdminClustering.Metadata, EdgeAdmin.LocalScheduler.History, EdgeAdmin.LocalScheduler]
   end
 
-  # The proxy supervisor is Gateway-owned because it includes the raw
-  # Admin-to-Admin data-plane listener and the edge-facing proxy servers.
+  # Data-plane proxy children include the raw Admin-to-Admin tunnel and the
+  # edge-facing proxy servers.
   defp gateway_proxy_children do
     [EdgeAdminProxy.Supervisor]
   end

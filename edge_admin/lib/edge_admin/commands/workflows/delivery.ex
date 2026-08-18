@@ -10,8 +10,6 @@ defmodule EdgeAdmin.Commands.Workflows.Delivery do
   import Ecto.Query, warn: false
 
   alias EdgeAdmin.AdminClustering.Metadata
-  alias EdgeAdmin.AdminGateway.Router, as: GatewayRouter
-  alias EdgeAdmin.AdminGateway.Worker, as: GatewayWorker
   alias EdgeAdmin.Commands.Forms
   alias EdgeAdmin.Commands.Resources.Commands, as: CommandResource
   alias EdgeAdmin.Commands.Schemas.Command
@@ -20,6 +18,8 @@ defmodule EdgeAdmin.Commands.Workflows.Delivery do
   alias EdgeAdmin.Commands.Workflows.CommandExecutionLifecycle
   alias EdgeAdmin.Events
   alias EdgeAdmin.Events.Catalog
+  alias EdgeAdmin.GatewayRegistry
+  alias EdgeAdmin.GatewayRegistry.VirtualGateway
   alias EdgeAdmin.Nodes.Targeting
   alias EdgeAdmin.Repo
 
@@ -375,8 +375,8 @@ defmodule EdgeAdmin.Commands.Workflows.Delivery do
   end
 
   defp deliver_execution_via_gateway(node, execution_data) do
-    with {:ok, gateway} <- GatewayRouter.resolve_node(node) do
-      GatewayWorker.deliver_execution(gateway, node, execution_data)
+    with {:ok, gateway} <- GatewayRegistry.resolve_node(node) do
+      VirtualGateway.deliver_execution(gateway, node, execution_data)
     end
   end
 end

@@ -27,16 +27,17 @@ defmodule EdgeAgent.LocalScheduler.Tasks do
   require Logger
 
   @doc """
-  Probe the VPN for `admin-*` peers and refresh the cached admin URL list.
+  Probe the VPN for `admin-*` Admin Gateway peers and refresh the cached Admin
+  Gateway URL list.
 
-  Always runs. Discovery returns an empty list if no admins are reachable;
-  no separate guard is needed.
+  Always runs. Discovery returns an empty list if no Admin Gateways are
+  reachable; no separate guard is needed.
   """
   @spec discover_admins() :: :ok
   def discover_admins do
     Logger.debug("LocalScheduler: discover_admins started")
     {:ok, _network_name, admin_urls} = Discovery.discover_admins()
-    Logger.debug("LocalScheduler: discover_admins done — #{length(admin_urls)} admin(s)")
+    Logger.debug("LocalScheduler: discover_admins done — #{length(admin_urls)} Admin Gateway(s)")
 
     :telemetry.execute(
       [:edge_agent, :discovery, :scan],
@@ -48,7 +49,7 @@ defmodule EdgeAgent.LocalScheduler.Tasks do
   end
 
   @doc """
-  Refreshes non-secret Admin-advertised settings configuration.
+  Refreshes non-secret settings configuration advertised by the Admin Gateway.
   """
   @spec refresh_settings_config() :: :ok
   def refresh_settings_config do
@@ -57,9 +58,10 @@ defmodule EdgeAgent.LocalScheduler.Tasks do
   end
 
   @doc """
-  Report node health to admin via HTTP fallback.
+  Report node health to the Admin Gateway via HTTP fallback.
 
-  Skipped when VPN is up — admin pings the agent directly in that case.
+  Skipped when VPN is up — the Admin Gateway pings the agent directly in that
+  case.
   """
   @spec report_health_check() :: :ok
   def report_health_check do
@@ -75,7 +77,7 @@ defmodule EdgeAgent.LocalScheduler.Tasks do
   end
 
   @doc """
-  Push diagnostics to Admin via HTTP fallback.
+  Push diagnostics to the Admin Gateway via HTTP fallback.
   """
   @spec push_diagnostics() :: :ok
   def push_diagnostics do
@@ -91,7 +93,7 @@ defmodule EdgeAgent.LocalScheduler.Tasks do
   end
 
   @doc """
-  Push scraped local metrics to admin via HTTP fallback.
+  Push scraped local metrics to the Admin Gateway via HTTP fallback.
 
   Skipped when VPN is up — Prometheus scrapes directly through admin's
   cluster gateway in that case.
@@ -110,9 +112,10 @@ defmodule EdgeAgent.LocalScheduler.Tasks do
   end
 
   @doc """
-  Pull executions admin has for this node via HTTP fallback.
+  Pull executions the Admin Gateway has queued for this node via HTTP fallback.
 
-  Skipped when VPN is up — admin pushes executions to the agent directly.
+  Skipped when VPN is up — the Admin Gateway pushes executions to the agent
+  directly.
   """
   @spec sync_unprocessed_executions() :: :ok
   def sync_unprocessed_executions do
@@ -128,7 +131,7 @@ defmodule EdgeAgent.LocalScheduler.Tasks do
   end
 
   @doc """
-  Poll admin for a pending self-update request via HTTP fallback.
+  Poll the Admin Gateway for a pending self-update request via HTTP fallback.
 
   Skipped when VPN is up, when no fallback is configured, or when self-update
   is disabled by env var.

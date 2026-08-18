@@ -46,10 +46,10 @@ defmodule EdgeAgent.AdminGateway.Transport do
 
     cond do
       vpn_urls == [] and fallback_urls != [] ->
-        Logger.info("No VPN admin URLs, using HTTP fallback: #{inspect(fallback_urls)}")
+        Logger.info("No VPN Admin Gateway URLs, using HTTP fallback: #{inspect(fallback_urls)}")
 
       vpn_urls != [] and fallback_urls != [] ->
-        Logger.debug("VPN admin URLs will be tried before public fallback URLs: #{inspect(fallback_urls)}")
+        Logger.debug("VPN Admin Gateway URLs will be tried before public fallback URLs: #{inspect(fallback_urls)}")
 
       true ->
         :ok
@@ -71,7 +71,7 @@ defmodule EdgeAgent.AdminGateway.Transport do
     end
   end
 
-  defp try_request([], _path, _request_fn), do: {:error, {:all_requests_failed, "All admin URLs failed"}}
+  defp try_request([], _path, _request_fn), do: {:error, {:all_requests_failed, "All Admin Gateway URLs failed"}}
 
   defp try_request_with_auth([url | remaining], path, headers, request_fn) do
     full_url = "#{url}#{path}"
@@ -87,5 +87,5 @@ defmodule EdgeAgent.AdminGateway.Transport do
   end
 
   defp try_request_with_auth([], _path, _headers, _request_fn),
-    do: {:error, {:all_requests_failed, "All admin URLs failed"}}
+    do: {:error, {:all_requests_failed, "All Admin Gateway URLs failed"}}
 end

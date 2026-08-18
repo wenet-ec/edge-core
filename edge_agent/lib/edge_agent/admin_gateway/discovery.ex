@@ -3,9 +3,9 @@ defmodule EdgeAgent.AdminGateway.Discovery do
   @moduledoc """
   Admin Gateway discovery via WireGuard peer inspection.
 
-  Lists VPN peers, probes peers named `admin-*` on the discovery endpoint, and
-  stores confirmed Admin URLs in Settings. An empty result is still stored so
-  other components can enter HTTP fallback mode.
+  Lists VPN peers, probes peers named `admin-*` on the Admin Gateway discovery
+  endpoint, and stores confirmed Admin Gateway URLs in Settings. An empty
+  result is still stored so other components can enter HTTP fallback mode.
   """
 
   alias EdgeAgent.AdminGateway.Client
@@ -84,13 +84,13 @@ defmodule EdgeAgent.AdminGateway.Discovery do
   defp first_network_or([], fallback), do: fallback
 
   defp record_discovery(found_network, []) do
-    Logger.warning("No admins discovered across any network")
+    Logger.warning("No Admin Gateways discovered across any network")
     Settings.set_admin_urls([])
     {:ok, found_network, []}
   end
 
   defp record_discovery(found_network, admin_urls) do
-    Logger.info("Discovered #{length(admin_urls)} unique admin(s) across all networks")
+    Logger.info("Discovered #{length(admin_urls)} unique Admin Gateway(s) across all networks")
     Settings.set_admin_urls(admin_urls)
     {:ok, found_network, admin_urls}
   end
@@ -107,7 +107,7 @@ defmodule EdgeAgent.AdminGateway.Discovery do
 
     case Client.probe(base_url) do
       {:ok, admin_name} ->
-        Logger.info("✓ Discovered admin: #{admin_name} (#{ip}) on #{network_name}")
+        Logger.info("✓ Discovered Admin Gateway: #{admin_name} (#{ip}) on #{network_name}")
         [base_url]
 
       {:error, :unexpected_body} ->
@@ -125,7 +125,7 @@ defmodule EdgeAgent.AdminGateway.Discovery do
   end
 
   defp probe_peer(peer, network_name, _port) do
-    Logger.debug("✗ Skipping peer on #{network_name} (not admin or no IP): #{inspect(peer)}")
+    Logger.debug("✗ Skipping peer on #{network_name} (not an Admin Gateway or no IP): #{inspect(peer)}")
     []
   end
 end

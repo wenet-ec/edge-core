@@ -9,7 +9,8 @@ defmodule EdgeAgentWeb.Router do
     reflection endpoint, which the Edge VPN CLI calls without credentials.
   - `:api` — JSON + `ApiTokenAuth` (bearer token verified against the
     agent's stored API token from bootstrap registration). All
-    admin↔agent endpoints sit here.
+    Admin Gateway↔agent endpoints sit here. In the bundled deployment, these
+    endpoints are backed by the responsible per-cluster VirtualGateway.
 
   Routes mirror what `EdgeAgent.AdminGateway.Client` documents on the
   admin side; if you add one here, update that moduledoc's endpoint list

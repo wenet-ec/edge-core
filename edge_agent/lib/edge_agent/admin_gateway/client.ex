@@ -1,12 +1,15 @@
 # edge_agent/lib/edge_agent/admin_gateway/client.ex
 defmodule EdgeAgent.AdminGateway.Client do
   @moduledoc """
-  HTTP client for Agent-to-Admin Gateway API calls.
+  HTTP client for Agent-to-Admin Gateway API calls. These are calls to the
+  Admin Gateway's Agent-facing surface; the Agent does not call the Router
+  directly. In the bundled deployment, that surface reaches the responsible
+  per-cluster VirtualGateway inside the Admin process.
 
   Bootstrap enrollment uses URLs from the decoded enrollment-key blob. All
   post-registration calls use Settings URLs through `Transport`: VPN-discovered
-  Admin URLs first, then public fallback URLs on transport failure. Reachable
-  HTTP responses are terminal.
+  Admin Gateway URLs are tried first, followed by public fallback URLs on
+  transport failure. Reachable HTTP responses are terminal.
   """
 
   alias EdgeAgent.AdminGateway.Transport
@@ -24,7 +27,8 @@ defmodule EdgeAgent.AdminGateway.Client do
   end
 
   @doc """
-  Probes a raw admin URL to check if it is a reachable EdgeAdmin instance.
+  Probes a raw Admin Gateway URL to check if it is a reachable gateway
+  instance.
 
   GET /api/v1/admins/me/discovery
   """
@@ -54,7 +58,7 @@ defmodule EdgeAgent.AdminGateway.Client do
   end
 
   @doc """
-  Verify an enrollment key with admin before joining the VPN.
+  Verify an enrollment key with the Admin Gateway before joining the VPN.
 
   Retries the next enrollment URL on degraded-mode 503 and network errors.
 
@@ -69,7 +73,7 @@ defmodule EdgeAgent.AdminGateway.Client do
   end
 
   defp try_verify([], _path, _payload) do
-    {:error, {:all_requests_failed, "All admin URLs failed during enrollment key verification"}}
+    {:error, {:all_requests_failed, "All Admin Gateway URLs failed during enrollment key verification"}}
   end
 
   defp try_verify([url | rest], path, payload) do
@@ -86,7 +90,7 @@ defmodule EdgeAgent.AdminGateway.Client do
          }}
 
       {:ok, %{status: 503}} ->
-        Logger.warning("Admin at #{url} is in degraded mode, trying next URL...")
+        Logger.warning("Admin Gateway at #{url} is in degraded mode, trying next URL...")
         try_verify(rest, path, payload)
 
       {:ok, %{status: status, body: body}} ->
@@ -100,7 +104,7 @@ defmodule EdgeAgent.AdminGateway.Client do
   end
 
   @doc """
-  Register this node with an admin.
+  Register this node with an Admin Gateway.
 
   POST /api/v1/agents/nodes/register
   """
@@ -298,7 +302,7 @@ defmodule EdgeAgent.AdminGateway.Client do
   end
 
   @doc """
-  Reports node health check status to admin.
+  Reports node health check status to the Admin Gateway.
 
   POST /api/v1/agents/nodes/me/health_check
   """
@@ -327,7 +331,7 @@ defmodule EdgeAgent.AdminGateway.Client do
   end
 
   @doc """
-  Pushes a diagnostic report to Admin through the normal
+  Pushes a diagnostic report to the Admin Gateway through the normal
   authenticated VPN-first/fallback client.
 
   POST /api/v1/agents/diagnostics/push
@@ -405,7 +409,7 @@ defmodule EdgeAgent.AdminGateway.Client do
   end
 
   @doc """
-  Pushes metrics cache to admin for HTTP fallback mode.
+  Pushes metrics cache to the Admin Gateway for HTTP fallback mode.
 
   POST /api/v1/agents/metrics/push
   """
@@ -423,7 +427,7 @@ defmodule EdgeAgent.AdminGateway.Client do
 
       case Req.post(url, opts) do
         {:ok, %{status: 200, body: %{"data" => data}}} ->
-          Logger.debug("Pushed #{metrics_type} metrics to admin")
+          Logger.debug("Pushed #{metrics_type} metrics to Admin Gateway")
           {:ok, data}
 
         {:ok, %{status: status_code, body: body}} ->
@@ -438,7 +442,7 @@ defmodule EdgeAgent.AdminGateway.Client do
   end
 
   @doc """
-  Registers an alias (friendly name) for this node with admin.
+  Registers an alias (friendly name) for this node with the Admin Gateway.
 
   Called during bootstrap for each name in the ALIASES env var.
 

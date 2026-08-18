@@ -3,8 +3,8 @@ defmodule EdgeAgent.AdminGateway.HealthCheck do
   @moduledoc """
   Health check reporting to the Admin Gateway during HTTP fallback.
 
-  When VPN is unavailable, agents report their health status to admin
-  via HTTP fallback to maintain visibility and node tracking.
+  When VPN is unavailable, agents report their health status to the Admin
+  Gateway via HTTP fallback to maintain visibility and node tracking.
   """
 
   alias EdgeAgent.AdminGateway.Client

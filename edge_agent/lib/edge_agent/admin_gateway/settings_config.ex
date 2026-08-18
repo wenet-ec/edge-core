@@ -4,8 +4,9 @@ defmodule EdgeAgent.AdminGateway.SettingsConfig do
   Refreshes non-secret, Admin Gateway-advertised Settings Config.
 
   Values are fetched from the authenticated `/api/v1/agents/settings/config`
-  endpoint through the normal VPN-first Admin client. Newly learned URLs are
-  prepended locally while known URLs are retained for rolling hostname migration.
+  endpoint through the normal VPN-first Admin Gateway client. Newly learned
+  URLs are prepended locally while known URLs are retained for rolling
+  hostname migration.
   """
 
   alias EdgeAgent.AdminGateway.Client

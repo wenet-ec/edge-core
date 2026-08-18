@@ -101,8 +101,8 @@ defmodule EdgeAdminProxy.Tunnel.TcpTunnel do
     end
   end
 
-  defp agent_proxy_port(:http), do: Application.get_env(:edge_agent, :http_proxy_port, 43_128)
-  defp agent_proxy_port(:socks5), do: Application.get_env(:edge_agent, :socks5_proxy_port, 41_080)
+  defp agent_proxy_port(:http), do: Application.get_env(:edge_agent, :agent_http_proxy_port, 43_128)
+  defp agent_proxy_port(:socks5), do: Application.get_env(:edge_agent, :agent_socks5_proxy_port, 41_080)
 
   defp handshake(socket, :http, target_host, target_port, proxy_password, initial_data) do
     auth_header = "Proxy-Authorization: Basic #{Base.encode64("_:#{proxy_password}")}\r\n"

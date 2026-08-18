@@ -222,6 +222,8 @@ cors_headers =
     csv -> csv |> String.split(",") |> Enum.map(&(&1 |> String.trim() |> String.downcase()))
   end
 
+admin_api_port = get_env("ADMIN_API_PORT", :integer, 44_000)
+
 config :edge_admin, Corsica,
   origins: get_env("CORS_ALLOWED_ORIGINS", :cors),
   allow_headers: cors_headers,
@@ -230,7 +232,7 @@ config :edge_admin, Corsica,
 config :edge_admin, EdgeAdminWeb.Endpoint,
   http: [
     ip: {0, 0, 0, 0, 0, 0, 0, 0},
-    port: get_env("API_PORT", :integer, 44_000)
+    port: admin_api_port
   ],
   secret_key_base: get_env!("SECRET_KEY_BASE"),
   live_view: [
@@ -532,8 +534,8 @@ config :edge_admin,
   node_health_check_concurrency:
     get_env("NODE_HEALTH_CHECK_CONCURRENCY", :integer, default_node_health_check_concurrency),
   command_delivery_concurrency: get_env("COMMAND_DELIVERY_CONCURRENCY", :integer, default_command_delivery_concurrency),
-  http_proxy_port: get_env("HTTP_PROXY_PORT", :integer, 43_128),
-  socks5_proxy_port: get_env("SOCKS5_PROXY_PORT", :integer, 41_080),
+  admin_http_proxy_port: get_env("ADMIN_HTTP_PROXY_PORT", :integer, 43_128),
+  admin_socks5_proxy_port: get_env("ADMIN_SOCKS5_PROXY_PORT", :integer, 41_080),
   metrics_base_url: get_env!("METRICS_BASE_URL"),
   edge_vpn_bootstrap_username: get_env!("EDGE_VPN_BOOTSTRAP_USERNAME"),
   edge_vpn_bootstrap_password: get_env!("EDGE_VPN_BOOTSTRAP_PASSWORD")

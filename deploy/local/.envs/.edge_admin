@@ -52,7 +52,7 @@ DB_SSL=false
 # DB_NOTIFIER_PORT=5432
 
 # Phoenix / Web Server
-API_PORT=44000
+ADMIN_API_PORT=44000
 SECRET_KEY_BASE=zsIbO5eGH9IJ1p+E6M1a1VL4bIGrwLeTS8W7q8QDAOE/o3Ucy0si768bJxmF4A1Q
 CORS_ALLOWED_ORIGINS=*
 # Comma-separated list of allowed request headers, or `*` to mirror whatever
@@ -109,8 +109,8 @@ ENCRYPTION_TAG=AES.GCM.V1
 # ROTATE_NEW_ENCRYPTION_TAG=
 
 # Proxy Servers
-HTTP_PROXY_PORT=43128
-SOCKS5_PROXY_PORT=41080
+ADMIN_HTTP_PROXY_PORT=43128
+ADMIN_SOCKS5_PROXY_PORT=41080
 
 # Per-operation proxy timeouts (in milliseconds)
 # PROXY_CONNECTION_TIMEOUT_MS=2000        # TCP connect to target host (default: 2s)

@@ -24,8 +24,8 @@ defmodule EdgeAdminProxy do
 
   ## Listeners
 
-  - **HTTP Forward Proxy**: Port 43128 (configurable via `HTTP_PROXY_PORT`)
-  - **SOCKS5 Proxy**: Port 41080 (configurable via `SOCKS5_PROXY_PORT`)
+  - **HTTP Forward Proxy**: Port 43128 (configurable via `ADMIN_HTTP_PROXY_PORT`)
+  - **SOCKS5 Proxy**: Port 41080 (configurable via `ADMIN_SOCKS5_PROXY_PORT`)
 
   Authentication (both listeners):
   - **Username**: `_` / empty for direct, node DNS hostname for chaining

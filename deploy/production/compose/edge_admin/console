@@ -13,7 +13,7 @@ fi
 
 node_name=""
 for _ in {1..30}; do
-    response="$(curl "${curl_args[@]}" "http://127.0.0.1:${API_PORT:-44000}/api/v1/admins/me" 2>/dev/null || true)"
+    response="$(curl "${curl_args[@]}" "http://127.0.0.1:${ADMIN_API_PORT:-44000}/api/v1/admins/me" 2>/dev/null || true)"
     node_name="$(printf '%s' "$response" | sed -n 's/.*"erlang_node_name":"\([^"]*\)".*/\1/p')"
 
     if [ -n "$node_name" ]; then

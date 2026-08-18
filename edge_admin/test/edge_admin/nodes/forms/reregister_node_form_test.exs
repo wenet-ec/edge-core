@@ -12,6 +12,7 @@ defmodule EdgeAdmin.Nodes.Forms.ReregisterNodeFormTest do
         "network_name" => "cluster-test",
         "http_port" => 4000,
         "ssh_port" => 40_022,
+        "agent_metrics_port" => 44_000,
         "host_metrics_port" => 9100,
         "wireguard_metrics_port" => 9586,
         "http_proxy_port" => 8080,

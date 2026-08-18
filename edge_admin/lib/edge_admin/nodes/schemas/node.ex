@@ -40,6 +40,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
   @port_fields [
     :http_port,
     :ssh_port,
+    :agent_metrics_port,
     :host_metrics_port,
     :wireguard_metrics_port,
     :http_proxy_port,
@@ -55,6 +56,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
           version: String.t(),
           http_port: integer(),
           ssh_port: integer(),
+          agent_metrics_port: integer(),
           host_metrics_port: integer(),
           wireguard_metrics_port: integer(),
           http_proxy_port: integer(),
@@ -110,6 +112,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
 
     field(:http_port, :integer)
     field(:ssh_port, :integer)
+    field(:agent_metrics_port, :integer, default: 44_000)
     field(:host_metrics_port, :integer)
     field(:wireguard_metrics_port, :integer)
     field(:http_proxy_port, :integer)
@@ -164,6 +167,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
       :status,
       :http_port,
       :ssh_port,
+      :agent_metrics_port,
       :host_metrics_port,
       :wireguard_metrics_port,
       :http_proxy_port,
@@ -182,6 +186,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
       :vpn_host_id,
       :http_port,
       :ssh_port,
+      :agent_metrics_port,
       :host_metrics_port,
       :wireguard_metrics_port,
       :http_proxy_port,
@@ -193,6 +198,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
     ])
     |> check_constraint(:http_port, name: :nodes_http_port_valid)
     |> check_constraint(:ssh_port, name: :nodes_ssh_port_valid)
+    |> check_constraint(:agent_metrics_port, name: :nodes_agent_metrics_port_valid)
     |> check_constraint(:host_metrics_port, name: :nodes_host_metrics_port_valid)
     |> check_constraint(:wireguard_metrics_port, name: :nodes_wireguard_metrics_port_valid)
     |> check_constraint(:http_proxy_port, name: :nodes_http_proxy_port_valid)

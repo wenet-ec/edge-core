@@ -23,6 +23,7 @@ defmodule EdgeAdmin.Nodes.Views.NodeView do
       mdns_hostname: NodeSchema.mdns_hostname(node),
       http_port: node.http_port,
       ssh_port: node.ssh_port,
+      agent_metrics_port: node.agent_metrics_port,
       host_metrics_port: node.host_metrics_port,
       wireguard_metrics_port: node.wireguard_metrics_port,
       http_proxy_port: node.http_proxy_port,

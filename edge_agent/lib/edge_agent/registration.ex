@@ -107,6 +107,7 @@ defmodule EdgeAgent.Registration do
     %{
       network_name: network_name,
       http_port: Application.fetch_env!(:edge_agent, :agent_api_port),
+      agent_metrics_port: Application.fetch_env!(:edge_agent, :agent_metrics_port),
       ssh_port: Application.fetch_env!(:edge_agent, :agent_ssh_port),
       host_metrics_port: Application.fetch_env!(:edge_agent, :agent_host_metrics_port),
       wireguard_metrics_port: Application.fetch_env!(:edge_agent, :agent_wireguard_metrics_port),

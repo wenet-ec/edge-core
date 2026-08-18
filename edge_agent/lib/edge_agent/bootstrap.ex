@@ -40,6 +40,7 @@ defmodule EdgeAgent.Bootstrap do
   - `:public_enrollment_key_urls` - List of URLs to fetch enrollment key blob (tried in order)
   - `:run_bootstrap` - Whether to run bootstrap (default: true)
   - `:agent_api_port` - Agent HTTP API port (sent to admin as `http_port`)
+  - `:agent_metrics_port` - Agent PromEx metrics port (defaults to the API port)
   - `:agent_ssh_port` - Agent SSH server port
   - `:agent_host_metrics_port` - Node exporter port
   - `:agent_wireguard_metrics_port` - WireGuard exporter port

@@ -130,6 +130,10 @@ ADMIN_SOCKS5_PROXY_PORT=41080
 # Admin's own Prometheus metrics scrape target (host:port, no scheme).
 METRICS_BASE_URL=edge_admin_a1:44000
 
+# Optional standalone PromEx listener. When unset, metrics remain on the API
+# listener at ADMIN_API_PORT (default: 44000).
+# ADMIN_METRICS_PORT=49090
+
 # SENTRY_DSN=https://...@sentry.io/...
 SENTRY_ENVIRONMENT_NAME=local
 

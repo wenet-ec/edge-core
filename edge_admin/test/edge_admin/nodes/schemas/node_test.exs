@@ -40,6 +40,7 @@ defmodule EdgeAdmin.Nodes.Schemas.NodeTest do
         status: :healthy,
         http_port: 44_000,
         ssh_port: 40_022,
+        agent_metrics_port: 44_000,
         host_metrics_port: 49_100,
         wireguard_metrics_port: 49_586,
         http_proxy_port: 43_128,
@@ -110,6 +111,7 @@ defmodule EdgeAdmin.Nodes.Schemas.NodeTest do
       for field <- [
             :http_port,
             :ssh_port,
+            :agent_metrics_port,
             :host_metrics_port,
             :wireguard_metrics_port,
             :http_proxy_port,
@@ -125,6 +127,7 @@ defmodule EdgeAdmin.Nodes.Schemas.NodeTest do
       for field <- [
             :http_port,
             :ssh_port,
+            :agent_metrics_port,
             :host_metrics_port,
             :wireguard_metrics_port,
             :http_proxy_port,

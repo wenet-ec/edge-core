@@ -228,6 +228,11 @@ cors_headers =
   end
 
 admin_api_port = get_env("ADMIN_API_PORT", :integer, 44_000)
+admin_metrics_port = get_env("ADMIN_METRICS_PORT", :integer, nil)
+
+if is_integer(admin_metrics_port) and admin_metrics_port == admin_api_port do
+  raise "ADMIN_METRICS_PORT must differ from ADMIN_API_PORT when dedicated metrics are enabled"
+end
 
 token_auth_enabled =
   api_auth_enabled or proxy_auth_enabled or mcp_auth_enabled or metrics_auth_enabled
@@ -542,6 +547,10 @@ config :edge_admin,
   metrics_base_url: get_env!("METRICS_BASE_URL"),
   edge_vpn_bootstrap_username: get_env!("EDGE_VPN_BOOTSTRAP_USERNAME"),
   edge_vpn_bootstrap_password: get_env!("EDGE_VPN_BOOTSTRAP_PASSWORD")
+
+config :edge_admin,
+  admin_metrics_port: admin_metrics_port,
+  admin_metrics_dedicated: is_integer(admin_metrics_port)
 
 # Event delivery — applies to both broker and webhook channels
 # CORE_NAME stamps every envelope with the publishing instance's identity.

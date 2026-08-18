@@ -199,6 +199,7 @@ defmodule EdgeAdmin.Nodes.Workflows.Registration do
       last_seen_at: now,
       http_port: attrs["http_port"],
       ssh_port: attrs["ssh_port"],
+      agent_metrics_port: attrs["agent_metrics_port"],
       host_metrics_port: attrs["host_metrics_port"],
       wireguard_metrics_port: attrs["wireguard_metrics_port"],
       http_proxy_port: attrs["http_proxy_port"],

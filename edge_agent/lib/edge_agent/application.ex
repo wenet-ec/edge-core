@@ -72,6 +72,7 @@ defmodule EdgeAgent.Application do
       EdgeAgent.Bootstrap,
       EdgeAgent.Vpn.DerpMapCache,
       EdgeAgent.Lan.Mdns,
+      EdgeAgent.PromEx.Server,
       EdgeAgentWeb.Endpoint
     ]
   end

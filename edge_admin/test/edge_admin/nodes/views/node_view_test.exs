@@ -42,6 +42,7 @@ defmodule EdgeAdmin.Nodes.Views.NodeViewTest do
       status: :healthy,
       http_port: 44_000,
       ssh_port: 40_022,
+      agent_metrics_port: 44_000,
       host_metrics_port: 9100,
       wireguard_metrics_port: 9586,
       http_proxy_port: 8080,
@@ -85,6 +86,7 @@ defmodule EdgeAdmin.Nodes.Views.NodeViewTest do
       # Ports.
       assert result.http_port == 44_000
       assert result.ssh_port == 40_022
+      assert result.agent_metrics_port == 44_000
       assert result.host_metrics_port == 9100
       assert result.wireguard_metrics_port == 9586
       assert result.http_proxy_port == 8080
@@ -151,6 +153,7 @@ defmodule EdgeAdmin.Nodes.Views.NodeViewTest do
           id node_name cluster_name enrollment_key_id vpn_host_id status
           vpn_hostname mdns_hostname
           http_port ssh_port host_metrics_port wireguard_metrics_port
+          agent_metrics_port
           http_proxy_port socks5_proxy_port
           version self_update_enabled last_seen_at
           aliases inserted_at updated_at

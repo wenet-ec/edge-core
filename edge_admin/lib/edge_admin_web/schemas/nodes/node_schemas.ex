@@ -123,6 +123,10 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
           type: :integer,
           description: "SSH port"
         },
+        agent_metrics_port: %Schema{
+          type: :integer,
+          description: "Agent PromEx metrics port"
+        },
         host_metrics_port: %Schema{
           type: :integer,
           description: "Host metrics port (Node Exporter)"
@@ -175,6 +179,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
         :cluster_name,
         :http_port,
         :ssh_port,
+        :agent_metrics_port,
         :host_metrics_port,
         :wireguard_metrics_port,
         :http_proxy_port,
@@ -194,6 +199,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
         mdns_hostname: "node-01234567-89ab-cdef-0123-456789abcdef.local",
         http_port: 44_000,
         ssh_port: 42_222,
+        agent_metrics_port: 44_000,
         host_metrics_port: 49_100,
         wireguard_metrics_port: 49_586,
         http_proxy_port: 44_880,

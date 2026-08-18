@@ -24,6 +24,11 @@ defmodule EdgeAdmin.Repo.Migrations.CreateNodes do
 
       add :ssh_port, :integer, null: false, check: %{name: "nodes_ssh_port_valid", expr: "ssh_port BETWEEN 1 AND 65535"}
 
+      add :agent_metrics_port, :integer,
+        null: false,
+        default: 44_000,
+        check: %{name: "nodes_agent_metrics_port_valid", expr: "agent_metrics_port BETWEEN 1 AND 65535"}
+
       add :host_metrics_port, :integer,
         null: false,
         check: %{name: "nodes_host_metrics_port_valid", expr: "host_metrics_port BETWEEN 1 AND 65535"}
@@ -54,6 +59,7 @@ defmodule EdgeAdmin.Repo.Migrations.CreateNodes do
     if repo().__adapter__() == Ecto.Adapters.Postgres do
       create constraint(:nodes, :nodes_http_port_valid, check: "http_port BETWEEN 1 AND 65535")
       create constraint(:nodes, :nodes_ssh_port_valid, check: "ssh_port BETWEEN 1 AND 65535")
+      create constraint(:nodes, :nodes_agent_metrics_port_valid, check: "agent_metrics_port BETWEEN 1 AND 65535")
       create constraint(:nodes, :nodes_host_metrics_port_valid, check: "host_metrics_port BETWEEN 1 AND 65535")
 
       create constraint(:nodes, :nodes_wireguard_metrics_port_valid,

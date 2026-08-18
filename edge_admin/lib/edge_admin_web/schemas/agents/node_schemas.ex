@@ -35,6 +35,12 @@ defmodule EdgeAdminWeb.Schemas.Agents.NodeSchemas do
           description: "Agent HTTP API port admin should reach on this node"
         },
         ssh_port: %Schema{type: :integer, minimum: 1, maximum: 65_535, description: "Agent SSH server port"},
+        agent_metrics_port: %Schema{
+          type: :integer,
+          minimum: 1,
+          maximum: 65_535,
+          description: "Agent PromEx metrics port"
+        },
         host_metrics_port: %Schema{
           type: :integer,
           minimum: 1,
@@ -63,6 +69,7 @@ defmodule EdgeAdminWeb.Schemas.Agents.NodeSchemas do
         :network_name,
         :http_port,
         :ssh_port,
+        :agent_metrics_port,
         :host_metrics_port,
         :wireguard_metrics_port,
         :http_proxy_port,
@@ -105,6 +112,12 @@ defmodule EdgeAdminWeb.Schemas.Agents.NodeSchemas do
         network_name: %Schema{type: :string, description: "Edge VPN network name (must start with 'cluster-')"},
         http_port: %Schema{type: :integer, minimum: 1, maximum: 65_535, description: "Agent HTTP API port"},
         ssh_port: %Schema{type: :integer, minimum: 1, maximum: 65_535, description: "Agent SSH server port"},
+        agent_metrics_port: %Schema{
+          type: :integer,
+          minimum: 1,
+          maximum: 65_535,
+          description: "Agent PromEx metrics port"
+        },
         host_metrics_port: %Schema{
           type: :integer,
           minimum: 1,
@@ -126,6 +139,7 @@ defmodule EdgeAdminWeb.Schemas.Agents.NodeSchemas do
         :network_name,
         :http_port,
         :ssh_port,
+        :agent_metrics_port,
         :host_metrics_port,
         :wireguard_metrics_port,
         :http_proxy_port,

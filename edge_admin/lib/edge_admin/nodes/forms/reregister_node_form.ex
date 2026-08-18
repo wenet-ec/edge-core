@@ -14,6 +14,7 @@ defmodule EdgeAdmin.Nodes.Forms.ReregisterNodeForm do
     field(:network_name, :string)
     field(:http_port, :integer)
     field(:ssh_port, :integer)
+    field(:agent_metrics_port, :integer)
     field(:host_metrics_port, :integer)
     field(:wireguard_metrics_port, :integer)
     field(:http_proxy_port, :integer)
@@ -26,6 +27,7 @@ defmodule EdgeAdmin.Nodes.Forms.ReregisterNodeForm do
     :network_name,
     :http_port,
     :ssh_port,
+    :agent_metrics_port,
     :host_metrics_port,
     :wireguard_metrics_port,
     :http_proxy_port,
@@ -43,6 +45,7 @@ defmodule EdgeAdmin.Nodes.Forms.ReregisterNodeForm do
     |> validate_network_name()
     |> validate_port(:http_port)
     |> validate_port(:ssh_port)
+    |> validate_port(:agent_metrics_port)
     |> validate_port(:host_metrics_port)
     |> validate_port(:wireguard_metrics_port)
     |> validate_port(:http_proxy_port)

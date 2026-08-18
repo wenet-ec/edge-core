@@ -126,6 +126,7 @@ defmodule EdgeAdmin.Application do
 
   defp router_endpoint_children do
     [
+      EdgeAdmin.PromEx.Server,
       {EdgeAdminMcp.Server, transport: :streamable_http, registry: {Anubis.Server.Registry.PG, []}},
       EdgeAdminWeb.Endpoint
     ] ++ event_broker_children()

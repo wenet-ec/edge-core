@@ -6,6 +6,11 @@ defmodule EdgeAdminWeb.Endpoint do
   alias Phoenix.LiveDashboard.RequestLogger
   alias Plug.Conn
 
+  @prom_ex_metrics_opts PromEx.Plug.init(
+                          prom_ex_module: EdgeAdmin.PromEx,
+                          path: "/api/v1/admins/me/metrics/raw"
+                        )
+
   socket("/live", Phoenix.LiveView.Socket,
     websocket: [connect_info: [:peer_data, :x_headers]],
     longpoll: [connect_info: [:peer_data, :x_headers]]
@@ -65,9 +70,11 @@ defmodule EdgeAdminWeb.Endpoint do
   # for non-API routes.
   plug(OpenApiSpex.Plug.PutApiSpec, module: EdgeAdminWeb.OpenApiSpec)
 
-  # PromEx metrics with conditional authentication
+  # PromEx metrics with conditional authentication. When ADMIN_METRICS_PORT is
+  # configured, PromEx owns a separate listener and this API endpoint is left
+  # unmounted.
   plug(:metrics_auth_conditional)
-  plug(PromEx.Plug, prom_ex_module: EdgeAdmin.PromEx, path: "/api/v1/admins/me/metrics/raw")
+  plug(:prom_ex_metrics)
 
   # Request Logger is only mounted when Admin debug is enabled — otherwise it
   # tags every request with stale metadata for a UI nobody can reach.
@@ -93,10 +100,22 @@ defmodule EdgeAdminWeb.Endpoint do
 
   # Apply metrics auth only for the metrics endpoint
   defp metrics_auth_conditional(%{request_path: "/api/v1/admins/me/metrics/raw"} = conn, _opts) do
-    EdgeAdminWeb.Plugs.MetricsAuth.call(conn, [])
+    if Application.get_env(:edge_admin, :admin_metrics_dedicated, false) do
+      conn
+    else
+      EdgeAdminWeb.Plugs.MetricsAuth.call(conn, [])
+    end
   end
 
   defp metrics_auth_conditional(conn, _opts), do: conn
+
+  defp prom_ex_metrics(conn, _opts) do
+    if Application.get_env(:edge_admin, :admin_metrics_dedicated, false) do
+      conn
+    else
+      PromEx.Plug.call(conn, @prom_ex_metrics_opts)
+    end
+  end
 
   # Session configuration for LiveView
   defp session(conn, _opts) do

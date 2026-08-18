@@ -22,6 +22,11 @@ if get_env("PHX_SERVER", :boolean, false) == true do
 end
 
 api_port = get_env("AGENT_API_PORT", :integer, 44_000)
+agent_metrics_port = get_env("AGENT_METRICS_PORT", :integer, nil)
+
+if is_integer(agent_metrics_port) and agent_metrics_port == api_port do
+  raise "AGENT_METRICS_PORT must differ from AGENT_API_PORT when dedicated metrics are enabled"
+end
 
 # Background Job Schedules
 enqueue_executions_schedule = get_env("ENQUEUE_EXECUTIONS_SCHEDULE", :string, "* * * * *")
@@ -127,6 +132,8 @@ end
 config :edge_agent,
   recovery_key: recovery_key,
   agent_api_port: api_port,
+  agent_metrics_port: agent_metrics_port || api_port,
+  agent_metrics_dedicated: is_integer(agent_metrics_port),
   agent_ssh_port: get_env("AGENT_SSH_PORT", :integer, 40_022),
   ssh_system_dir: "#{data_dir}/ssh",
   ssh_user_dir: "#{data_dir}/ssh/users",

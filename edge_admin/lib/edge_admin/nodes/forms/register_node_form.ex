@@ -15,6 +15,7 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeForm do
     field(:network_name, :string)
     field(:http_port, :integer)
     field(:ssh_port, :integer)
+    field(:agent_metrics_port, :integer)
     field(:host_metrics_port, :integer)
     field(:wireguard_metrics_port, :integer)
     field(:http_proxy_port, :integer)
@@ -30,6 +31,7 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeForm do
     :network_name,
     :http_port,
     :ssh_port,
+    :agent_metrics_port,
     :host_metrics_port,
     :wireguard_metrics_port,
     :http_proxy_port,
@@ -53,6 +55,7 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeForm do
       :network_name,
       :http_port,
       :ssh_port,
+      :agent_metrics_port,
       :host_metrics_port,
       :wireguard_metrics_port,
       :http_proxy_port,
@@ -66,6 +69,7 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeForm do
     |> validate_network_name()
     |> validate_port(:http_port)
     |> validate_port(:ssh_port)
+    |> validate_port(:agent_metrics_port)
     |> validate_port(:host_metrics_port)
     |> validate_port(:wireguard_metrics_port)
     |> validate_port(:http_proxy_port)
@@ -105,6 +109,7 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeForm do
       "network_name" => form.network_name,
       "http_port" => form.http_port,
       "ssh_port" => form.ssh_port,
+      "agent_metrics_port" => form.agent_metrics_port,
       "host_metrics_port" => form.host_metrics_port,
       "wireguard_metrics_port" => form.wireguard_metrics_port,
       "http_proxy_port" => form.http_proxy_port,

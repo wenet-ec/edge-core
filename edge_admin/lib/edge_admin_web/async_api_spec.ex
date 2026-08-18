@@ -470,6 +470,7 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
       "version" => %{"type" => "string"},
       "http_port" => %{"type" => "integer"},
       "ssh_port" => %{"type" => "integer"},
+      "agent_metrics_port" => %{"type" => "integer"},
       "host_metrics_port" => %{"type" => "integer"},
       "wireguard_metrics_port" => %{"type" => "integer"},
       "http_proxy_port" => %{"type" => "integer"},

@@ -53,7 +53,7 @@ defmodule EdgeAgentWeb.Endpoint do
   plug(:halt_if_sent)
 
   plug(:metrics_auth_conditional)
-  plug(PromEx.Plug, prom_ex_module: EdgeAgent.PromEx, path: "/api/v1/agents/me/metrics/raw")
+  plug(:prom_ex_metrics)
 
   plug(EdgeAgentWeb.Router)
 
@@ -71,16 +71,31 @@ defmodule EdgeAgentWeb.Endpoint do
   defp ping(conn, _opts), do: conn
 
   defp metrics_auth_conditional(%{request_path: "/api/v1/agents/me/metrics/raw"} = conn, _opts) do
-    auth_enabled = Application.get_env(:edge_agent, :agent_metrics_auth_enabled, true)
-
-    if auth_enabled do
-      EdgeAgentWeb.Plugs.ApiTokenAuth.call(conn, [])
-    else
+    if Application.get_env(:edge_agent, :agent_metrics_dedicated, false) do
       conn
+    else
+      auth_enabled = Application.get_env(:edge_agent, :agent_metrics_auth_enabled, true)
+
+      if auth_enabled do
+        EdgeAgentWeb.Plugs.ApiTokenAuth.call(conn, [])
+      else
+        conn
+      end
     end
   end
 
   defp metrics_auth_conditional(conn, _opts), do: conn
+
+  defp prom_ex_metrics(conn, _opts) do
+    if Application.get_env(:edge_agent, :agent_metrics_dedicated, false) do
+      conn
+    else
+      PromEx.Plug.call(
+        conn,
+        PromEx.Plug.init(prom_ex_module: EdgeAgent.PromEx, path: "/api/v1/agents/me/metrics/raw")
+      )
+    end
+  end
 
   # Splitting routers in separate modules has a negative side effect:
   # Phoenix.Router does not check the Plug.Conn state and tries to match the

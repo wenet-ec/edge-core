@@ -211,7 +211,7 @@ defmodule EdgeAdmin.GatewayRegistry.AgentClient do
   """
   @spec scrape_agent_metrics(Node.t()) :: {:ok, String.t()} | {:error, term()}
   def scrape_agent_metrics(%Node{} = node) do
-    url = agent_base_url(node) <> "/api/v1/agents/me/metrics/raw"
+    url = agent_base_url(node, node.agent_metrics_port) <> "/api/v1/agents/me/metrics/raw"
     opts = Keyword.merge([auth: {:bearer, node.api_token}], metrics_opts())
 
     case Req.get(url, opts) do

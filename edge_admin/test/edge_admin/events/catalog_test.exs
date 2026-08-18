@@ -27,6 +27,7 @@ defmodule EdgeAdmin.Events.CatalogTest do
       version: "1.2.0",
       http_port: 44_000,
       ssh_port: 40_022,
+      agent_metrics_port: 44_000,
       host_metrics_port: 9100,
       wireguard_metrics_port: 9101,
       http_proxy_port: 44_001,
@@ -333,6 +334,7 @@ defmodule EdgeAdmin.Events.CatalogTest do
       assert data["version"] == "1.2.0"
       assert data["http_port"] == 44_000
       assert data["ssh_port"] == 40_022
+      assert data["agent_metrics_port"] == 44_000
       assert data["host_metrics_port"] == 9100
       assert data["wireguard_metrics_port"] == 9101
       assert data["http_proxy_port"] == 44_001

@@ -117,7 +117,7 @@ fi
 if [ -n "${EDGE_VPN_API_SCHEME:-}" ]; then
     export NETMAKER_API_SCHEME="${EDGE_VPN_API_SCHEME}"
 fi
-export DERP_MAP_URLS="http://localhost:${API_PORT:-44000}/api/v1/derp_map"
+export DERP_MAP_URLS="http://localhost:${AGENT_API_PORT:-44000}/api/v1/derp_map"
 
 echo "Starting Edge VPN CLI (netclient) daemon..."
 netclient daemon &

@@ -39,12 +39,12 @@ defmodule EdgeAgent.Bootstrap do
   - `:recovery_key` - Optional node recovery key used only when local identity is absent
   - `:public_enrollment_key_urls` - List of URLs to fetch enrollment key blob (tried in order)
   - `:run_bootstrap` - Whether to run bootstrap (default: true)
-  - `:api_port` - Agent HTTP API port (sent to admin as `http_port`)
-  - `:ssh_port` - Agent SSH server port
-  - `:host_metrics_port` - Node exporter port
-  - `:wireguard_metrics_port` - WireGuard exporter port
-  - `:http_proxy_port` - HTTP proxy port
-  - `:socks5_proxy_port` - SOCKS5 proxy port
+  - `:agent_api_port` - Agent HTTP API port (sent to admin as `http_port`)
+  - `:agent_ssh_port` - Agent SSH server port
+  - `:agent_host_metrics_port` - Node exporter port
+  - `:agent_wireguard_metrics_port` - WireGuard exporter port
+  - `:agent_http_proxy_port` - HTTP proxy port
+  - `:agent_socks5_proxy_port` - SOCKS5 proxy port
   - `:vpn_ready_timeout_seconds` - VPN verification timeout in seconds (default: 30)
   - `:aliases` - List of friendly name aliases to register with admin (default: [])
 

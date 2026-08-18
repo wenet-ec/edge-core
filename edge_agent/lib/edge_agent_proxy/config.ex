@@ -16,8 +16,8 @@ defmodule EdgeAgentProxy.Config do
   variable name and default.
   """
 
-  def http_proxy_port, do: Application.get_env(:edge_agent, :http_proxy_port)
-  def socks5_proxy_port, do: Application.get_env(:edge_agent, :socks5_proxy_port)
+  def http_proxy_port, do: Application.get_env(:edge_agent, :agent_http_proxy_port)
+  def socks5_proxy_port, do: Application.get_env(:edge_agent, :agent_socks5_proxy_port)
 
   def listen_address do
     Application.get_env(:edge_agent, :proxy_listen_address, {0, 0, 0, 0, 0, 0, 0, 0})

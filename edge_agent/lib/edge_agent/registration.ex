@@ -103,15 +103,15 @@ defmodule EdgeAgent.Registration do
 
   defp node_metadata(network_name) do
     # The wire field is `http_port` (Admin's API contract), but the Agent HTTP
-    # server's port is configured as `:api_port` from `API_PORT`.
+    # server's port is configured as `:agent_api_port` from `AGENT_API_PORT`.
     %{
       network_name: network_name,
-      http_port: Application.fetch_env!(:edge_agent, :api_port),
-      ssh_port: Application.fetch_env!(:edge_agent, :ssh_port),
-      host_metrics_port: Application.fetch_env!(:edge_agent, :host_metrics_port),
-      wireguard_metrics_port: Application.fetch_env!(:edge_agent, :wireguard_metrics_port),
-      http_proxy_port: Application.fetch_env!(:edge_agent, :http_proxy_port),
-      socks5_proxy_port: Application.fetch_env!(:edge_agent, :socks5_proxy_port),
+      http_port: Application.fetch_env!(:edge_agent, :agent_api_port),
+      ssh_port: Application.fetch_env!(:edge_agent, :agent_ssh_port),
+      host_metrics_port: Application.fetch_env!(:edge_agent, :agent_host_metrics_port),
+      wireguard_metrics_port: Application.fetch_env!(:edge_agent, :agent_wireguard_metrics_port),
+      http_proxy_port: Application.fetch_env!(:edge_agent, :agent_http_proxy_port),
+      socks5_proxy_port: Application.fetch_env!(:edge_agent, :agent_socks5_proxy_port),
       version: :edge_agent |> Application.spec(:vsn) |> to_string(),
       self_update_enabled: Application.get_env(:edge_agent, :self_update_enabled, false)
     }

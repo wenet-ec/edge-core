@@ -11,8 +11,8 @@ defmodule EdgeAgentProxy.Transport.DestinationValidator do
   - BLOCK: Link-local addresses (169.254.0.0/16, fe80::/10)
   - BLOCK: Docker API ports (2375, 2376, 2377)
   - BLOCK: Kubernetes API ports (6443, 10250, 10255, 2379, 2380)
-  - BLOCK: Agent's own metrics ports (`HOST_METRICS_PORT`,
-    `WIREGUARD_METRICS_PORT` — always blocked, no opt-out)
+  - BLOCK: Agent's own metrics ports (`AGENT_HOST_METRICS_PORT`,
+    `AGENT_WIREGUARD_METRICS_PORT` — always blocked, no opt-out)
   - BLOCK: `proxy_blocked_ports` / `proxy_custom_blocked_hosts`
     (operator-configured; both default empty — no extra ports/hosts blocked
     out of the box)
@@ -262,8 +262,8 @@ defmodule EdgeAgentProxy.Transport.DestinationValidator do
   """
   @spec metrics_port?(:inet.port_number()) :: boolean()
   def metrics_port?(port) when is_integer(port) do
-    host_metrics_port = Application.get_env(:edge_agent, :host_metrics_port)
-    wireguard_metrics_port = Application.get_env(:edge_agent, :wireguard_metrics_port)
+    host_metrics_port = Application.get_env(:edge_agent, :agent_host_metrics_port)
+    wireguard_metrics_port = Application.get_env(:edge_agent, :agent_wireguard_metrics_port)
     port in [host_metrics_port, wireguard_metrics_port]
   end
 

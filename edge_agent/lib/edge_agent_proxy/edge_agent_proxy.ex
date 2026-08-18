@@ -4,8 +4,8 @@ defmodule EdgeAgentProxy do
   Proxy servers supervisor managing HTTP and SOCKS5 forward proxies.
 
   Runs two separate Ranch listeners:
-  - HTTP forward proxy on port 43128 (configurable via `HTTP_PROXY_PORT`)
-  - SOCKS5 proxy on port 41080 (configurable via `SOCKS5_PROXY_PORT`)
+  - HTTP forward proxy on port 43128 (configurable via `AGENT_HTTP_PROXY_PORT`)
+  - SOCKS5 proxy on port 41080 (configurable via `AGENT_SOCKS5_PROXY_PORT`)
 
   Both proxies use simple authentication:
   - Username: "_" (underscore)

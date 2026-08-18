@@ -4,8 +4,8 @@ defmodule EdgeAgentMetrics.Config do
   Configuration management for the metrics exporter pair.
 
   Centralizes the static binary paths and host bind-mount paths (module
-  attributes) alongside env-driven settings (`:host_metrics_port`,
-  `:wireguard_metrics_port`) and exposes a single `build_config/0` snapshot
+  attributes) alongside env-driven settings (`:agent_host_metrics_port`,
+  `:agent_wireguard_metrics_port`) and exposes a single `build_config/0` snapshot
   used by the GenServer.
   """
 
@@ -19,8 +19,8 @@ defmodule EdgeAgentMetrics.Config do
   @host_sys_path "/host/sys"
   @host_root_path "/host"
 
-  def host_metrics_port, do: Application.get_env(:edge_agent, :host_metrics_port)
-  def wireguard_metrics_port, do: Application.get_env(:edge_agent, :wireguard_metrics_port)
+  def host_metrics_port, do: Application.get_env(:edge_agent, :agent_host_metrics_port)
+  def wireguard_metrics_port, do: Application.get_env(:edge_agent, :agent_wireguard_metrics_port)
   def listen_address, do: @listen_address_ipv6
   def node_exporter_binary, do: @node_exporter_binary
   def wireguard_exporter_binary, do: @wireguard_exporter_binary

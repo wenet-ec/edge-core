@@ -127,9 +127,6 @@ ENV LC_ALL=C.UTF-8
 # Disable automatic distribution startup — agent starts it dynamically after detecting LAN IP
 ENV RELEASE_DISTRIBUTION=none
 
-# Keep epmd in the 40k port range to avoid colliding with user-deployed Erlang/Elixir apps
-ENV ERL_EPMD_PORT=44369
-
 # erlexec's port program refuses to start unless USER and SHELL are set in
 # the environment, even when running as root. Container runtimes don't set
 # these by default. The values here just need to be non-empty + match the

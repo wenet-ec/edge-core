@@ -81,7 +81,7 @@ defmodule EdgeAgentSsh.Config do
 
   @doc "Returns the configured SSH listening port."
   @spec ssh_port() :: non_neg_integer() | nil
-  def ssh_port, do: Application.get_env(:edge_agent, :ssh_port)
+  def ssh_port, do: Application.get_env(:edge_agent, :agent_ssh_port)
 
   @doc "Returns the directory containing persistent SSH host keys."
   @spec ssh_system_dir() :: String.t()

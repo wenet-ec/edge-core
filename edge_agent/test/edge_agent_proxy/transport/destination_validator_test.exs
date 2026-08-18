@@ -204,8 +204,8 @@ defmodule EdgeAgentProxy.Transport.DestinationValidatorTest do
 
   describe "metrics_port?/1" do
     test "host_metrics_port is blocked" do
-      with_app_env(:host_metrics_port, 49_100, fn ->
-        with_app_env(:wireguard_metrics_port, 49_586, fn ->
+      with_app_env(:agent_host_metrics_port, 49_100, fn ->
+        with_app_env(:agent_wireguard_metrics_port, 49_586, fn ->
           assert DestinationValidator.metrics_port?(49_100)
         end)
       end)
@@ -213,16 +213,16 @@ defmodule EdgeAgentProxy.Transport.DestinationValidatorTest do
 
     test "wireguard_metrics_port is blocked" do
       # metrics_port?/1
-      with_app_env(:host_metrics_port, 49_100, fn ->
-        with_app_env(:wireguard_metrics_port, 49_586, fn ->
+      with_app_env(:agent_host_metrics_port, 49_100, fn ->
+        with_app_env(:agent_wireguard_metrics_port, 49_586, fn ->
           assert DestinationValidator.metrics_port?(49_586)
         end)
       end)
     end
 
     test "other port is not a metrics port" do
-      with_app_env(:host_metrics_port, 49_100, fn ->
-        with_app_env(:wireguard_metrics_port, 49_586, fn ->
+      with_app_env(:agent_host_metrics_port, 49_100, fn ->
+        with_app_env(:agent_wireguard_metrics_port, 49_586, fn ->
           refute DestinationValidator.metrics_port?(80)
           refute DestinationValidator.metrics_port?(443)
           refute DestinationValidator.metrics_port?(9100)
@@ -330,15 +330,15 @@ defmodule EdgeAgentProxy.Transport.DestinationValidatorTest do
       Application.put_env(:edge_agent, :proxy_custom_allowed_hosts, [])
       Application.put_env(:edge_agent, :proxy_custom_blocked_hosts, [])
       Application.put_env(:edge_agent, :proxy_blocked_ports, [])
-      Application.put_env(:edge_agent, :host_metrics_port, 49_100)
-      Application.put_env(:edge_agent, :wireguard_metrics_port, 49_586)
+      Application.put_env(:edge_agent, :agent_host_metrics_port, 49_100)
+      Application.put_env(:edge_agent, :agent_wireguard_metrics_port, 49_586)
 
       on_exit(fn ->
         Application.delete_env(:edge_agent, :proxy_custom_allowed_hosts)
         Application.delete_env(:edge_agent, :proxy_custom_blocked_hosts)
         Application.delete_env(:edge_agent, :proxy_blocked_ports)
-        Application.delete_env(:edge_agent, :host_metrics_port)
-        Application.delete_env(:edge_agent, :wireguard_metrics_port)
+        Application.delete_env(:edge_agent, :agent_host_metrics_port)
+        Application.delete_env(:edge_agent, :agent_wireguard_metrics_port)
       end)
     end
 
@@ -518,8 +518,8 @@ defmodule EdgeAgentProxy.Transport.DestinationValidatorTest do
       Application.put_env(:edge_agent, :proxy_custom_allowed_hosts, [])
       Application.put_env(:edge_agent, :proxy_custom_blocked_hosts, [])
       Application.put_env(:edge_agent, :proxy_blocked_ports, [])
-      Application.put_env(:edge_agent, :host_metrics_port, 49_100)
-      Application.put_env(:edge_agent, :wireguard_metrics_port, 49_586)
+      Application.put_env(:edge_agent, :agent_host_metrics_port, 49_100)
+      Application.put_env(:edge_agent, :agent_wireguard_metrics_port, 49_586)
 
       assert {:error, :localhost_blocked} =
                DestinationValidator.validate_destination("::ffff:127.0.0.1", 80)
@@ -529,8 +529,8 @@ defmodule EdgeAgentProxy.Transport.DestinationValidatorTest do
       Application.put_env(:edge_agent, :proxy_custom_allowed_hosts, [])
       Application.put_env(:edge_agent, :proxy_custom_blocked_hosts, [])
       Application.put_env(:edge_agent, :proxy_blocked_ports, [])
-      Application.put_env(:edge_agent, :host_metrics_port, 49_100)
-      Application.put_env(:edge_agent, :wireguard_metrics_port, 49_586)
+      Application.put_env(:edge_agent, :agent_host_metrics_port, 49_100)
+      Application.put_env(:edge_agent, :agent_wireguard_metrics_port, 49_586)
 
       assert {:error, :metadata_service_blocked} =
                DestinationValidator.validate_destination("::ffff:169.254.169.254", 80)
@@ -616,16 +616,16 @@ defmodule EdgeAgentProxy.Transport.DestinationValidatorTest do
       Application.put_env(:edge_agent, :proxy_custom_allowed_hosts, [])
       Application.put_env(:edge_agent, :proxy_custom_blocked_hosts, [])
       Application.put_env(:edge_agent, :proxy_blocked_ports, [])
-      Application.put_env(:edge_agent, :host_metrics_port, 49_100)
-      Application.put_env(:edge_agent, :wireguard_metrics_port, 49_586)
+      Application.put_env(:edge_agent, :agent_host_metrics_port, 49_100)
+      Application.put_env(:edge_agent, :agent_wireguard_metrics_port, 49_586)
 
       on_exit(fn ->
         Application.delete_env(:edge_agent, :proxy_custom_allowed_hosts)
         # Tencent metadata host
         Application.delete_env(:edge_agent, :proxy_custom_blocked_hosts)
         Application.delete_env(:edge_agent, :proxy_blocked_ports)
-        Application.delete_env(:edge_agent, :host_metrics_port)
-        Application.delete_env(:edge_agent, :wireguard_metrics_port)
+        Application.delete_env(:edge_agent, :agent_host_metrics_port)
+        Application.delete_env(:edge_agent, :agent_wireguard_metrics_port)
       end)
     end
 

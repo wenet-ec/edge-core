@@ -1,7 +1,7 @@
 # edge_agent/test/edge_agent_metrics/config_test.exs
 defmodule EdgeAgentMetrics.ConfigTest do
   # async: false — node_exporter_args/0 / wireguard_exporter_args/0 read
-  # :host_metrics_port and :wireguard_metrics_port from app env. We snapshot
+  # :agent_host_metrics_port and :agent_wireguard_metrics_port from app env. We snapshot
   # and restore around env-touching tests; serial execution avoids races.
   use ExUnit.Case, async: false
 
@@ -52,19 +52,19 @@ defmodule EdgeAgentMetrics.ConfigTest do
     end
 
     test "ports come from app env" do
-      original_host = Elixir.Application.get_env(:edge_agent, :host_metrics_port)
-      original_wg = Elixir.Application.get_env(:edge_agent, :wireguard_metrics_port)
+      original_host = Elixir.Application.get_env(:edge_agent, :agent_host_metrics_port)
+      original_wg = Elixir.Application.get_env(:edge_agent, :agent_wireguard_metrics_port)
 
-      Elixir.Application.put_env(:edge_agent, :host_metrics_port, 49_999)
-      Elixir.Application.put_env(:edge_agent, :wireguard_metrics_port, 48_888)
+      Elixir.Application.put_env(:edge_agent, :agent_host_metrics_port, 49_999)
+      Elixir.Application.put_env(:edge_agent, :agent_wireguard_metrics_port, 48_888)
 
       try do
         result = Config.build_config()
         assert result.host_metrics_port == 49_999
         assert result.wireguard_metrics_port == 48_888
       after
-        restore(:host_metrics_port, original_host)
-        restore(:wireguard_metrics_port, original_wg)
+        restore(:agent_host_metrics_port, original_host)
+        restore(:agent_wireguard_metrics_port, original_wg)
       end
     end
   end
@@ -75,9 +75,9 @@ defmodule EdgeAgentMetrics.ConfigTest do
 
   describe "node_exporter_args/0" do
     setup do
-      original = Elixir.Application.get_env(:edge_agent, :host_metrics_port)
-      Elixir.Application.put_env(:edge_agent, :host_metrics_port, 49_100)
-      on_exit(fn -> restore(:host_metrics_port, original) end)
+      original = Elixir.Application.get_env(:edge_agent, :agent_host_metrics_port)
+      Elixir.Application.put_env(:edge_agent, :agent_host_metrics_port, 49_100)
+      on_exit(fn -> restore(:agent_host_metrics_port, original) end)
       :ok
     end
 
@@ -126,9 +126,9 @@ defmodule EdgeAgentMetrics.ConfigTest do
 
   describe "wireguard_exporter_args/0" do
     setup do
-      original = Elixir.Application.get_env(:edge_agent, :wireguard_metrics_port)
-      Elixir.Application.put_env(:edge_agent, :wireguard_metrics_port, 49_586)
-      on_exit(fn -> restore(:wireguard_metrics_port, original) end)
+      original = Elixir.Application.get_env(:edge_agent, :agent_wireguard_metrics_port)
+      Elixir.Application.put_env(:edge_agent, :agent_wireguard_metrics_port, 49_586)
+      on_exit(fn -> restore(:agent_wireguard_metrics_port, original) end)
       :ok
     end
 

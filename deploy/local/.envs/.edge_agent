@@ -26,14 +26,14 @@ WATCHTOWER_URL=http://localhost:58080
 WATCHTOWER_HTTP_API_TOKEN=local-dev-token
 
 # Web Server / API
-# API_PORT=44000          # Agent HTTP API port (default: 44000)
+# AGENT_API_PORT=44000          # Agent HTTP API port (default: 44000)
 
 # Ports
-# SSH_PORT=40022                    # Embedded SSH server (default: 40022)
-# HOST_METRICS_PORT=49100           # Node exporter scrape port (default: 49100)
-# WIREGUARD_METRICS_PORT=49586      # WireGuard exporter scrape port (default: 49586)
-# HTTP_PROXY_PORT=43128             # HTTP/CONNECT proxy (default: 43128)
-# SOCKS5_PROXY_PORT=41080           # SOCKS5 proxy (default: 41080)
+# AGENT_SSH_PORT=40022                    # Embedded SSH server (default: 40022)
+# AGENT_HOST_METRICS_PORT=49100           # Node exporter scrape port (default: 49100)
+# AGENT_WIREGUARD_METRICS_PORT=49586      # WireGuard exporter scrape port (default: 49586)
+# AGENT_HTTP_PROXY_PORT=43128             # HTTP/CONNECT proxy (default: 43128)
+# AGENT_SOCKS5_PROXY_PORT=41080           # SOCKS5 proxy (default: 41080)
 # AGENT_WIREGUARD_PORT=             # Static WireGuard listen port (optional; useful behind NAT)
 
 # Admin Discovery

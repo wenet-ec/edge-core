@@ -21,7 +21,7 @@ if get_env("PHX_SERVER", :boolean, false) == true do
   config :edge_agent, EdgeAgentWeb.Endpoint, server: true
 end
 
-api_port = get_env("API_PORT", :integer, 44_000)
+api_port = get_env("AGENT_API_PORT", :integer, 44_000)
 
 # Background Job Schedules
 enqueue_executions_schedule = get_env("ENQUEUE_EXECUTIONS_SCHEDULE", :string, "* * * * *")
@@ -126,15 +126,15 @@ end
 
 config :edge_agent,
   recovery_key: recovery_key,
-  api_port: api_port,
-  ssh_port: get_env("SSH_PORT", :integer, 40_022),
+  agent_api_port: api_port,
+  agent_ssh_port: get_env("AGENT_SSH_PORT", :integer, 40_022),
   ssh_system_dir: "#{data_dir}/ssh",
   ssh_user_dir: "#{data_dir}/ssh/users",
-  host_metrics_port: get_env("HOST_METRICS_PORT", :integer, 49_100),
-  wireguard_metrics_port: get_env("WIREGUARD_METRICS_PORT", :integer, 49_586),
+  agent_host_metrics_port: get_env("AGENT_HOST_METRICS_PORT", :integer, 49_100),
+  agent_wireguard_metrics_port: get_env("AGENT_WIREGUARD_METRICS_PORT", :integer, 49_586),
   agent_wireguard_port: get_env("AGENT_WIREGUARD_PORT", :integer, nil),
-  http_proxy_port: get_env("HTTP_PROXY_PORT", :integer, 43_128),
-  socks5_proxy_port: get_env("SOCKS5_PROXY_PORT", :integer, 41_080),
+  agent_http_proxy_port: get_env("AGENT_HTTP_PROXY_PORT", :integer, 43_128),
+  agent_socks5_proxy_port: get_env("AGENT_SOCKS5_PROXY_PORT", :integer, 41_080),
   admin_discovery_port: get_env("ADMIN_DISCOVERY_PORT", :integer, 44_000),
   aliases: get_env("ALIASES", :list, []),
   enrollment_key: get_env("ENROLLMENT_KEY", :string, nil),

@@ -45,7 +45,7 @@ defmodule EdgeAgent.Lan.Mdns do
         raise "mDNS: node_id missing from Settings — Bootstrap must run before EdgeAgent.Lan.Mdns"
 
     hostname = "node-#{node_id}"
-    port = Application.fetch_env!(:edge_agent, :api_port)
+    port = Application.fetch_env!(:edge_agent, :agent_api_port)
 
     MdnsLite.set_hosts([hostname])
 

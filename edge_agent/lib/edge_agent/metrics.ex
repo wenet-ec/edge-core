@@ -14,9 +14,9 @@ defmodule EdgeAgent.Metrics do
 
   ## Metrics Sources
 
-  - **Host metrics** - node_exporter at `localhost:HOST_METRICS_PORT` (default 49100)
+  - **Host metrics** - node_exporter at `localhost:AGENT_HOST_METRICS_PORT` (default 49100)
   - **Agent metrics** - agent PromEx module (direct call, no HTTP)
-  - **WireGuard metrics** - wireguard_exporter at `localhost:WIREGUARD_METRICS_PORT` (default 49586)
+  - **WireGuard metrics** - wireguard_exporter at `localhost:AGENT_WIREGUARD_METRICS_PORT` (default 49586)
 
   ## Push Strategy
 
@@ -56,7 +56,7 @@ defmodule EdgeAgent.Metrics do
   end
 
   defp push_host_metrics do
-    port = Application.get_env(:edge_agent, :host_metrics_port)
+    port = Application.get_env(:edge_agent, :agent_host_metrics_port)
     url = "http://localhost:#{port}/metrics"
 
     scrape_and_push("host", url)
@@ -96,7 +96,7 @@ defmodule EdgeAgent.Metrics do
   end
 
   defp push_wireguard_metrics do
-    port = Application.get_env(:edge_agent, :wireguard_metrics_port)
+    port = Application.get_env(:edge_agent, :agent_wireguard_metrics_port)
     url = "http://localhost:#{port}/metrics"
 
     scrape_and_push("wireguard", url)

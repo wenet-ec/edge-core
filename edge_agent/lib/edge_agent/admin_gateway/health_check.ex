@@ -1,18 +1,18 @@
-# edge_agent/lib/edge_agent/edge_clusters/health_check.ex
-defmodule EdgeAgent.EdgeClusters.HealthCheck do
+# edge_agent/lib/edge_agent/admin_gateway/health_check.ex
+defmodule EdgeAgent.AdminGateway.HealthCheck do
   @moduledoc """
-  Health check reporting for HTTP fallback mode.
+  Health check reporting to the Admin Gateway during HTTP fallback.
 
   When VPN is unavailable, agents report their health status to admin
   via HTTP fallback to maintain visibility and node tracking.
   """
 
-  alias EdgeAgent.EdgeClusters.AdminClient
+  alias EdgeAgent.AdminGateway.Client
 
   require Logger
 
   @doc """
-  Reports node health to admin via HTTP fallback.
+  Reports node health to the Admin Gateway via HTTP fallback.
 
   Used by `EdgeAgent.LocalScheduler.Tasks.report_health_check/0`.
   """
@@ -22,7 +22,7 @@ defmodule EdgeAgent.EdgeClusters.HealthCheck do
 
     Logger.debug("Reporting health check: #{status}")
 
-    result = AdminClient.report_health_check(status)
+    result = Client.report_health_check(status)
 
     telemetry_result =
       case result do

@@ -19,7 +19,7 @@ defmodule EdgeAgent.SelfUpdates do
     mid-call after Watchtower accepts the update.
   """
 
-  alias EdgeAgent.EdgeClusters.AdminClient
+  alias EdgeAgent.AdminGateway.Client
   alias EdgeAgent.Settings
 
   require Logger
@@ -149,7 +149,7 @@ defmodule EdgeAgent.SelfUpdates do
   """
   @spec check_self_update :: :ok | {:error, term()}
   def check_self_update do
-    case AdminClient.check_self_update() do
+    case Client.check_self_update() do
       {:ok, %{"including_me" => false}} ->
         Settings.set_last_check_self_update_at(DateTime.truncate(DateTime.utc_now(), :second))
         Logger.debug("Self-update check: no update available")

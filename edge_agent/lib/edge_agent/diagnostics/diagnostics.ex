@@ -4,8 +4,8 @@ defmodule EdgeAgent.Diagnostics do
   Edge Agent self-diagnostics.
   """
 
+  alias EdgeAgent.AdminGateway.Client
   alias EdgeAgent.Diagnostics.WireguardInterface
-  alias EdgeAgent.EdgeClusters.AdminClient
   alias EdgeAgent.Settings
   alias EdgeAgent.Vpn
   alias EdgeAgent.Vpn.DerpMapCache
@@ -31,7 +31,7 @@ defmodule EdgeAgent.Diagnostics do
   def push do
     result =
       snapshot()
-      |> AdminClient.push_diagnostics()
+      |> Client.push_diagnostics()
       |> case do
         {:ok, _response} -> :ok
         {:error, reason} -> {:error, reason}

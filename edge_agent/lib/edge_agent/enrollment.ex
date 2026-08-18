@@ -63,7 +63,7 @@ defmodule EdgeAgent.Enrollment do
     `PUBLIC_ENROLLMENT_KEY_URLS` with standard shapes still work.
   """
 
-  alias EdgeAgent.EdgeClusters.AdminClient
+  alias EdgeAgent.AdminGateway.Client
   alias EdgeAgent.Settings
 
   require Logger
@@ -77,7 +77,7 @@ defmodule EdgeAgent.Enrollment do
   On success, Settings will contain:
   - `vpn_enrollment_key` — for use by `EdgeAgent.Vpn`
   - `enrollment_key_id` — for associating the successful registration with Admin
-  - `admin_fallback_urls` — for use by `AdminClient` when VPN is down
+  - `admin_fallback_urls` — for use by `AdminGateway.Client` when VPN is down
   """
   @spec ensure_verified() :: :ok | {:error, String.t()}
   def ensure_verified, do: ensure_verified(nil)
@@ -314,7 +314,7 @@ defmodule EdgeAgent.Enrollment do
   end
 
   defp verify_enrollment_key_with_admin(key_blob, admin_urls) do
-    case AdminClient.verify_enrollment_key(key_blob, admin_urls) do
+    case Client.verify_enrollment_key(key_blob, admin_urls) do
       {:ok, %{vpn_enrollment_key: vpn_enrollment_key, enrollment_key_id: enrollment_key_id}}
       when is_binary(vpn_enrollment_key) and vpn_enrollment_key != "" and
              is_binary(enrollment_key_id) and enrollment_key_id != "" ->

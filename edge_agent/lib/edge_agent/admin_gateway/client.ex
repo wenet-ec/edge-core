@@ -1,7 +1,7 @@
-# edge_agent/lib/edge_agent/edge_clusters/admin_client.ex
-defmodule EdgeAgent.EdgeClusters.AdminClient do
+# edge_agent/lib/edge_agent/admin_gateway/client.ex
+defmodule EdgeAgent.AdminGateway.Client do
   @moduledoc """
-  HTTP client for Agent-to-Admin API calls.
+  HTTP client for Agent-to-Admin Gateway API calls.
 
   Bootstrap enrollment uses URLs from the decoded enrollment-key blob. All
   post-registration calls use Settings URLs through `Transport`: VPN-discovered
@@ -9,7 +9,7 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
   HTTP responses are terminal.
   """
 
-  alias EdgeAgent.EdgeClusters.AdminClient.Transport
+  alias EdgeAgent.AdminGateway.Transport
 
   require Logger
 

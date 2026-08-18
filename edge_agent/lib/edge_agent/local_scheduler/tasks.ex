@@ -14,11 +14,11 @@ defmodule EdgeAgent.LocalScheduler.Tasks do
   telemetry events surface exceptions if they escape.
   """
 
+  alias EdgeAgent.AdminGateway.Discovery
+  alias EdgeAgent.AdminGateway.HealthCheck
+  alias EdgeAgent.AdminGateway.SettingsConfig
   alias EdgeAgent.Commands
   alias EdgeAgent.Diagnostics
-  alias EdgeAgent.EdgeClusters.Discovery
-  alias EdgeAgent.EdgeClusters.HealthCheck
-  alias EdgeAgent.EdgeClusters.SettingsConfig
   alias EdgeAgent.Metrics
   alias EdgeAgent.SelfUpdates
   alias EdgeAgent.Settings

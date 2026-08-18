@@ -11,6 +11,7 @@ defmodule EdgeAgent.Commands do
 
   import Ecto.Query, warn: false
 
+  alias EdgeAgent.AdminGateway.Client
   alias EdgeAgent.Commands.CommandExecutionOutput
   alias EdgeAgent.Commands.CommandExecutionResults
   alias EdgeAgent.Commands.Enums.CommandExecutionStatuses
@@ -18,7 +19,6 @@ defmodule EdgeAgent.Commands do
   alias EdgeAgent.Commands.Forms.CreateCommandExecutionForm
   alias EdgeAgent.Commands.Resources.CommandExecutions, as: CommandExecutionResource
   alias EdgeAgent.Commands.Schemas.CommandExecution
-  alias EdgeAgent.EdgeClusters.AdminClient
   alias EdgeAgent.Settings
 
   require Logger
@@ -302,7 +302,7 @@ defmodule EdgeAgent.Commands do
     Enum.reduce_while(executions, :ok, fn execution, _acc ->
       params = CommandExecutionResults.build_report_params(execution)
 
-      case AdminClient.report_command_execution_result(execution.id, params) do
+      case Client.report_command_execution_result(execution.id, params) do
         :ok ->
           Logger.debug("Successfully reported execution #{execution.id}")
           delete_execution_after_report(execution)
@@ -473,7 +473,7 @@ defmodule EdgeAgent.Commands do
     node_id = Settings.get_node_id()
 
     sent_result =
-      case AdminClient.list_sent_command_executions() do
+      case Client.list_sent_command_executions() do
         {:ok, %{data: commands, meta: _meta}} ->
           Logger.info("Syncing #{length(commands)} sent command execution(s)")
 
@@ -507,12 +507,12 @@ defmodule EdgeAgent.Commands do
   end
 
   defp sync_pending_executions(node_id) do
-    case AdminClient.list_pending_command_executions() do
+    case Client.list_pending_command_executions() do
       {:ok, %{data: commands, meta: _meta}} ->
         Logger.info("Syncing #{length(commands)} pending command execution(s)")
 
         Enum.each(commands, fn command ->
-          case AdminClient.acknowledge_command_execution(command["id"]) do
+          case Client.acknowledge_command_execution(command["id"]) do
             :ok ->
               Logger.debug("Acknowledged command execution: #{command["id"]}")
               store_command_execution_locally(command, node_id)

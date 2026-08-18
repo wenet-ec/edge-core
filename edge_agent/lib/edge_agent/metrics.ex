@@ -28,7 +28,7 @@ defmodule EdgeAgent.Metrics do
 
   """
 
-  alias EdgeAgent.EdgeClusters.AdminClient
+  alias EdgeAgent.AdminGateway.Client
 
   require Logger
 
@@ -69,7 +69,7 @@ defmodule EdgeAgent.Metrics do
         {:error, {"agent", :empty_metrics}}
 
       {:ok, metrics_text} when is_binary(metrics_text) ->
-        case AdminClient.push_metrics("agent", metrics_text) do
+        case Client.push_metrics("agent", metrics_text) do
           {:ok, _cache} ->
             Logger.debug("Successfully pushed agent metrics")
             {:ok, "agent"}
@@ -109,7 +109,7 @@ defmodule EdgeAgent.Metrics do
         {:error, {metrics_type, :empty_metrics}}
 
       {:ok, metrics_text} when is_binary(metrics_text) ->
-        case AdminClient.push_metrics(metrics_type, metrics_text) do
+        case Client.push_metrics(metrics_type, metrics_text) do
           {:ok, _cache} ->
             Logger.debug("Successfully pushed #{metrics_type} metrics")
             {:ok, metrics_type}

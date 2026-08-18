@@ -1,7 +1,7 @@
-# edge_agent/lib/edge_agent/edge_clusters/admin_client/transport.ex
-defmodule EdgeAgent.EdgeClusters.AdminClient.Transport do
+# edge_agent/lib/edge_agent/admin_gateway/transport.ex
+defmodule EdgeAgent.AdminGateway.Transport do
   @moduledoc """
-  Shared URL selection and failover transport for Agent-to-Admin requests.
+  Shared URL selection and failover transport for Agent-to-Admin Gateway requests.
 
   A reachable HTTP response is terminal; only transport failures advance to
   the next URL. VPN URLs are always attempted before configured fallbacks.

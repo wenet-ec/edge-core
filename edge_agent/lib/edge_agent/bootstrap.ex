@@ -52,9 +52,9 @@ defmodule EdgeAgent.Bootstrap do
 
   use GenServer
 
+  alias EdgeAgent.AdminGateway.Client
+  alias EdgeAgent.AdminGateway.Discovery
   alias EdgeAgent.Commands
-  alias EdgeAgent.EdgeClusters.AdminClient
-  alias EdgeAgent.EdgeClusters.Discovery
   alias EdgeAgent.Enrollment
   alias EdgeAgent.Identity
   alias EdgeAgent.Registration
@@ -198,7 +198,7 @@ defmodule EdgeAgent.Bootstrap do
       Logger.info("Step 6: Registering #{length(aliases)} alias(es)...")
 
       Enum.each(aliases, fn name ->
-        case AdminClient.register_alias(name) do
+        case Client.register_alias(name) do
           :ok ->
             Logger.info("Alias registered: #{name}")
 

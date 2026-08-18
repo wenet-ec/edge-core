@@ -11,7 +11,7 @@ defmodule EdgeAgentWeb.Router do
     agent's stored API token from bootstrap registration). All
     admin↔agent endpoints sit here.
 
-  Routes mirror what `EdgeAgent.EdgeClusters.AdminClient` documents on the
+  Routes mirror what `EdgeAgent.AdminGateway.Client` documents on the
   admin side; if you add one here, update that moduledoc's endpoint list
   too.
   """

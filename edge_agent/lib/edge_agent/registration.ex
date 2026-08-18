@@ -11,7 +11,7 @@ defmodule EdgeAgent.Registration do
   Bootstrap remains responsible only for sequencing these operations.
   """
 
-  alias EdgeAgent.EdgeClusters.AdminClient
+  alias EdgeAgent.AdminGateway.Client
   alias EdgeAgent.Settings
 
   require Logger
@@ -34,10 +34,10 @@ defmodule EdgeAgent.Registration do
   defp registration_request(node_id, network_name, recovery_key) do
     case Settings.get_api_token() do
       token when is_binary(token) and token != "" ->
-        AdminClient.reregister_node(build_reregistration_payload(network_name))
+        Client.reregister_node(build_reregistration_payload(network_name))
 
       _ ->
-        AdminClient.register_node(
+        Client.register_node(
           build_registration_payload(
             node_id,
             network_name,

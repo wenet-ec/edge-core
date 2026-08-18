@@ -7,7 +7,7 @@ defmodule EdgeAgent.SshServer.Authentication do
   calling the admin's unified credentials verification endpoint.
   """
 
-  alias EdgeAgent.EdgeClusters.AdminClient
+  alias EdgeAgent.AdminGateway.Client
   alias EdgeAgent.SshServer.Authentication.KeyEncoding
 
   require Logger
@@ -23,7 +23,7 @@ defmodule EdgeAgent.SshServer.Authentication do
     Logger.debug("SSH password auth attempt for user: #{username}")
 
     result =
-      case AdminClient.verify_ssh_credentials(username, {:password, password_string}) do
+      case Client.verify_ssh_credentials(username, {:password, password_string}) do
         {:ok, true} ->
           Logger.info("SSH password authentication successful for user: #{username}")
           true
@@ -69,7 +69,7 @@ defmodule EdgeAgent.SshServer.Authentication do
         Logger.warning("SSH public key auth failed for user #{username}: unsupported key format")
         false
       else
-        case AdminClient.verify_ssh_credentials(username, {:public_key, public_key_string}) do
+        case Client.verify_ssh_credentials(username, {:public_key, public_key_string}) do
           {:ok, true} ->
             Logger.info("SSH public key authentication successful for user: #{username}")
             true

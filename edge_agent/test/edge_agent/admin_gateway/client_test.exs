@@ -1,14 +1,14 @@
-# edge_agent/test/edge_agent/edge_clusters/admin_client_test.exs
-defmodule EdgeAgent.EdgeClusters.AdminClientTest do
+# edge_agent/test/edge_agent/admin_gateway/client_test.exs
+defmodule EdgeAgent.AdminGateway.ClientTest do
   use EdgeAgent.DataCase, async: false
 
-  alias EdgeAgent.EdgeClusters.AdminClient
-  alias EdgeAgent.EdgeClusters.AdminClient.Transport
+  alias EdgeAgent.AdminGateway.Client
+  alias EdgeAgent.AdminGateway.Transport
   alias EdgeAgent.Settings
   # urls_to_try/2 — fallback URL priority logic
   #
-  # URL ordering is pure and belongs to AdminClient.Transport. The surrounding
-  # AdminClient cases retain coverage for Settings-backed failover behavior.
+  # URL ordering is pure and belongs to AdminGateway.Transport. The surrounding
+  # Client cases retain coverage for Settings-backed failover behavior.
 
   describe "urls_to_try/2 — VPN admin URLs take priority" do
     setup do
@@ -25,7 +25,7 @@ defmodule EdgeAgent.EdgeClusters.AdminClientTest do
       Settings.set_admin_fallback_urls([])
 
       # Should try the VPN URL and fail with a network error, NOT :no_admin_urls
-      result = AdminClient.list_pending_command_executions()
+      result = Client.list_pending_command_executions()
       assert result != {:error, :no_admin_urls}
       assert match?({:error, _}, result)
     end
@@ -53,7 +53,7 @@ defmodule EdgeAgent.EdgeClusters.AdminClientTest do
       Settings.set_admin_urls([])
       Settings.set_admin_fallback_urls([])
 
-      assert {:error, :no_admin_urls} = AdminClient.register_node(%{node_id: "test"})
+      assert {:error, :no_admin_urls} = Client.register_node(%{node_id: "test"})
     end
   end
 
@@ -70,7 +70,7 @@ defmodule EdgeAgent.EdgeClusters.AdminClientTest do
       Settings.set_admin_fallback_urls(["http://127.0.0.1:1"])
       Settings.set_api_token("test-token")
 
-      result = AdminClient.list_pending_command_executions()
+      result = Client.list_pending_command_executions()
       assert result != {:error, :no_admin_urls}
       assert match?({:error, _}, result)
     end
@@ -90,14 +90,14 @@ defmodule EdgeAgent.EdgeClusters.AdminClientTest do
       Settings.set_admin_urls([])
       Settings.set_admin_fallback_urls([])
 
-      assert {:error, :no_admin_urls} = AdminClient.register_node(%{node_id: "test"})
+      assert {:error, :no_admin_urls} = Client.register_node(%{node_id: "test"})
     end
 
     test "no VPN, no Settings fallback → :no_admin_urls (authenticated re-registration path)" do
       Settings.set_admin_urls([])
       Settings.set_admin_fallback_urls([])
 
-      assert {:error, :no_admin_urls} = AdminClient.reregister_node(%{})
+      assert {:error, :no_admin_urls} = Client.reregister_node(%{})
     end
   end
 
@@ -110,24 +110,24 @@ defmodule EdgeAgent.EdgeClusters.AdminClientTest do
 
   describe "verify_enrollment_key/2" do
     test "empty admin_urls list → {:error, {:all_requests_failed, _}}" do
-      result = AdminClient.verify_enrollment_key("some-blob==", [])
+      result = Client.verify_enrollment_key("some-blob==", [])
       assert {:error, {:all_requests_failed, reason}} = result
       assert is_binary(reason)
     end
 
     test "single unreachable URL → {:error, {:all_requests_failed, _}} after trying" do
-      result = AdminClient.verify_enrollment_key("some-blob==", ["http://127.0.0.1:1"])
+      result = Client.verify_enrollment_key("some-blob==", ["http://127.0.0.1:1"])
       assert {:error, {:all_requests_failed, _}} = result
     end
 
     test "multiple unreachable URLs → {:error, {:all_requests_failed, _}}" do
       urls = ["http://127.0.0.1:1", "http://127.0.0.1:2"]
-      result = AdminClient.verify_enrollment_key("some-blob==", urls)
+      result = Client.verify_enrollment_key("some-blob==", urls)
       assert {:error, {:all_requests_failed, _}} = result
     end
 
     test "returns error tuple, not raises, when all URLs unreachable" do
-      assert match?({:error, _}, AdminClient.verify_enrollment_key("blob", ["http://127.0.0.1:1"]))
+      assert match?({:error, _}, Client.verify_enrollment_key("blob", ["http://127.0.0.1:1"]))
     end
   end
 end

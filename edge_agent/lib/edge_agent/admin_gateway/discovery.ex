@@ -1,20 +1,20 @@
-# edge_agent/lib/edge_agent/edge_clusters/discovery.ex
-defmodule EdgeAgent.EdgeClusters.Discovery do
+# edge_agent/lib/edge_agent/admin_gateway/discovery.ex
+defmodule EdgeAgent.AdminGateway.Discovery do
   @moduledoc """
-  Admin server discovery via WireGuard peer inspection.
+  Admin Gateway discovery via WireGuard peer inspection.
 
   Lists VPN peers, probes peers named `admin-*` on the discovery endpoint, and
   stores confirmed Admin URLs in Settings. An empty result is still stored so
   other components can enter HTTP fallback mode.
   """
 
-  alias EdgeAgent.EdgeClusters.AdminClient
+  alias EdgeAgent.AdminGateway.Client
   alias EdgeAgent.Settings
 
   require Logger
 
   @doc """
-  Discover admins in the cluster.
+  Discover Admin Gateways in the cluster.
 
   Returns `{:ok, network_name, admin_urls}` where network_name is the Edge VPN
   network name or nil if none found.
@@ -105,7 +105,7 @@ defmodule EdgeAgent.EdgeClusters.Discovery do
   defp probe_peer(%{"name" => "admin-" <> _, "address" => ip}, network_name, port) when is_binary(ip) do
     base_url = "http://#{ip}:#{port}"
 
-    case AdminClient.probe(base_url) do
+    case Client.probe(base_url) do
       {:ok, admin_name} ->
         Logger.info("✓ Discovered admin: #{admin_name} (#{ip}) on #{network_name}")
         [base_url]

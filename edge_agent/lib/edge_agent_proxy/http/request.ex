@@ -1,5 +1,5 @@
-# edge_agent/lib/edge_agent/proxy_servers/http/request.ex
-defmodule EdgeAgent.ProxyServers.Http.Request do
+# edge_agent/lib/edge_agent_proxy/http/request.ex
+defmodule EdgeAgentProxy.Http.Request do
   @moduledoc """
   Pure HTTP proxy request and header transformations used by the Agent handler.
   """

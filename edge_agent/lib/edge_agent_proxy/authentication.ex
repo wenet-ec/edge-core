@@ -1,5 +1,5 @@
-# edge_agent/lib/edge_agent/proxy_servers/authentication.ex
-defmodule EdgeAgent.ProxyServers.Authentication do
+# edge_agent/lib/edge_agent_proxy/authentication.ex
+defmodule EdgeAgentProxy.Authentication do
   @moduledoc """
   Authentication for proxy server.
 

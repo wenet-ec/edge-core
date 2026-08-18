@@ -1,5 +1,5 @@
-# edge_agent/lib/edge_agent/proxy_servers/error_handler.ex
-defmodule EdgeAgent.ProxyServers.ErrorHandler do
+# edge_agent/lib/edge_agent_proxy/error_handler.ex
+defmodule EdgeAgentProxy.ErrorHandler do
   @moduledoc """
   Centralized error handling for proxy servers.
 

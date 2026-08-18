@@ -1,8 +1,8 @@
-# edge_agent/test/edge_agent/proxy_servers/socks5/codec_test.exs
-defmodule EdgeAgent.ProxyServers.Socks5.CodecTest do
+# edge_agent/test/edge_agent_proxy/socks5/codec_test.exs
+defmodule EdgeAgentProxy.Socks5.CodecTest do
   use ExUnit.Case, async: true
 
-  alias EdgeAgent.ProxyServers.Socks5.Codec
+  alias EdgeAgentProxy.Socks5.Codec
   # parse_greeting/1 — RFC 1928 §3 client greeting:
   #   VER (1) | NMETHODS (1) | METHODS (NMETHODS bytes)
 

@@ -1,5 +1,5 @@
-# edge_agent/lib/edge_agent/proxy_servers/supervisor.ex
-defmodule EdgeAgent.ProxyServers.Supervisor do
+# edge_agent/lib/edge_agent_proxy/supervisor.ex
+defmodule EdgeAgentProxy.Supervisor do
   @moduledoc """
   Supervises the Agent proxy subsystem.
 
@@ -17,8 +17,8 @@ defmodule EdgeAgent.ProxyServers.Supervisor do
   @impl true
   def init(_opts) do
     children = [
-      EdgeAgent.ProxyServers.Transport.TunnelRegistry,
-      EdgeAgent.ProxyServers
+      EdgeAgentProxy.Transport.TunnelRegistry,
+      EdgeAgentProxy
     ]
 
     Supervisor.init(children, strategy: :one_for_one)

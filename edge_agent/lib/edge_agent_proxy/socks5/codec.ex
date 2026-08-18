@@ -1,5 +1,5 @@
-# edge_agent/lib/edge_agent/proxy_servers/socks5/codec.ex
-defmodule EdgeAgent.ProxyServers.Socks5.Codec do
+# edge_agent/lib/edge_agent_proxy/socks5/codec.ex
+defmodule EdgeAgentProxy.Socks5.Codec do
   @moduledoc """
   Pure SOCKS5 encoder/decoder (RFC 1928 + RFC 1929) with no I/O.
 

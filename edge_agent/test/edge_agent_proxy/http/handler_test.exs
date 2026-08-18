@@ -1,11 +1,11 @@
-# edge_agent/test/edge_agent/proxy_servers/http/handler_test.exs
-defmodule EdgeAgent.ProxyServers.Http.HandlerTest do
+# edge_agent/test/edge_agent_proxy/http/handler_test.exs
+defmodule EdgeAgentProxy.Http.HandlerTest do
   # async: false because tests touch the :via_pseudonym application env. The
   # Handler reads it lazily on every call, so racing test writes would
   # cross-talk between cases.
   use ExUnit.Case, async: false
 
-  alias EdgeAgent.ProxyServers.Http.Handler
+  alias EdgeAgentProxy.Http.Handler
   # validate_proxy_form/2
 
   describe "validate_proxy_form/2" do

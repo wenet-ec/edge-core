@@ -1,5 +1,5 @@
-# edge_agent/lib/edge_agent/proxy_servers/transport/tunnel_registry.ex
-defmodule EdgeAgent.ProxyServers.Transport.TunnelRegistry do
+# edge_agent/lib/edge_agent_proxy/transport/tunnel_registry.ex
+defmodule EdgeAgentProxy.Transport.TunnelRegistry do
   @moduledoc """
   Tracks live proxy handler processes so they can be signalled for graceful
   drain on shutdown.

@@ -1,8 +1,8 @@
-# edge_agent/test/edge_agent/proxy_servers/error_handler_test.exs
-defmodule EdgeAgent.ProxyServers.ErrorHandlerTest do
+# edge_agent/test/edge_agent_proxy/error_handler_test.exs
+defmodule EdgeAgentProxy.ErrorHandlerTest do
   use ExUnit.Case, async: true
 
-  alias EdgeAgent.ProxyServers.ErrorHandler
+  alias EdgeAgentProxy.ErrorHandler
 
   describe "http_error_response/1" do
     test "econnrefused → 502 connection refused" do

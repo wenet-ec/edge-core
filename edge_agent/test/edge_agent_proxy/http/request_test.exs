@@ -1,8 +1,8 @@
-# edge_agent/test/edge_agent/proxy_servers/http/request_test.exs
-defmodule EdgeAgent.ProxyServers.Http.RequestTest do
+# edge_agent/test/edge_agent_proxy/http/request_test.exs
+defmodule EdgeAgentProxy.Http.RequestTest do
   use ExUnit.Case, async: true
 
-  alias EdgeAgent.ProxyServers.Http.Request
+  alias EdgeAgentProxy.Http.Request
 
   test "requires absolute-form URIs except for CONNECT" do
     assert Request.validate_proxy_form("CONNECT", "example.com:443") == :ok

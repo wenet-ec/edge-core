@@ -1,5 +1,5 @@
-# edge_agent/lib/edge_agent/proxy_servers/transport/buffered_reader.ex
-defmodule EdgeAgent.ProxyServers.Transport.BufferedReader do
+# edge_agent/lib/edge_agent_proxy/transport/buffered_reader.ex
+defmodule EdgeAgentProxy.Transport.BufferedReader do
   @moduledoc """
   Reads framed protocol messages from passive `:gen_tcp` sockets.
 

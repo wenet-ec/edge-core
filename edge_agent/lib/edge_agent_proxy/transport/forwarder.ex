@@ -1,5 +1,5 @@
-# edge_agent/lib/edge_agent/proxy_servers/transport/forwarder.ex
-defmodule EdgeAgent.ProxyServers.Transport.Forwarder do
+# edge_agent/lib/edge_agent_proxy/transport/forwarder.ex
+defmodule EdgeAgentProxy.Transport.Forwarder do
   @moduledoc """
   Bidirectional TCP forwarder with half-close semantics and graceful drain.
 
@@ -18,7 +18,7 @@ defmodule EdgeAgent.ProxyServers.Transport.Forwarder do
   `[:edge_agent, :proxy, :tunnel, :closed]` telemetry when both loops finish.
   """
 
-  alias EdgeAgent.ProxyServers.Config
+  alias EdgeAgentProxy.Config
 
   @type metadata :: map()
 

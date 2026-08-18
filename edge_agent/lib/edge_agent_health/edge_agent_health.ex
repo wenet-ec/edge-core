@@ -123,7 +123,7 @@ defmodule EdgeAgentHealth do
 
   @spec proxy_servers_health() :: :ok | {:error, String.t()}
   def proxy_servers_health do
-    case EdgeAgent.ProxyServers.status() do
+    case EdgeAgentProxy.status() do
       :running ->
         :ok
 

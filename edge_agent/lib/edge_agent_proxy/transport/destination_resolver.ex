@@ -1,5 +1,5 @@
-# edge_agent/lib/edge_agent/proxy_servers/transport/destination_resolver.ex
-defmodule EdgeAgent.ProxyServers.Transport.DestinationResolver do
+# edge_agent/lib/edge_agent_proxy/transport/destination_resolver.ex
+defmodule EdgeAgentProxy.Transport.DestinationResolver do
   @moduledoc """
   Resolves proxy destinations once and validates every returned address.
 
@@ -7,7 +7,7 @@ defmodule EdgeAgent.ProxyServers.Transport.DestinationResolver do
   resolution and the DNS-rebinding-safe selection of the address to connect.
   """
 
-  alias EdgeAgent.ProxyServers.Transport.DestinationValidator
+  alias EdgeAgentProxy.Transport.DestinationValidator
 
   require Logger
 

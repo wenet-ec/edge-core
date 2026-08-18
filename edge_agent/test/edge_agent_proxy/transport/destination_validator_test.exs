@@ -1,9 +1,9 @@
-# edge_agent/test/edge_agent/proxy_servers/transport/destination_validator_test.exs
-defmodule EdgeAgent.ProxyServers.Transport.DestinationValidatorTest do
+# edge_agent/test/edge_agent_proxy/transport/destination_validator_test.exs
+defmodule EdgeAgentProxy.Transport.DestinationValidatorTest do
   use ExUnit.Case, async: false
 
-  alias EdgeAgent.ProxyServers.Transport.DestinationResolver
-  alias EdgeAgent.ProxyServers.Transport.DestinationValidator
+  alias EdgeAgentProxy.Transport.DestinationResolver
+  alias EdgeAgentProxy.Transport.DestinationValidator
 
   defp with_app_env(key, value, fun) do
     old = Application.get_env(:edge_agent, key)

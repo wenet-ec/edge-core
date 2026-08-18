@@ -8,7 +8,7 @@ defmodule EdgeAgent.Application do
   The supervision tree is selected by `EDGE_AGENT_MODE`:
 
   - `"test"` — minimal tree: `Repo`, `PubSub`, `Oban`, `ExecutionRegistry`,
-    `Endpoint`. No `Bootstrap`, `SshServer`, `MetricsServers`, `ProxyServers`,
+    `Endpoint`. No `Bootstrap`, `SshServer`, `MetricsServers`, `EdgeAgentProxy`,
     `PromEx`, `DerpMapCache`, or `Mdns` — keeps tests free of external
     side effects (VPN join, port binds, OpenSSL host-key generation).
   - any other value (incl. unset) — full `:server` tree.
@@ -68,7 +68,7 @@ defmodule EdgeAgent.Application do
       ExecutionRegistry,
       EdgeAgent.SshServer,
       EdgeAgent.MetricsServers,
-      EdgeAgent.ProxyServers.Supervisor,
+      EdgeAgentProxy.Supervisor,
       EdgeAgent.Bootstrap,
       EdgeAgent.Vpn.DerpMapCache,
       EdgeAgent.Lan.Mdns,

@@ -1,5 +1,5 @@
-# edge_agent/lib/edge_agent/proxy_servers/transport/destination_validator.ex
-defmodule EdgeAgent.ProxyServers.Transport.DestinationValidator do
+# edge_agent/lib/edge_agent_proxy/transport/destination_validator.ex
+defmodule EdgeAgentProxy.Transport.DestinationValidator do
   @moduledoc """
   Validates proxy destination addresses to prevent SSRF and privilege escalation attacks.
 
@@ -320,7 +320,7 @@ defmodule EdgeAgent.ProxyServers.Transport.DestinationValidator do
   Get human-readable error message for a block reason.
 
   Production code paths render error messages via
-  `EdgeAgent.ProxyServers.ErrorHandler.http_error_response/1` (HTTP) and
+  `EdgeAgentProxy.ErrorHandler.http_error_response/1` (HTTP) and
   `socks5_reply_code/1` (SOCKS5). This helper is kept for tests and any
   out-of-band reporting that needs a plain English string per reason.
   """

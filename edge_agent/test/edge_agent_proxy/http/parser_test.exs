@@ -1,8 +1,8 @@
-# edge_agent/test/edge_agent/proxy_servers/http/parser_test.exs
-defmodule EdgeAgent.ProxyServers.Http.ParserTest do
+# edge_agent/test/edge_agent_proxy/http/parser_test.exs
+defmodule EdgeAgentProxy.Http.ParserTest do
   use ExUnit.Case, async: true
 
-  alias EdgeAgent.ProxyServers.Http.Parser
+  alias EdgeAgentProxy.Http.Parser
   # to_method/1 — atom (well-known) or binary (custom) → uppercase string
 
   describe "to_method/1" do

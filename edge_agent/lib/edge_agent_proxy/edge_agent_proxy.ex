@@ -1,5 +1,5 @@
-# edge_agent/lib/edge_agent/proxy_servers/proxy_servers.ex
-defmodule EdgeAgent.ProxyServers do
+# edge_agent/lib/edge_agent_proxy/edge_agent_proxy.ex
+defmodule EdgeAgentProxy do
   @moduledoc """
   Proxy servers supervisor managing HTTP and SOCKS5 forward proxies.
 
@@ -21,10 +21,10 @@ defmodule EdgeAgent.ProxyServers do
 
   use GenServer
 
-  alias EdgeAgent.ProxyServers.Config
-  alias EdgeAgent.ProxyServers.Http.Handler, as: HttpHandler
-  alias EdgeAgent.ProxyServers.Socks5.Handler, as: Socks5Handler
-  alias EdgeAgent.ProxyServers.Transport.TunnelRegistry
+  alias EdgeAgentProxy.Config
+  alias EdgeAgentProxy.Http.Handler, as: HttpHandler
+  alias EdgeAgentProxy.Socks5.Handler, as: Socks5Handler
+  alias EdgeAgentProxy.Transport.TunnelRegistry
 
   require Logger
 
@@ -101,7 +101,7 @@ defmodule EdgeAgent.ProxyServers do
       status: :error
     }
 
-    case start_proxy_servers(state) do
+    case start_listeners(state) do
       {:ok, new_state} ->
         Logger.info("Proxy servers started successfully")
         Logger.info("  HTTP proxy: #{format_ip(listen_address)}:#{http_port}")
@@ -127,7 +127,7 @@ defmodule EdgeAgent.ProxyServers do
 
   @impl true
   def handle_info(:retry_listener_start, %{http_listener_ref: nil, socks5_listener_ref: nil} = state) do
-    case start_proxy_servers(state) do
+    case start_listeners(state) do
       {:ok, new_state} ->
         Logger.info("Proxy servers recovered")
         {:noreply, %{new_state | status: :running}}
@@ -144,7 +144,7 @@ defmodule EdgeAgent.ProxyServers do
   @impl true
   def terminate(_reason, state) do
     Logger.info("Shutting down proxy servers...")
-    stop_proxy_servers(state)
+    stop_listeners(state)
     drain_tunnels()
     :ok
   end
@@ -169,7 +169,7 @@ defmodule EdgeAgent.ProxyServers do
     :ok
   end
 
-  defp start_proxy_servers(state) do
+  defp start_listeners(state) do
     case start_http_proxy(state) do
       {:ok, http_ref} ->
         case start_socks5_proxy(state) do
@@ -251,7 +251,7 @@ defmodule EdgeAgent.ProxyServers do
     end
   end
 
-  defp stop_proxy_servers(state) do
+  defp stop_listeners(state) do
     if state.http_listener_ref do
       :ranch.stop_listener(:http_proxy)
       Logger.info("HTTP proxy stopped")

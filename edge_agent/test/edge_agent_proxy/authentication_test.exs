@@ -1,9 +1,9 @@
-# edge_agent/test/edge_agent/proxy_servers/authentication_test.exs
-defmodule EdgeAgent.ProxyServers.AuthenticationTest do
+# edge_agent/test/edge_agent_proxy/authentication_test.exs
+defmodule EdgeAgentProxy.AuthenticationTest do
   use EdgeAgent.DataCase
 
-  alias EdgeAgent.ProxyServers.Authentication
   alias EdgeAgent.Settings
+  alias EdgeAgentProxy.Authentication
 
   defp with_auth_enabled(value, fun) do
     old = Application.get_env(:edge_agent, :proxy_servers_auth_enabled)

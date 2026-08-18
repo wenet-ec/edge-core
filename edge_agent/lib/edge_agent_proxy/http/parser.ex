@@ -1,5 +1,5 @@
-# edge_agent/lib/edge_agent/proxy_servers/http/parser.ex
-defmodule EdgeAgent.ProxyServers.Http.Parser do
+# edge_agent/lib/edge_agent_proxy/http/parser.ex
+defmodule EdgeAgentProxy.Http.Parser do
   @moduledoc """
   HTTP/1.x request parser built on `:erlang.decode_packet/3`.
 

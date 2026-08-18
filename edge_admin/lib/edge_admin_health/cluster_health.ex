@@ -19,7 +19,7 @@ defmodule EdgeAdminHealth.ClusterHealth do
   @doc "Returns healthy only when the Admin cluster is not degraded."
   @spec degraded_mode_health() :: :ok | {:error, String.t()}
   def degraded_mode_health do
-    if EdgeAdmin.Admins.Metadata.degraded?() do
+    if EdgeAdmin.AdminClustering.Metadata.degraded?() do
       {:error, "Cluster is degraded"}
     else
       :ok

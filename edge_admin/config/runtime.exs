@@ -385,11 +385,11 @@ config :edge_admin, EdgeAdmin.LocalScheduler,
   jobs: [
     admin_discovery: [
       schedule: admin_discovery_schedule,
-      task: {EdgeAdmin.Admins.Discovery, :scan_and_connect_admins, []}
+      task: {EdgeAdmin.AdminClustering.Discovery, :scan_and_connect_admins, []}
     ],
     metadata_recomputation: [
       schedule: metadata_recomputation_schedule,
-      task: {EdgeAdmin.Admins.Metadata, :recompute_now, []}
+      task: {EdgeAdmin.AdminClustering.Metadata, :recompute_now, []}
     ],
     node_health_check: [
       schedule: node_health_check_schedule,

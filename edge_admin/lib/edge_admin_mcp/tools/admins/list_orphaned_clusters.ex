@@ -9,7 +9,7 @@ defmodule EdgeAdminMcp.Tools.Admins.ListOrphanedClusters do
   """
   use EdgeAdminMcp, :tool
 
-  alias EdgeAdmin.Admins.Metadata
+  alias EdgeAdmin.AdminClustering.Metadata
 
   @impl true
   def title, do: "List Orphaned Clusters"

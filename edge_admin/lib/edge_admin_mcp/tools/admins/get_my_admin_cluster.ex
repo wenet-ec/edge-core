@@ -14,7 +14,7 @@ defmodule EdgeAdminMcp.Tools.Admins.GetMyAdminCluster do
   """
   use EdgeAdminMcp, :tool
 
-  alias EdgeAdmin.Admins.Metadata
+  alias EdgeAdmin.AdminClustering.Metadata
 
   @impl true
   def title, do: "Get This Admin's Admin Cluster"

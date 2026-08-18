@@ -1,8 +1,8 @@
-# edge_admin/test/edge_admin/admins/admins_test.exs
-defmodule EdgeAdmin.AdminsTest do
+# edge_admin/test/edge_admin/admin_clustering/admin_clustering_test.exs
+defmodule EdgeAdmin.AdminClusteringTest do
   use ExUnit.Case, async: true
 
-  alias EdgeAdmin.Admins
+  alias EdgeAdmin.AdminClustering
   # Fixture helpers
 
   defp network(netid, addressrange \\ "100.64.0.0/24") do
@@ -34,7 +34,7 @@ defmodule EdgeAdmin.AdminsTest do
       members: [member(opts)]
     }
 
-    [admin] = Admins.normalise_cluster(raw).admins
+    [admin] = AdminClustering.normalise_cluster(raw).admins
     admin
   end
 
@@ -47,7 +47,7 @@ defmodule EdgeAdmin.AdminsTest do
         members: [member(name: "admin-zzz", host_id: "h1"), member(name: "admin-aaa", host_id: "h2")]
       }
 
-      result = Admins.normalise_cluster(raw)
+      result = AdminClustering.normalise_cluster(raw)
 
       assert result.name == "admin-cluster-a"
       assert result.ipv4_range == "100.64.0.0/24"
@@ -67,7 +67,7 @@ defmodule EdgeAdmin.AdminsTest do
         ]
       }
 
-      result = Admins.normalise_cluster(raw)
+      result = AdminClustering.normalise_cluster(raw)
 
       assert Enum.map(result.admins, & &1.name) == ["admin-aaa", "admin-mmm", "admin-zzz"]
     end
@@ -78,7 +78,7 @@ defmodule EdgeAdmin.AdminsTest do
         members: Enum.map(1..5, fn i -> member(name: "admin-#{i}", host_id: "h#{i}") end)
       }
 
-      result = Admins.normalise_cluster(raw)
+      result = AdminClustering.normalise_cluster(raw)
 
       assert result.admin_count == length(result.admins)
       assert result.admin_count == 5
@@ -87,7 +87,7 @@ defmodule EdgeAdmin.AdminsTest do
     test "empty members list yields admin_count: 0 and admins: []" do
       raw = %{network: network("admin-cluster-a"), members: []}
 
-      result = Admins.normalise_cluster(raw)
+      result = AdminClustering.normalise_cluster(raw)
 
       assert result.admin_count == 0
       assert result.admins == []
@@ -99,7 +99,7 @@ defmodule EdgeAdmin.AdminsTest do
         members: [member(name: "admin-7k3m9p2nq8r4")]
       }
 
-      result = Admins.normalise_cluster(raw)
+      result = AdminClustering.normalise_cluster(raw)
       [admin] = result.admins
 
       assert admin.vpn_hostname == "admin-7k3m9p2nq8r4.admin-cluster-a.nm.internal"

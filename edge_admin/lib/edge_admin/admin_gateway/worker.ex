@@ -25,8 +25,8 @@ defmodule EdgeAdmin.AdminGateway.Worker do
 
   use GenServer
 
+  alias EdgeAdmin.AdminClustering.Metadata
   alias EdgeAdmin.AdminGateway.AgentClient
-  alias EdgeAdmin.Admins.Metadata
   alias EdgeAdmin.Vpn
 
   require Logger

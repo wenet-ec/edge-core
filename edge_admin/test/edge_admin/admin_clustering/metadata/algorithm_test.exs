@@ -1,8 +1,8 @@
-# edge_admin/test/edge_admin/admins/metadata/algorithm_test.exs
-defmodule EdgeAdmin.Admins.Metadata.AlgorithmTest do
+# edge_admin/test/edge_admin/admin_clustering/metadata/algorithm_test.exs
+defmodule EdgeAdmin.AdminClustering.Metadata.AlgorithmTest do
   use ExUnit.Case, async: true
 
-  alias EdgeAdmin.Admins.Metadata.Algorithm
+  alias EdgeAdmin.AdminClustering.Metadata.Algorithm
 
   # Build an admins map from a keyword list of {name, edge_node_capacity}
   defp admins(pairs) do

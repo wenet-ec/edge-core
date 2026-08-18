@@ -23,7 +23,7 @@ defmodule EdgeAdminWeb.Plugs.DegradedMode do
   # time via `compile_env`. Tests override it by setting `:metadata_module` in
   # config/test.exs before compilation. Runtime swaps are NOT supported — change
   # the config and recompile.
-  @metadata_module Application.compile_env(:edge_admin, :metadata_module, EdgeAdmin.Admins.Metadata)
+  @metadata_module Application.compile_env(:edge_admin, :metadata_module, EdgeAdmin.AdminClustering.Metadata)
   @compile {:no_warn_undefined, @metadata_module}
 
   def init(mode), do: mode

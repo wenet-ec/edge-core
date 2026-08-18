@@ -31,9 +31,9 @@ defmodule EdgeAdmin.Metrics do
 
   import Ecto.Query, warn: false
 
+  alias EdgeAdmin.AdminClustering.Metadata
   alias EdgeAdmin.AdminGateway.Router, as: GatewayRouter
   alias EdgeAdmin.AdminGateway.Worker, as: GatewayWorker
-  alias EdgeAdmin.Admins.Metadata
   alias EdgeAdmin.Metrics.Forms.PushMetricsCacheForm
   alias EdgeAdmin.Metrics.Parsers.AdminMetricsParser
   alias EdgeAdmin.Metrics.Parsers.AgentMetricsParser

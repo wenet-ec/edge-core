@@ -10,7 +10,7 @@ defmodule EdgeAdmin.Nodes.Resources.Nodes do
   import Ecto.Query, warn: false
 
   alias Ecto.Query.CastError
-  alias EdgeAdmin.Admins.Metadata
+  alias EdgeAdmin.AdminClustering.Metadata
   alias EdgeAdmin.Commands
   alias EdgeAdmin.Events
   alias EdgeAdmin.Events.Catalog

@@ -9,7 +9,7 @@ defmodule EdgeAdmin.Commands.Workflows.Retention do
 
   import Ecto.Query, warn: false
 
-  alias EdgeAdmin.Admins.Metadata
+  alias EdgeAdmin.AdminClustering.Metadata
   alias EdgeAdmin.Commands.Enums.CommandExecutionStatuses
   alias EdgeAdmin.Commands.Schemas.CommandExecution
   alias EdgeAdmin.Commands.Workflows.CommandExecutionLifecycle

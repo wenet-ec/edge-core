@@ -22,9 +22,9 @@ defmodule EdgeAdmin.AdminGateway.Coordinator do
 
   use GenServer
 
+  alias EdgeAdmin.AdminClustering.Metadata
   alias EdgeAdmin.AdminGateway.Reconciliation
   alias EdgeAdmin.AdminGateway.Supervisor, as: GatewaySupervisor
-  alias EdgeAdmin.Admins.Metadata
   alias EdgeAdmin.Vpn
 
   require Logger

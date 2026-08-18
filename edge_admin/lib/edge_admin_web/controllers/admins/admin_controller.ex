@@ -20,7 +20,7 @@ defmodule EdgeAdminWeb.Controllers.Admins.AdminController do
   )
 
   def show(conn, _params) do
-    admin = EdgeAdmin.Admins.Metadata.get_admin()
+    admin = EdgeAdmin.AdminClustering.Metadata.get_admin()
     render(conn, :show, conn: conn, admin: admin)
   end
 end

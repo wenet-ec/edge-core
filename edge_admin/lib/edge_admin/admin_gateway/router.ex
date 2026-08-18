@@ -7,8 +7,8 @@ defmodule EdgeAdmin.AdminGateway.Router do
   uses the Gateway process directly; the lookup details remain contained here.
   """
 
+  alias EdgeAdmin.AdminClustering.Metadata
   alias EdgeAdmin.AdminGateway.Worker
-  alias EdgeAdmin.Admins.Metadata
   alias EdgeAdmin.ProxyServers.AdminTunnel.Client, as: AdminTunnelClient
   alias EdgeAdmin.ProxyServers.Config, as: ProxyConfig
 

@@ -17,7 +17,7 @@ defmodule EdgeAdmin.Vpn do
   `network_has_capacity/1`.
   """
 
-  alias EdgeAdmin.Admins.Metadata
+  alias EdgeAdmin.AdminClustering.Metadata
   alias EdgeAdmin.Vpn.Addressing, as: VpnAddressing
   alias EdgeAdmin.Vpn.Naming, as: VpnNaming
   alias Nexmaker.Api
@@ -158,7 +158,7 @@ defmodule EdgeAdmin.Vpn do
 
   This is a raw Netmaker proxy: shapes mirror Netmaker's API and may include
   stale members. Callers in the admin domain should normalise to
-  domain-friendly output (see `EdgeAdmin.Admins.list_admin_clusters/0`).
+  domain-friendly output (see `EdgeAdmin.AdminClustering.list_admin_clusters/0`).
 
   Returns `{:ok, [%{network: net_map, members: [%{node: node, host: host}, ...]}]}`
   or `{:error, :service_unavailable}`.

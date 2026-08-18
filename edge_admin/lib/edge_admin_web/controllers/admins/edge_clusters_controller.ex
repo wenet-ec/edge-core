@@ -20,7 +20,7 @@ defmodule EdgeAdminWeb.Controllers.Admins.EdgeClustersController do
   )
 
   def index(conn, _params) do
-    edge_clusters = EdgeAdmin.Admins.Metadata.get_edge_clusters()
+    edge_clusters = EdgeAdmin.AdminClustering.Metadata.get_edge_clusters()
     render(conn, :index, conn: conn, edge_clusters: edge_clusters)
   end
 end

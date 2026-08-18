@@ -52,7 +52,7 @@ defmodule EdgeAdminHealth do
   @doc "Checks whether Admin-cluster membership has initialized."
   @spec membership_health() :: :ok | {:error, String.t()}
   def membership_health do
-    if EdgeAdmin.Admins.Membership.initialized?() do
+    if EdgeAdmin.AdminClustering.Membership.initialized?() do
       :ok
     else
       {:error, "Membership not initialized"}
@@ -62,7 +62,7 @@ defmodule EdgeAdminHealth do
   @doc "Checks whether Admin metadata computation has initialized."
   @spec metadata_health() :: :ok | {:error, String.t()}
   def metadata_health do
-    if EdgeAdmin.Admins.Metadata.initialized?() do
+    if EdgeAdmin.AdminClustering.Metadata.initialized?() do
       :ok
     else
       {:error, "Metadata not initialized"}

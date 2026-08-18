@@ -1,5 +1,5 @@
-# edge_admin/lib/edge_admin/admins/metadata.ex
-defmodule EdgeAdmin.Admins.Metadata do
+# edge_admin/lib/edge_admin/admin_clustering/metadata.ex
+defmodule EdgeAdmin.AdminClustering.Metadata do
   @moduledoc """
   Distributed metadata coordinator for admin cluster state and edge cluster assignments.
 
@@ -135,8 +135,8 @@ defmodule EdgeAdmin.Admins.Metadata do
 
   use GenServer
 
-  alias EdgeAdmin.Admins.Metadata.Algorithm
-  alias EdgeAdmin.Admins.Metadata.Events
+  alias EdgeAdmin.AdminClustering.Metadata.Algorithm
+  alias EdgeAdmin.AdminClustering.Metadata.Events
   alias EdgeAdmin.Nodes
   alias EdgeAdmin.Vpn
 

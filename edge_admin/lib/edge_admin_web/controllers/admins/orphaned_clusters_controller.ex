@@ -21,7 +21,7 @@ defmodule EdgeAdminWeb.Controllers.Admins.OrphanedClustersController do
   )
 
   def index(conn, _params) do
-    orphaned_clusters = EdgeAdmin.Admins.Metadata.get_orphaned_clusters()
+    orphaned_clusters = EdgeAdmin.AdminClustering.Metadata.get_orphaned_clusters()
     render(conn, :index, conn: conn, orphaned_clusters: orphaned_clusters)
   end
 end

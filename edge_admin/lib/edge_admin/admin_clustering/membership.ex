@@ -1,5 +1,5 @@
-# edge_admin/lib/edge_admin/admins/membership.ex
-defmodule EdgeAdmin.Admins.Membership do
+# edge_admin/lib/edge_admin/admin_clustering/membership.ex
+defmodule EdgeAdmin.AdminClustering.Membership do
   @moduledoc """
   Establishes this admin's membership in the admin cluster.
 
@@ -81,7 +81,7 @@ defmodule EdgeAdmin.Admins.Membership do
 
   use GenServer
 
-  alias EdgeAdmin.Admins.Discovery
+  alias EdgeAdmin.AdminClustering.Discovery
   alias EdgeAdmin.Vpn
 
   require Logger

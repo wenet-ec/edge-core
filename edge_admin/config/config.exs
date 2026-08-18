@@ -72,6 +72,6 @@ config :sentry,
 
 # Syn event handler bridge — forwards admin join/leave events to Metadata for
 # immediate recomputation instead of waiting for the 60s periodic scheduler.
-config :syn, event_handler: EdgeAdmin.Admins.SynEventHandler
+config :syn, event_handler: EdgeAdmin.AdminClustering.SynEventHandler
 
 import_config "#{Mix.env()}.exs"

@@ -10,10 +10,10 @@ defmodule EdgeAdmin.Nodes.Workflows.HealthCheck do
 
   import Ecto.Query, warn: false
 
+  alias EdgeAdmin.AdminClustering.Metadata
   alias EdgeAdmin.AdminGateway.AgentClient
   alias EdgeAdmin.AdminGateway.Router, as: GatewayRouter
   alias EdgeAdmin.AdminGateway.Worker, as: GatewayWorker
-  alias EdgeAdmin.Admins.Metadata
   alias EdgeAdmin.Events
   alias EdgeAdmin.Events.Catalog
   alias EdgeAdmin.Nodes.Forms

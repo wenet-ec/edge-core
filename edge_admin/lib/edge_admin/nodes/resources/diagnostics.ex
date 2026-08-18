@@ -6,9 +6,9 @@ defmodule EdgeAdmin.Nodes.Resources.Diagnostics do
 
   import Ecto.Query, only: [where: 3]
 
+  alias EdgeAdmin.AdminClustering.Metadata
   alias EdgeAdmin.AdminGateway.Router, as: GatewayRouter
   alias EdgeAdmin.AdminGateway.Worker, as: GatewayWorker
-  alias EdgeAdmin.Admins.Metadata
   alias EdgeAdmin.Nodes.Resources.Nodes, as: NodeResource
   alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.Nodes.Schemas.NodeDiagnostic

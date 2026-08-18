@@ -10,7 +10,7 @@ defmodule EdgeAdmin.Nodes.Resources.Clusters do
 
   import Ecto.Query, warn: false
 
-  alias EdgeAdmin.Admins.Metadata
+  alias EdgeAdmin.AdminClustering.Metadata
   alias EdgeAdmin.Nodes.Checks
   alias EdgeAdmin.Nodes.Filters.ClusterFilters
   alias EdgeAdmin.Nodes.Forms

@@ -10,7 +10,7 @@ defmodule EdgeAdmin.Commands do
   ## Concurrency model
 
   This context runs on every admin in a multi-admin cluster simultaneously.
-  Cluster ownership (via `Admins.Metadata`) is *eventually* consistent and can
+  Cluster ownership (via `AdminClustering.Metadata`) is *eventually* consistent and can
   flap during reconciliation — at any moment, two admins may both believe they
   own the same edge cluster. Independently, a single admin's HTTP round trip
   to an agent can outlast the agent's command execution, so the agent can
@@ -25,7 +25,7 @@ defmodule EdgeAdmin.Commands do
   as early 409 gates but the DB is authoritative.
 
   Commands are globally visible, but delivery is local to the clusters this
-  Admin owns according to `EdgeAdmin.Admins.Metadata`.
+  Admin owns according to `EdgeAdmin.AdminClustering.Metadata`.
   """
 
   alias EdgeAdmin.Commands.Resources.CommandExecutions, as: CommandExecutionResource

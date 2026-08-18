@@ -18,7 +18,7 @@ defmodule EdgeAdmin.Nodes.Workers.ScheduleClusterReconciliationWorker do
       states: :incomplete
     ]
 
-  alias EdgeAdmin.Admins.Metadata
+  alias EdgeAdmin.AdminClustering.Metadata
   alias EdgeAdmin.Nodes
 
   require Logger

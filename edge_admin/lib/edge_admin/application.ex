@@ -95,7 +95,7 @@ defmodule EdgeAdmin.Application do
         {Phoenix.PubSub, name: EdgeAdmin.PubSub},
         EdgeAdminWeb.Telemetry,
         {Oban, Application.fetch_env!(:edge_admin, Oban)},
-        EdgeAdmin.Admins.Membership
+        EdgeAdmin.AdminClustering.Membership
       ]
   end
 
@@ -109,7 +109,7 @@ defmodule EdgeAdmin.Application do
   end
 
   defp router_scheduler_children do
-    [EdgeAdmin.Admins.Metadata, EdgeAdmin.LocalScheduler.History, EdgeAdmin.LocalScheduler]
+    [EdgeAdmin.AdminClustering.Metadata, EdgeAdmin.LocalScheduler.History, EdgeAdmin.LocalScheduler]
   end
 
   # The proxy supervisor is Gateway-owned because it includes the raw

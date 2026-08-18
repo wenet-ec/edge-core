@@ -1,5 +1,5 @@
-# edge_admin/lib/edge_admin/admins/admins.ex
-defmodule EdgeAdmin.Admins do
+# edge_admin/lib/edge_admin/admin_clustering/admin_clustering.ex
+defmodule EdgeAdmin.AdminClustering do
   @moduledoc """
   Public surface for admin-domain queries.
 

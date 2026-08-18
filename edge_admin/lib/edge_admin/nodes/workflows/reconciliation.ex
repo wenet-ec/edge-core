@@ -11,7 +11,7 @@ defmodule EdgeAdmin.Nodes.Workflows.Reconciliation do
   import Ecto.Query, warn: false
 
   alias Ecto.Query.CastError
-  alias EdgeAdmin.Admins.Metadata
+  alias EdgeAdmin.AdminClustering.Metadata
   alias EdgeAdmin.Commands
   alias EdgeAdmin.Nodes
   alias EdgeAdmin.Nodes.Queries.ClusterQueries

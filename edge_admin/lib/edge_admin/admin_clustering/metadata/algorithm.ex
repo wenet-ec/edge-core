@@ -1,5 +1,5 @@
-# edge_admin/lib/edge_admin/admins/metadata/algorithm.ex
-defmodule EdgeAdmin.Admins.Metadata.Algorithm do
+# edge_admin/lib/edge_admin/admin_clustering/metadata/algorithm.ex
+defmodule EdgeAdmin.AdminClustering.Metadata.Algorithm do
   @moduledoc """
   Pure algorithm for one-admin-per-cluster assignments.
 
@@ -58,7 +58,7 @@ defmodule EdgeAdmin.Admins.Metadata.Algorithm do
       ...>   %{name: "cluster-a", nodes: ["node-1", "node-2", "node-3"]},
       ...>   %{name: "cluster-b", nodes: ["node-4", "node-5"]}
       ...> ]
-      iex> EdgeAdmin.Admins.Metadata.Algorithm.compute_assignments(admins, clusters)
+      iex> EdgeAdmin.AdminClustering.Metadata.Algorithm.compute_assignments(admins, clusters)
       %{
         edge_clusters: %{
           "admin-1" => %{"cluster-b" => ["node-4", "node-5"]},
@@ -163,7 +163,7 @@ defmodule EdgeAdmin.Admins.Metadata.Algorithm do
   ## Example
       iex> admins = %{"admin-1" => %{edge_node_capacity: 199}}
       iex> current = %{edge_clusters: %{"admin-1" => %{}}}
-      iex> EdgeAdmin.Admins.Metadata.Algorithm.bootstrap_empty_cluster(admins, current, "cluster-new")
+      iex> EdgeAdmin.AdminClustering.Metadata.Algorithm.bootstrap_empty_cluster(admins, current, "cluster-new")
       {:ok, "admin-1"}
   """
   def bootstrap_empty_cluster(admins, current_assignments, cluster_name) do

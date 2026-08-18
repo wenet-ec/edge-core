@@ -9,7 +9,7 @@ defmodule EdgeAdminMcp.Tools.Admins.ListAdminClusters do
   """
   use EdgeAdminMcp, :tool
 
-  alias EdgeAdmin.Admins
+  alias EdgeAdmin.AdminClustering
 
   @impl true
   def title, do: "List All Admin Clusters"
@@ -21,7 +21,7 @@ defmodule EdgeAdminMcp.Tools.Admins.ListAdminClusters do
 
   @impl true
   def execute(_params, frame) do
-    case Admins.list_admin_clusters() do
+    case AdminClustering.list_admin_clusters() do
       {:ok, admin_clusters} ->
         payload = %{
           admin_clusters: admin_clusters,

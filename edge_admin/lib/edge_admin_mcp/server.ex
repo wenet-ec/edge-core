@@ -86,7 +86,7 @@ defmodule EdgeAdminMcp.Server do
   alias Anubis.Server.Response
   alias EdgeAdminMcp.ToolError
 
-  # Tools that are blocked when `EdgeAdmin.Admins.Metadata.degraded?/0` is true.
+  # Tools that are blocked when `EdgeAdmin.AdminClustering.Metadata.degraded?/0` is true.
   # Mirrors `plug DegradedMode, :block when action in [...]` on the REST side
   # — same source of truth (`@metadata_module.degraded?/0`), same operations
   # blocked. Reads, alias ops, webhook ops, SSH ops, commands all run
@@ -112,7 +112,7 @@ defmodule EdgeAdminMcp.Server do
 
   # Compile-time dispatch matching `EdgeAdminWeb.Plugs.DegradedMode` — tests
   # override `:metadata_module` in `config/test.exs` before compilation.
-  @metadata_module Application.compile_env(:edge_admin, :metadata_module, EdgeAdmin.Admins.Metadata)
+  @metadata_module Application.compile_env(:edge_admin, :metadata_module, EdgeAdmin.AdminClustering.Metadata)
   @compile {:no_warn_undefined, @metadata_module}
 
   @impl true

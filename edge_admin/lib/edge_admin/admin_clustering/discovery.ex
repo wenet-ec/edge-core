@@ -1,5 +1,5 @@
-# edge_admin/lib/edge_admin/admins/discovery.ex
-defmodule EdgeAdmin.Admins.Discovery do
+# edge_admin/lib/edge_admin/admin_clustering/discovery.ex
+defmodule EdgeAdmin.AdminClustering.Discovery do
   @moduledoc """
   Peer admin discovery and Erlang node connection.
 

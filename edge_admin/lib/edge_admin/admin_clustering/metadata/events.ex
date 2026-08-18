@@ -1,5 +1,5 @@
-# edge_admin/lib/edge_admin/admins/metadata/events.ex
-defmodule EdgeAdmin.Admins.Metadata.Events do
+# edge_admin/lib/edge_admin/admin_clustering/metadata/events.ex
+defmodule EdgeAdmin.AdminClustering.Metadata.Events do
   @moduledoc """
   Pub/sub surface for metadata-related events.
 
@@ -11,7 +11,7 @@ defmodule EdgeAdmin.Admins.Metadata.Events do
       distribution.
 
     * **Local recompute events** — `:recomputed` notifications. Published by
-      `EdgeAdmin.Admins.Metadata` after a recomputation completes and consumed
+      `EdgeAdmin.AdminClustering.Metadata` after a recomputation completes and consumed
       by this admin's `EdgeAdmin.AdminGateway.Coordinator` GenServer to drive gateway
       reconciliation. Node-local, never leaves the VM.
 

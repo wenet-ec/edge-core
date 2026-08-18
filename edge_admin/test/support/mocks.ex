@@ -5,4 +5,4 @@
 # Application.compile_env(:edge_admin, :nodes_module) /
 # Application.compile_env(:edge_admin, :metadata_module).
 Mox.defmock(EdgeAdmin.NodesMock, for: EdgeAdmin.Nodes)
-Mox.defmock(EdgeAdmin.MetadataMock, for: EdgeAdmin.Admins.Metadata)
+Mox.defmock(EdgeAdmin.MetadataMock, for: EdgeAdmin.AdminClustering.Metadata)

@@ -4,7 +4,7 @@ defmodule EdgeAdminMcp.Tools.Admins.GetAdmin do
   Get information about this admin instance — ID, name, VPN host
   identity, WireGuard peer capacity, and last metadata recompute time.
 
-  Returns the per-admin record from `EdgeAdmin.Admins.Metadata` ETS:
+  Returns the per-admin record from `EdgeAdmin.AdminClustering.Metadata` ETS:
   `id`, `name`, `max_wireguard_peers`, `admin_peer_count`,
   `edge_node_capacity`, `erlang_node_name`, `vpn_hostname`,
   `admin_cluster_name`, `vpn_host_id`, `last_computed_at`.
@@ -15,7 +15,7 @@ defmodule EdgeAdminMcp.Tools.Admins.GetAdmin do
   """
   use EdgeAdminMcp, :tool
 
-  alias EdgeAdmin.Admins.Metadata
+  alias EdgeAdmin.AdminClustering.Metadata
 
   @impl true
   def title, do: "Get Admin Info"

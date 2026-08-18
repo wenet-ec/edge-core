@@ -19,7 +19,7 @@ defmodule EdgeAdminMcp.Tools.Admins.ListEdgeClusters do
   """
   use EdgeAdminMcp, :tool
 
-  alias EdgeAdmin.Admins.Metadata
+  alias EdgeAdmin.AdminClustering.Metadata
 
   @impl true
   def title, do: "List Edge Clusters (Admin View)"

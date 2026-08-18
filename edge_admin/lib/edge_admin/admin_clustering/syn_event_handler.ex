@@ -1,5 +1,5 @@
-# edge_admin/lib/edge_admin/admins/syn_event_handler.ex
-defmodule EdgeAdmin.Admins.SynEventHandler do
+# edge_admin/lib/edge_admin/admin_clustering/syn_event_handler.ex
+defmodule EdgeAdmin.AdminClustering.SynEventHandler do
   @moduledoc """
   Syn event handler bridge for admin topology changes.
 
@@ -30,7 +30,7 @@ defmodule EdgeAdmin.Admins.SynEventHandler do
 
   ## Registration
 
-  Registered globally via `config :syn, event_handler: EdgeAdmin.Admins.SynEventHandler`
+  Registered globally via `config :syn, event_handler: EdgeAdmin.AdminClustering.SynEventHandler`
   in `config.exs`. Syn loads this once at startup via `ensure_event_handler_loaded/0`.
   """
 
@@ -59,7 +59,7 @@ defmodule EdgeAdmin.Admins.SynEventHandler do
   # Metadata may not be started yet during bootstrap; the periodic scheduler is
   # the fallback if this early notification is skipped.
   defp notify_metadata(trigger) do
-    case Process.whereis(EdgeAdmin.Admins.Metadata) do
+    case Process.whereis(EdgeAdmin.AdminClustering.Metadata) do
       nil ->
         Logger.debug("SynEventHandler: Metadata not yet started, skipping #{trigger} notification")
 

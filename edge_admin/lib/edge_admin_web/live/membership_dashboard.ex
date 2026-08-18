@@ -322,7 +322,7 @@ defmodule EdgeAdminWeb.Live.MembershipDashboard do
   @doc false
   # Called via :erpc on the selected node. Reads ETS — must run on that node.
   def remote_snapshot do
-    alias EdgeAdmin.Admins.Metadata
+    alias EdgeAdmin.AdminClustering.Metadata
 
     metadata = Metadata.snapshot()
 

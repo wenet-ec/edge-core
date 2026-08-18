@@ -1,7 +1,7 @@
 defmodule EdgeAdminWeb.Live.MembershipDashboardTest do
   use ExUnit.Case, async: false
 
-  alias EdgeAdmin.Admins.Metadata
+  alias EdgeAdmin.AdminClustering.Metadata
   alias EdgeAdminWeb.Live.MembershipDashboard
 
   setup do

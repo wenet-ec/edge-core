@@ -26,7 +26,7 @@ defmodule EdgeAdminWeb.Controllers.Admins.AdminClustersController do
   )
 
   def index(conn, _params) do
-    with {:ok, admin_clusters} <- EdgeAdmin.Admins.list_admin_clusters() do
+    with {:ok, admin_clusters} <- EdgeAdmin.AdminClustering.list_admin_clusters() do
       render(conn, :index, conn: conn, admin_clusters: admin_clusters)
     end
   end

@@ -125,7 +125,7 @@ with a behaviour callback so the production code can dispatch to a
 configurable module at compile time, and you're testing that dispatch
 logic.
 
-Existing examples are `EdgeAdmin.Admins.Metadata` → `MetadataMock` and
+Existing examples are `EdgeAdmin.AdminClustering.Metadata` → `MetadataMock` and
 `EdgeAdmin.Nodes` → `NodesMock`, wired via `Application.compile_env` and
 the test environment swapping the module. In those cases, Mox is testing
 the *real* dispatch behaviour, not constructing fake interactions.

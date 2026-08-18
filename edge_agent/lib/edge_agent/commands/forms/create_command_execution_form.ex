@@ -9,6 +9,7 @@ defmodule EdgeAgent.Commands.Forms.CreateCommandExecutionForm do
   use EdgeAgent.Form
 
   alias EdgeAgent.Commands.Enums.CommandExecutionStatuses
+  alias EdgeAgent.Commands.Validators.CommandExecutionValidators
 
   @incoming_statuses CommandExecutionStatuses.incoming_statuses()
 
@@ -77,27 +78,20 @@ defmodule EdgeAgent.Commands.Forms.CreateCommandExecutionForm do
 
   defp validate_command_text_format(changeset) do
     validate_change(changeset, :command_text, fn :command_text, command_text ->
-      trimmed = String.trim(command_text)
-
-      if trimmed == "" do
-        [command_text: "cannot be empty or only whitespace"]
-      else
+      if CommandExecutionValidators.valid_command_text?(command_text) do
         []
+      else
+        [command_text: CommandExecutionValidators.command_text_error()]
       end
     end)
   end
 
   defp validate_timeout(changeset) do
     validate_change(changeset, :timeout, fn :timeout, timeout ->
-      cond do
-        is_nil(timeout) ->
-          []
-
-        timeout <= 0 ->
-          [timeout: "must be a positive number (in milliseconds)"]
-
-        true ->
-          []
+      if CommandExecutionValidators.valid_timeout?(timeout) do
+        []
+      else
+        [timeout: CommandExecutionValidators.timeout_error()]
       end
     end)
   end

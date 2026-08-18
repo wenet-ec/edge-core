@@ -4,6 +4,7 @@ defmodule EdgeAgent.Commands.Schemas.CommandExecution do
   use EdgeAgent.Schema
 
   alias EdgeAgent.Commands.Enums.CommandExecutionStatuses
+  alias EdgeAgent.Commands.Validators.CommandExecutionValidators
 
   @statuses CommandExecutionStatuses.statuses()
 
@@ -63,10 +64,10 @@ defmodule EdgeAgent.Commands.Schemas.CommandExecution do
 
   defp validate_timeout(changeset) do
     validate_change(changeset, :timeout, fn :timeout, timeout ->
-      if timeout > 0 do
+      if CommandExecutionValidators.valid_timeout?(timeout) do
         []
       else
-        [timeout: "must be a positive number (in milliseconds)"]
+        [timeout: CommandExecutionValidators.timeout_error()]
       end
     end)
   end

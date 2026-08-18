@@ -16,9 +16,9 @@ defmodule EdgeAgent.Commands do
   alias EdgeAgent.Commands.Enums.CommandExecutionStatuses
   alias EdgeAgent.Commands.ExecutionRegistry
   alias EdgeAgent.Commands.Forms.CreateCommandExecutionForm
+  alias EdgeAgent.Commands.Resources.CommandExecutions, as: CommandExecutionResource
   alias EdgeAgent.Commands.Schemas.CommandExecution
   alias EdgeAgent.EdgeClusters.AdminClient
-  alias EdgeAgent.Repo
   alias EdgeAgent.Settings
 
   require Logger
@@ -29,9 +29,7 @@ defmodule EdgeAgent.Commands do
   Returns all executions regardless of status.
   """
   @spec list_command_executions() :: [CommandExecution.t()]
-  def list_command_executions do
-    Repo.all(CommandExecution)
-  end
+  defdelegate list_command_executions(), to: CommandExecutionResource, as: :list
 
   @doc """
   Gets a command execution by ID.
@@ -39,14 +37,7 @@ defmodule EdgeAgent.Commands do
   Returns `{:ok, execution}` if found, `{:error, :not_found}` otherwise.
   """
   @spec get_command_execution(String.t()) :: {:ok, CommandExecution.t()} | {:error, :not_found}
-  def get_command_execution(id) do
-    case Repo.get(CommandExecution, id) do
-      nil -> {:error, :not_found}
-      execution -> {:ok, execution}
-    end
-  rescue
-    Ecto.Query.CastError -> {:error, :not_found}
-  end
+  defdelegate get_command_execution(id), to: CommandExecutionResource, as: :get
 
   @doc """
   Creates a command execution and enqueues worker for execution.
@@ -76,12 +67,7 @@ defmodule EdgeAgent.Commands do
   """
   @spec create_command_execution(map()) ::
           {:ok, CommandExecution.t()} | {:error, Ecto.Changeset.t()} | {:error, {:conflict, String.t()}}
-  def create_command_execution(attrs \\ %{}) do
-    %CommandExecution{}
-    |> CommandExecution.changeset(attrs)
-    |> Repo.insert()
-    |> Repo.normalize_conflict([:id])
-  end
+  defdelegate create_command_execution(attrs \\ %{}), to: CommandExecutionResource, as: :create
 
   defp get_or_create_command_execution(attrs) do
     case get_command_execution(attrs["id"]) do
@@ -100,11 +86,7 @@ defmodule EdgeAgent.Commands do
   """
   @spec update_command_execution(CommandExecution.t(), map()) ::
           {:ok, CommandExecution.t()} | {:error, Ecto.Changeset.t()}
-  def update_command_execution(%CommandExecution{} = command_execution, attrs) do
-    command_execution
-    |> CommandExecution.changeset(attrs)
-    |> Repo.update()
-  end
+  defdelegate update_command_execution(command_execution, attrs), to: CommandExecutionResource, as: :update
 
   @doc """
   Deletes a command execution from the database.
@@ -113,17 +95,13 @@ defmodule EdgeAgent.Commands do
   """
   @spec delete_command_execution(CommandExecution.t()) ::
           {:ok, CommandExecution.t()} | {:error, Ecto.Changeset.t()}
-  def delete_command_execution(%CommandExecution{} = command_execution) do
-    Repo.delete(command_execution)
-  end
+  defdelegate delete_command_execution(command_execution), to: CommandExecutionResource, as: :delete
 
   @doc """
   Returns a changeset for tracking command execution changes.
   """
   @spec change_command_execution(CommandExecution.t(), map()) :: Ecto.Changeset.t()
-  def change_command_execution(%CommandExecution{} = command_execution, attrs \\ %{}) do
-    CommandExecution.changeset(command_execution, attrs)
-  end
+  defdelegate change_command_execution(command_execution, attrs \\ %{}), to: CommandExecutionResource, as: :change
 
   @doc """
   Enqueues all recoverable command executions as Oban jobs.
@@ -198,21 +176,7 @@ defmodule EdgeAgent.Commands do
   finalized the row first.
   """
   @spec claim_command_execution(CommandExecution.t()) :: {:ok, CommandExecution.t()} | :stale
-  def claim_command_execution(%CommandExecution{id: id}) do
-    query = from(ce in CommandExecution, where: ce.id == ^id and ce.status == :pending)
-    now = DateTime.truncate(DateTime.utc_now(), :second)
-
-    case Repo.update_all(query, set: [status: :running, updated_at: now]) do
-      {1, _} ->
-        case Repo.get(CommandExecution, id) do
-          %CommandExecution{status: :running} = execution -> {:ok, execution}
-          _ -> :stale
-        end
-
-      {0, _} ->
-        :stale
-    end
-  end
+  defdelegate claim_command_execution(execution), to: CommandExecutionResource, as: :claim
 
   @doc false
   @spec truncate_output(String.t() | nil) :: String.t() | nil
@@ -405,7 +369,7 @@ defmodule EdgeAgent.Commands do
   end
 
   defp get_executions_by_status(statuses) when is_list(statuses) do
-    Repo.all(from(ce in CommandExecution, where: ce.status in ^statuses, order_by: [asc: ce.inserted_at]))
+    CommandExecutionResource.by_status(statuses)
   end
 
   defp get_executions_by_status(status), do: get_executions_by_status([status])
@@ -462,52 +426,11 @@ defmodule EdgeAgent.Commands do
   end
 
   defp complete_running_execution(execution_id, output, exit_code) do
-    query = from(ce in CommandExecution, where: ce.id == ^execution_id and ce.status == :running)
-    now = DateTime.truncate(DateTime.utc_now(), :second)
-
-    attrs = [
-      status: :completed,
-      output: output,
-      exit_code: exit_code,
-      completed_at: now,
-      updated_at: now
-    ]
-
-    case Repo.update_all(query, set: attrs) do
-      {1, _} -> :ok
-      {0, _} -> :stale
-    end
+    CommandExecutionResource.complete_running(execution_id, output, exit_code)
   end
 
   defp cancel_pending_or_running_execution(execution_id) do
-    recoverable_statuses = CommandExecutionStatuses.recoverable_statuses()
-
-    query =
-      from(ce in CommandExecution,
-        where: ce.id == ^execution_id and ce.status in ^recoverable_statuses
-      )
-
-    now = DateTime.truncate(DateTime.utc_now(), :second)
-
-    attrs = [
-      status: :completed,
-      output: "Command cancelled",
-      exit_code: 143,
-      completed_at: now,
-      updated_at: now
-    ]
-
-    case Repo.update_all(query, set: attrs) do
-      {1, _} ->
-        :cancelled
-
-      {0, _} ->
-        case Repo.get(CommandExecution, execution_id) do
-          nil -> :not_found
-          %{status: :completed} -> :completed
-          %{status: :expired} -> :expired
-        end
-    end
+    CommandExecutionResource.cancel_pending_or_running(execution_id)
   end
 
   defp cancel_oban_job(execution_id) do

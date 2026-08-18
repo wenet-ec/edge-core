@@ -95,9 +95,6 @@ ENV WG_QUICK_USERSPACE_IMPLEMENTATION=wireguard-go
 # Admins always use dynamic clustering (started after VPN join)
 ENV RELEASE_DISTRIBUTION=none
 
-# Keep epmd in the 40k port range to avoid colliding with user-deployed Erlang/Elixir apps
-ENV ERL_EPMD_PORT=44369
-
 COPY --from=netclient-builder /netclient /usr/local/bin/netclient
 RUN chmod +x /usr/local/bin/netclient && \
     mkdir -p /etc/netclient && \

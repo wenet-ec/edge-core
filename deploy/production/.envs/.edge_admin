@@ -253,7 +253,7 @@ ADMIN_MAX_WIREGUARD_PEERS=250
 ADMIN_CLUSTER_COOKIE=prod-cookie
 
 # epmd port — default 44369, baked into the Dockerfile. Override here only if needed.
-# ERL_EPMD_PORT=44369
+# ADMIN_EPMD_PORT=44369
 
 # Fixed Erlang distribution port for the Admin cluster (epmd replacement). Configured in vm.args.eex.
 ADMIN_CLUSTER_PORT=49125

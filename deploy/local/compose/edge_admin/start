@@ -100,6 +100,7 @@ fi
 trap cleanup EXIT INT TERM
 
 echo "Starting EPMD daemon..."
+export ERL_EPMD_PORT="${ADMIN_EPMD_PORT:-44369}"
 epmd -daemon
 
 # Tell netclient where to fetch canonical Core DERP map sources.

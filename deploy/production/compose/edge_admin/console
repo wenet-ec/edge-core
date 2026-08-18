@@ -35,4 +35,5 @@ fi
 
 export RELEASE_NODE="$node_name"
 export RELEASE_COOKIE="${ADMIN_CLUSTER_COOKIE:-edge_admin_default_cookie}"
+export ERL_EPMD_PORT="${ADMIN_EPMD_PORT:-44369}"
 exec /app/bin/console "$@"

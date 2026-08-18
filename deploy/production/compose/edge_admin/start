@@ -95,6 +95,7 @@ trap cleanup EXIT INT TERM
 # Start EPMD daemon for Erlang distribution (required for admin clustering).
 # Resolve the erts-* path explicitly to avoid glob expansion ambiguity.
 echo "Starting EPMD daemon..."
+export ERL_EPMD_PORT="${ADMIN_EPMD_PORT:-44369}"
 EPMD_BIN=$(ls -d /app/erts-*/bin/epmd 2>/dev/null | head -n1)
 if [ -z "$EPMD_BIN" ]; then
     echo "ERROR: epmd binary not found under /app/erts-*/bin/" >&2

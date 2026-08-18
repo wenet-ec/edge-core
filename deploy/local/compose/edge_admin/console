@@ -34,4 +34,5 @@ if ! getent hosts "$node_host" >/dev/null 2>&1; then
 fi
 
 cookie="${ADMIN_CLUSTER_COOKIE:-edge_admin_default_cookie}"
+export ERL_EPMD_PORT="${ADMIN_EPMD_PORT:-44369}"
 exec iex --name "console@127.0.0.1" --cookie "$cookie" --remsh "$node_name" "$@"

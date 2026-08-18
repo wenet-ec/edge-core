@@ -65,9 +65,6 @@ ENV WG_QUICK_USERSPACE_IMPLEMENTATION=wireguard-go
 # Admins always use dynamic clustering (started after VPN join)
 ENV RELEASE_DISTRIBUTION=none
 
-# Keep epmd in the 40k port range to avoid colliding with user-deployed Erlang/Elixir apps
-ENV ERL_EPMD_PORT=44369
-
 # Skip emqtt's optional QUIC NIF — our MQTT adapter uses TCP/TLS only, so the
 # `quicer` build (compiles Microsoft's msquic from source) is pure overhead.
 ENV BUILD_WITHOUT_QUIC=1

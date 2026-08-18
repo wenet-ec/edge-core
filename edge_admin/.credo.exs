@@ -21,7 +21,7 @@
           # ABC Size measures Assignment, Branch, and Condition complexity
           # Increased from 40 to 50 to accommodate complex business logic functions
           # Consider refactoring functions above this threshold
-          {Credo.Check.Refactor.ABCSize, [max_size: 50]},
+          {EdgeAdmin.CredoChecks.ABCSize, [max_size: 50]},
 
           # Consistency checks from plugins
           {CredoEnvvar.Check.Warning.EnvironmentVariablesAtCompileTime},

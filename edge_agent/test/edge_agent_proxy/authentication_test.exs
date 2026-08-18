@@ -6,16 +6,16 @@ defmodule EdgeAgentProxy.AuthenticationTest do
   alias EdgeAgentProxy.Authentication
 
   defp with_auth_enabled(value, fun) do
-    old = Application.get_env(:edge_agent, :proxy_servers_auth_enabled)
-    Application.put_env(:edge_agent, :proxy_servers_auth_enabled, value)
+    old = Application.get_env(:edge_agent, :agent_proxy_auth_enabled)
+    Application.put_env(:edge_agent, :agent_proxy_auth_enabled, value)
 
     try do
       fun.()
     after
       if old == nil do
-        Application.delete_env(:edge_agent, :proxy_servers_auth_enabled)
+        Application.delete_env(:edge_agent, :agent_proxy_auth_enabled)
       else
-        Application.put_env(:edge_agent, :proxy_servers_auth_enabled, old)
+        Application.put_env(:edge_agent, :agent_proxy_auth_enabled, old)
       end
     end
   end

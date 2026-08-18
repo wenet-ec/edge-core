@@ -11,7 +11,7 @@ defmodule EdgeAgentProxy.Authentication do
   still consume a same-length compare so the rejection path doesn't leak
   length via timing.
 
-  When `PROXY_SERVERS_AUTH_ENABLED=false` (default `true`), credential
+  When `AGENT_PROXY_AUTH_ENABLED=false` (default `true`), credential
   verification is skipped — any username/password is accepted. Intended for
   local dev only.
   """
@@ -27,7 +27,7 @@ defmodule EdgeAgentProxy.Authentication do
   If authentication is disabled, always returns :ok.
   """
   def authenticate(username, password) do
-    auth_enabled = Application.get_env(:edge_agent, :proxy_servers_auth_enabled, true)
+    auth_enabled = Application.get_env(:edge_agent, :agent_proxy_auth_enabled, true)
 
     if auth_enabled do
       authenticate_credentials(username, password)

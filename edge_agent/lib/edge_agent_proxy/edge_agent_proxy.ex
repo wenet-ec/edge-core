@@ -11,7 +11,7 @@ defmodule EdgeAgentProxy do
   - Username: "_" (underscore)
   - Password: `proxy_password` from the settings table
 
-  When `PROXY_SERVERS_AUTH_ENABLED=false` (default `true`), credentials are
+  When `AGENT_PROXY_AUTH_ENABLED=false` (default `true`), credentials are
   not verified and any client is accepted. Intended for local dev only.
 
   No cluster awareness: the agent proxies any destination accepted by the

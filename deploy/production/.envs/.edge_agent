@@ -54,7 +54,7 @@ WATCHTOWER_HTTP_API_TOKEN=change-me-in-production
 
 # Authentication
 # AGENT_METRICS_AUTH_ENABLED=true     # Require auth on metrics scrape endpoints (default: true)
-# PROXY_SERVERS_AUTH_ENABLED=true     # Require auth on proxy endpoints (default: true)
+# AGENT_PROXY_AUTH_ENABLED=true       # Require auth on proxy endpoints (default: true)
 
 # HTTP Timeouts (agent → admin communication)
 # ADMIN_CALL_TIMEOUT_MS=10000         # Registration, command acks, health reporting, metrics push

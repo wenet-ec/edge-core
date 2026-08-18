@@ -96,7 +96,7 @@ defmodule EdgeAdmin.Vpn do
   defdelegate find_available_ipv6_subnet(base_cidr, target_prefix, existing_ranges), to: VpnAddressing
   defdelegate parse_ipv6_cidr(cidr), to: VpnAddressing
   defdelegate ipv6_cidrs_overlap?(cidr, existing_ranges), to: VpnAddressing
-  defdelegate cidrs_overlap?(cidr, existing_ranges), to: VpnAddressing
+  defdelegate ipv4_cidrs_overlap?(cidr, existing_ranges), to: VpnAddressing
   defdelegate generate_subnets(base_ip, base_prefix, target_prefix), to: VpnAddressing
 
   @doc """

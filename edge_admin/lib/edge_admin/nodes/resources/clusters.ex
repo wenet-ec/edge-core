@@ -212,8 +212,8 @@ defmodule EdgeAdmin.Nodes.Resources.Clusters do
   end
 
   defp resolve_cluster_ranges(attrs, existing_ranges) do
-    with :ok <- Checks.SubnetOverlapCheck.check(attrs["ipv4_range"], existing_ranges.ipv4),
-         :ok <- Checks.SubnetOverlapCheck.check_ipv6(attrs["ipv6_range"], existing_ranges.ipv6),
+    with :ok <- Checks.SubnetOverlapCheck.check(attrs["ipv4_range"], existing_ranges.ipv4, :ipv4),
+         :ok <- Checks.SubnetOverlapCheck.check(attrs["ipv6_range"], existing_ranges.ipv6, :ipv6),
          {:ok, ipv4_range} <- allocate_ipv4_range(attrs["ipv4_range"], existing_ranges.ipv4),
          {:ok, ipv6_range} <- allocate_ipv6_range(attrs["ipv6_range"], existing_ranges.ipv6) do
       {:ok, %{ipv4: ipv4_range, ipv6: ipv6_range}}

@@ -97,7 +97,7 @@ defmodule EdgeAdmin.Vpn.Addressing do
         subnets = generate_subnets(base_ip, base_prefix, target_prefix)
 
         Enum.find(subnets, fn subnet ->
-          not cidrs_overlap?(subnet, existing_ranges)
+          not ipv4_cidrs_overlap?(subnet, existing_ranges)
         end)
 
       _ ->
@@ -189,8 +189,8 @@ defmodule EdgeAdmin.Vpn.Addressing do
   Returns true if the given CIDR string overlaps with any range in the list.
   Overlap means one network contains the other's network address (either direction).
   """
-  @spec cidrs_overlap?(String.t(), [String.t()]) :: boolean()
-  def cidrs_overlap?(cidr, existing_ranges) do
+  @spec ipv4_cidrs_overlap?(String.t(), [String.t()]) :: boolean()
+  def ipv4_cidrs_overlap?(cidr, existing_ranges) do
     case parse_cidr(cidr) do
       {:ok, {ip, prefix}} ->
         Enum.any?(existing_ranges, fn existing ->

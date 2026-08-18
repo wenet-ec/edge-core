@@ -180,9 +180,9 @@ EDGE_VPN_API_SCHEME=http
 # CLUSTER_AUTO_GENERATED_V6_RANGES=fd7a:91c2:4e8b::/48
 # CLUSTER_V6_SUBNET_PREFIX=64
 
-# Slots reserved for admin gateway nodes (e.g. split-brain flooding) — tune
-# to match admin instance count per core.
-# ADMIN_SLOT_RESERVATION=10
+# Slots reserved for Admin Gateway nodes (e.g. split-brain flooding) — tune
+# to match Admin Gateway instance count per core.
+# ADMIN_GATEWAY_SLOT_RESERVATION=10
 
 # Pre-create a named default cluster so agents can enroll without specifying a cluster.
 # `default` is reserved (used as a URL keyword on convenience routes) — pick any

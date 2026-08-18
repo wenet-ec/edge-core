@@ -70,12 +70,12 @@ defmodule EdgeAdmin.Vpn do
   end
 
   @doc """
-  Returns the number of IP slots reserved for admin gateway nodes.
+  Returns the number of IP slots reserved for Admin Gateway nodes.
 
-  Should be tuned to match the total number of admin instances across all admin clusters per core.
+  Should be tuned to match the total number of Admin Gateway instances across all admin clusters per core.
   """
-  def admin_slot_reservation do
-    Application.get_env(:edge_admin, :admin_slot_reservation, 10)
+  def admin_gateway_slot_reservation do
+    Application.get_env(:edge_admin, :admin_gateway_slot_reservation, 10)
   end
 
   defdelegate usable_ipv4_capacity(prefix), to: VpnAddressing

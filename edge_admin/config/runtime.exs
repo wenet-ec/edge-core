@@ -491,9 +491,9 @@ config :edge_admin,
   # the same value across every admin that uses this PostgreSQL/Netmaker core.
   cluster_auto_generated_v6_ranges: get_env("CLUSTER_AUTO_GENERATED_V6_RANGES", :list, ["fd7a:91c2:4e8b::/48"]),
   cluster_v6_subnet_prefix: get_env("CLUSTER_V6_SUBNET_PREFIX", :integer, 64),
-  # Slots reserved for admin gateway nodes (e.g. split-brain flooding).
-  # Tune to match total admin instances across all admin clusters per core.
-  admin_slot_reservation: get_env("ADMIN_SLOT_RESERVATION", :integer, 10),
+  # Slots reserved for Admin Gateway nodes (e.g. split-brain flooding).
+  # Tune to match total Admin Gateway instances across all admin clusters per core.
+  admin_gateway_slot_reservation: get_env("ADMIN_GATEWAY_SLOT_RESERVATION", :integer, 10),
   # Optional: Pre-defined default cluster for agent enrollment
   default_cluster_name: get_env("DEFAULT_CLUSTER_NAME"),
   default_cluster_v4_subnet: get_env("DEFAULT_CLUSTER_V4_SUBNET"),

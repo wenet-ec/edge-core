@@ -174,7 +174,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Cluster do
     with limit when not is_nil(limit) <- get_field(changeset, :node_limit),
          cidr when not is_nil(cidr) <- get_field(changeset, :ipv4_range),
          {:ok, {_ip, prefix}} <- Vpn.parse_cidr(cidr) do
-      reservation = Vpn.admin_slot_reservation()
+      reservation = Vpn.admin_gateway_slot_reservation()
       max_limit = Vpn.usable_ipv4_capacity(prefix) - reservation
 
       if ClusterValidators.node_limit_fits_ipv4_range?(limit, cidr, reservation) do
@@ -183,7 +183,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Cluster do
         add_error(
           changeset,
           :node_limit,
-          "cannot exceed #{max_limit} for /#{prefix} (#{Vpn.usable_ipv4_capacity(prefix)} usable IPs minus #{reservation} Admin slots)"
+          "cannot exceed #{max_limit} for /#{prefix} (#{Vpn.usable_ipv4_capacity(prefix)} usable IPs minus #{reservation} Admin Gateway slots)"
         )
       end
     else

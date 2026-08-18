@@ -1,8 +1,8 @@
-# edge_agent/test/edge_agent/metrics_servers/network/parser_test.exs
-defmodule EdgeAgent.MetricsServers.Network.ParserTest do
+# edge_agent/test/edge_agent_metrics/network/parser_test.exs
+defmodule EdgeAgentMetrics.Network.ParserTest do
   use ExUnit.Case, async: true
 
-  alias EdgeAgent.MetricsServers.Network.Parser
+  alias EdgeAgentMetrics.Network.Parser
   # Realistic `ip addr show` output. Each interface block starts with
   # `<index>: <name>:`. Multi-line indented body follows.
 

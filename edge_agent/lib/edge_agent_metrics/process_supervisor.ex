@@ -1,5 +1,5 @@
-# edge_agent/lib/edge_agent/metrics_servers/process_supervisor.ex
-defmodule EdgeAgent.MetricsServers.ProcessSupervisor do
+# edge_agent/lib/edge_agent_metrics/process_supervisor.ex
+defmodule EdgeAgentMetrics.ProcessSupervisor do
   @moduledoc """
   Manages the node_exporter and wireguard_exporter process lifecycle.
 
@@ -7,7 +7,7 @@ defmodule EdgeAgent.MetricsServers.ProcessSupervisor do
   node_exporter and wireguard_exporter processes.
   """
 
-  alias EdgeAgent.MetricsServers.Config
+  alias EdgeAgentMetrics.Config
 
   require Logger
 

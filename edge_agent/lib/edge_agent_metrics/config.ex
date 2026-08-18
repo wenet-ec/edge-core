@@ -1,5 +1,5 @@
-# edge_agent/lib/edge_agent/metrics_servers/config.ex
-defmodule EdgeAgent.MetricsServers.Config do
+# edge_agent/lib/edge_agent_metrics/config.ex
+defmodule EdgeAgentMetrics.Config do
   @moduledoc """
   Configuration management for the metrics exporter pair.
 

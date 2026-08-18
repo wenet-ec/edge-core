@@ -1,5 +1,5 @@
-# edge_agent/lib/edge_agent/metrics_servers/metrics_servers.ex
-defmodule EdgeAgent.MetricsServers do
+# edge_agent/lib/edge_agent_metrics/edge_agent_metrics.ex
+defmodule EdgeAgentMetrics do
   @moduledoc """
   Manages the node_exporter and wireguard_exporter processes for collecting
   system and WireGuard metrics from the host.
@@ -32,13 +32,13 @@ defmodule EdgeAgent.MetricsServers do
   sibling. The reconciler handles recovery.
   """
 
-  @behaviour EdgeAgent.MetricsServers.Behaviour
+  @behaviour EdgeAgentMetrics.Behaviour
 
   use GenServer
 
-  alias EdgeAgent.MetricsServers.Config
-  alias EdgeAgent.MetricsServers.Network
-  alias EdgeAgent.MetricsServers.ProcessSupervisor
+  alias EdgeAgentMetrics.Config
+  alias EdgeAgentMetrics.Network
+  alias EdgeAgentMetrics.ProcessSupervisor
 
   require Logger
 
@@ -48,13 +48,13 @@ defmodule EdgeAgent.MetricsServers do
   # even when nothing is asking.
   @check_health_interval_ms 30_000
 
-  @impl EdgeAgent.MetricsServers.Behaviour
+  @impl EdgeAgentMetrics.Behaviour
   def start_servers, do: GenServer.call(__MODULE__, :start_servers, 10_000)
 
-  @impl EdgeAgent.MetricsServers.Behaviour
+  @impl EdgeAgentMetrics.Behaviour
   def stop_servers, do: GenServer.call(__MODULE__, :stop_servers, 5_000)
 
-  @impl EdgeAgent.MetricsServers.Behaviour
+  @impl EdgeAgentMetrics.Behaviour
   def servers_status do
     GenServer.call(__MODULE__, :servers_status, 1_000)
   catch
@@ -62,7 +62,7 @@ defmodule EdgeAgent.MetricsServers do
     :exit, {:timeout, _} -> :unknown
   end
 
-  @impl EdgeAgent.MetricsServers.Behaviour
+  @impl EdgeAgentMetrics.Behaviour
   def servers_config do
     GenServer.call(__MODULE__, :servers_config, 1_000)
   catch
@@ -70,7 +70,7 @@ defmodule EdgeAgent.MetricsServers do
     :exit, {:timeout, _} -> %{}
   end
 
-  @impl EdgeAgent.MetricsServers.Behaviour
+  @impl EdgeAgentMetrics.Behaviour
   def get_primary_interface_ip do
     GenServer.call(__MODULE__, :get_primary_interface_ip, 5_000)
   catch

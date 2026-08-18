@@ -99,7 +99,7 @@ defmodule EdgeAgentHealth do
 
   @spec metrics_servers_health() :: :ok | {:error, String.t()}
   def metrics_servers_health do
-    case EdgeAgent.MetricsServers.servers_status() do
+    case EdgeAgentMetrics.servers_status() do
       :running ->
         :ok
 

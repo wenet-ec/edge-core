@@ -1,11 +1,11 @@
-# edge_agent/test/edge_agent/metrics_servers/config_test.exs
-defmodule EdgeAgent.MetricsServers.ConfigTest do
+# edge_agent/test/edge_agent_metrics/config_test.exs
+defmodule EdgeAgentMetrics.ConfigTest do
   # async: false — node_exporter_args/0 / wireguard_exporter_args/0 read
   # :host_metrics_port and :wireguard_metrics_port from app env. We snapshot
   # and restore around env-touching tests; serial execution avoids races.
   use ExUnit.Case, async: false
 
-  alias EdgeAgent.MetricsServers.Config
+  alias EdgeAgentMetrics.Config
   # Constant getters — pinned values. These are operationally meaningful: the
   # binary paths must match what the container image installs; the listen
   # address must match what Prometheus scrapes.

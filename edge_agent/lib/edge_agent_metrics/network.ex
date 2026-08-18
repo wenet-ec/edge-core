@@ -1,10 +1,10 @@
-# edge_agent/lib/edge_agent/metrics_servers/network.ex
-defmodule EdgeAgent.MetricsServers.Network do
+# edge_agent/lib/edge_agent_metrics/network.ex
+defmodule EdgeAgentMetrics.Network do
   @moduledoc """
   Network interface detection for the metrics server.
   """
 
-  alias EdgeAgent.MetricsServers.Network.Parser
+  alias EdgeAgentMetrics.Network.Parser
 
   @type ip_result :: {:ok, String.t()} | {:error, term()}
 

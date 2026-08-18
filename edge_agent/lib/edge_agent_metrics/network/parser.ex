@@ -1,5 +1,5 @@
-# edge_agent/lib/edge_agent/metrics_servers/network/parser.ex
-defmodule EdgeAgent.MetricsServers.Network.Parser do
+# edge_agent/lib/edge_agent_metrics/network/parser.ex
+defmodule EdgeAgentMetrics.Network.Parser do
   @moduledoc """
   Pure parsers for Linux `ip` command output.
   """

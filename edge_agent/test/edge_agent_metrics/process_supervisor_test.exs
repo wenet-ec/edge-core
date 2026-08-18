@@ -1,8 +1,8 @@
-# edge_agent/test/edge_agent/metrics_servers/process_supervisor_test.exs
-defmodule EdgeAgent.MetricsServers.ProcessSupervisorTest do
+# edge_agent/test/edge_agent_metrics/process_supervisor_test.exs
+defmodule EdgeAgentMetrics.ProcessSupervisorTest do
   use ExUnit.Case, async: true
 
-  alias EdgeAgent.MetricsServers.ProcessSupervisor
+  alias EdgeAgentMetrics.ProcessSupervisor
 
   describe "parse_ss_output/2" do
     test "extracts the PID of a process matching the configured binary" do

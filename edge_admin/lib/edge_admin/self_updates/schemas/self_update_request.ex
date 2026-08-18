@@ -14,6 +14,7 @@ defmodule EdgeAdmin.SelfUpdates.Schemas.SelfUpdateRequest do
   """
   use EdgeAdmin.Schema
 
+  alias EdgeAdmin.Nodes.Validators.TargetingValidators
   alias EdgeAdmin.SelfUpdates.Enums.SelfUpdateRequestStatuses
 
   @statuses SelfUpdateRequestStatuses.statuses()
@@ -52,5 +53,14 @@ defmodule EdgeAdmin.SelfUpdates.Schemas.SelfUpdateRequest do
     self_update_request
     |> cast(attrs, [:targeting, :status, :summary])
     |> validate_required([:targeting])
+    |> validate_targeting()
+  end
+
+  defp validate_targeting(changeset) do
+    validate_change(changeset, :targeting, fn :targeting, targeting ->
+      targeting
+      |> TargetingValidators.errors()
+      |> Enum.map(&{:targeting, &1})
+    end)
   end
 end

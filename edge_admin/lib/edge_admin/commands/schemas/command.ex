@@ -7,6 +7,7 @@ defmodule EdgeAdmin.Commands.Schemas.Command do
   alias EdgeAdmin.Commands.Schemas.CommandExecution
   alias EdgeAdmin.Commands.Validators.CommandValidators
   alias EdgeAdmin.Nodes.Schemas.Node
+  alias EdgeAdmin.Nodes.Validators.TargetingValidators
 
   @type t :: %__MODULE__{
           id: String.t() | nil,
@@ -51,6 +52,7 @@ defmodule EdgeAdmin.Commands.Schemas.Command do
     |> validate_command_text()
     |> validate_timeout()
     |> validate_expires_at()
+    |> validate_targeting()
     |> check_constraint(:command_text, name: :commands_command_text_present)
     |> check_constraint(:timeout, name: :commands_timeout_positive)
   end
@@ -79,6 +81,14 @@ defmodule EdgeAdmin.Commands.Schemas.Command do
       else
         [expires_at: "must be in the future"]
       end
+    end)
+  end
+
+  defp validate_targeting(changeset) do
+    validate_change(changeset, :targeting, fn :targeting, targeting ->
+      targeting
+      |> TargetingValidators.errors()
+      |> Enum.map(&{:targeting, &1})
     end)
   end
 end

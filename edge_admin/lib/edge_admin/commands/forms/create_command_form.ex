@@ -9,6 +9,7 @@ defmodule EdgeAdmin.Commands.Forms.CreateCommandForm do
   use EdgeAdmin.Form
 
   alias EdgeAdmin.Commands.Validators.CommandValidators
+  alias EdgeAdmin.Nodes.Validators.TargetingValidators
 
   embedded_schema do
     field(:command_text, :string)
@@ -87,7 +88,9 @@ defmodule EdgeAdmin.Commands.Forms.CreateCommandForm do
   end
 
   defp validate_targeting_type(changeset) do
-    validate_inclusion(changeset, :targeting_type, ["all", "nodes", "clusters"])
+    validate_change(changeset, :targeting_type, fn :targeting_type, value ->
+      if TargetingValidators.valid_type?(value), do: [], else: [targeting_type: "is invalid"]
+    end)
   end
 
   defp validate_targeting_requirements(changeset) do
@@ -95,23 +98,9 @@ defmodule EdgeAdmin.Commands.Forms.CreateCommandForm do
     node_ids = get_field(changeset, :node_ids)
     cluster_names = get_field(changeset, :cluster_names)
 
-    case targeting_type do
-      "nodes" ->
-        if is_nil(node_ids) or node_ids == [] do
-          add_error(changeset, :node_ids, "is required when targeting_type is 'nodes'")
-        else
-          changeset
-        end
-
-      "clusters" ->
-        if is_nil(cluster_names) or cluster_names == [] do
-          add_error(changeset, :cluster_names, "is required when targeting_type is 'clusters'")
-        else
-          changeset
-        end
-
-      _ ->
-        changeset
+    case TargetingValidators.requirement_error(targeting_type, node_ids, cluster_names) do
+      :ok -> changeset
+      {:error, field, message} -> add_error(changeset, field, message)
     end
   end
 

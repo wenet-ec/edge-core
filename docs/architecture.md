@@ -174,7 +174,13 @@ Thin wrapper around the `netclient` binary (which must be present in the contain
 
 ## Edge Admin
 
-Edge Admin is an Elixir/Phoenix application. It is the control plane — it owns the database, orchestrates command execution, manages SSH credentials, and runs the forward proxy.
+Edge Admin is an Elixir/Phoenix application. It is the control plane — it owns
+the database, orchestrates command execution, manages SSH credentials, and
+runs the forward proxy. For each edge cluster assigned to an Admin, the
+process starts one `EdgeAdmin.GatewayRegistry.VirtualGateway`. This creates an
+operational hub-and-spoke model: the Admin coordinates work and data-plane
+access for its assigned clusters, while Agents retain direct full-mesh
+WireGuard connectivity within their cluster.
 
 ### Database Adapter
 
@@ -221,7 +227,7 @@ admin@admin-abc123.admin-cluster-a.nm.internal
 
 This is **peer-to-peer, masterless**. There is no leader election, no primary, no replica. Every admin instance is equal. They coordinate through:
 
-- **`:syn` distributed registry** — two scopes: `:admin_scope` (who is in the cluster, each admin's WireGuard peer budget) and `:cluster_scope` (which admin's Gateway GenServer owns which edge cluster)
+- **`:syn` distributed registry** — two scopes: `:admin_scope` (who is in the cluster, each admin's WireGuard peer budget) and `:cluster_scope` (which Admin's `VirtualGateway` owns which edge cluster)
 - **ETS** — local in-memory cache of topology, intentionally ephemeral. Dies with the process, forcing clean recomputation from PostgreSQL on restart. Mnesia is explicitly avoided — its persistence creates split-brain complications.
 - **PostgreSQL** — the only source of truth. All persistent state lives here.
 
@@ -229,7 +235,7 @@ Erlang distribution is **intra-cluster only** (admins within the same peer clust
 
 ### Cluster Ownership Sharding
 
-WireGuard mesh overhead makes it expensive for multiple admins to all join the same edge cluster. The one-admin-per-cluster algorithm ensures exactly one admin manages each edge cluster at any time.
+WireGuard mesh overhead makes it expensive for multiple admins to all join the same edge cluster. The one-admin-per-cluster algorithm ensures exactly one Admin manages each edge cluster at any time and runs the corresponding `VirtualGateway` for it.
 
 Capacity is modelled honestly against the WireGuard peer table, not invented as a separate "edge node count":
 
@@ -299,7 +305,7 @@ Two proxy modes:
 - **Mode 1** (username `_`): Admin routes directly to a VPN node. Used to reach services inside the mesh.
 - **Mode 2** (username = node DNS hostname): Admin chains through a specific agent as the exit node. The agent opens the final TCP connection. Used to reach internet targets via an agent's network location.
 
-Cross-admin routing is transparent: a client connecting to any admin proxy gets correctly routed to the agent it wants, regardless of which admin owns that cluster. The owning Admin is resolved from the distributed metadata snapshot. Local traffic connects directly through that Admin's VPN; remote traffic opens the private Admin TCP tunnel, which performs an authenticated handshake and then carries raw bytes. Erlang distribution remains responsible for Admin topology and Gateway control operations, not proxy stream data.
+Cross-admin routing is transparent: a client connecting to any admin proxy gets correctly routed to the agent it wants, regardless of which admin owns that cluster. The owning Admin and its `VirtualGateway` are resolved from the distributed metadata snapshot. Local traffic connects directly through that Admin's VPN; remote traffic opens the private Admin TCP tunnel, which performs an authenticated handshake and then carries raw bytes. Erlang distribution remains responsible for Admin topology and Gateway control operations, not proxy stream data.
 
 Admin never acts as an exit node — only agents can. This prevents SSRF.
 

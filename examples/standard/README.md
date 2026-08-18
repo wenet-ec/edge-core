@@ -19,6 +19,12 @@ Cluster B: edge_admin_b1 + edge_admin_b2  →  100.63.1.0/24 + fd7a:91c2:4e8c:2:
 
 Each admin instance is a peer — there is no primary/replica or leader/follower relationship. Instances within the same cluster form an Erlang peer mesh over the VPN and share the same PostgreSQL database. Each cluster independently owns and manages its own set of edge nodes. Multiple clusters mean more total capacity — clusters do not coordinate with each other.
 
+Within an Admin cluster, ownership is coordinated deterministically: exactly
+one Admin owns each edge cluster at a time and runs one virtual gateway for it.
+This is an operational hub-and-spoke arrangement for commands, metrics, SSH,
+and proxy routing; the Agents inside each edge cluster still use their direct
+full-mesh WireGuard network.
+
 ## Requirements
 
 - A Linux server with Docker and Docker Compose installed

@@ -16,6 +16,10 @@ A single-admin, SQLite-backed deployment of Edge Core. Good for homelab, hobbyis
 - No multiple admin instances (single point of failure, no HA)
 - No multi-cluster sharding (one admin owns all nodes; capped by WireGuard mesh O(n²) overhead at ~100 nodes)
 
+The single Admin also runs one virtual gateway for each owned edge cluster. It
+coordinates commands, metrics, SSH, and proxy access, while Agents in the
+cluster retain direct full-mesh WireGuard connectivity.
+
 **When to upgrade to `standard/`:** if you need any of HA / multi-admin clustering / cluster ownership sharding / >100 nodes / production observability / cross-admin coordination, switch to `standard/`. The Edge Admin binary is identical; the difference is `DB_ADAPTER=postgres` and the supporting infrastructure (Postgres + EMQX + Prometheus + 4 admin instances across 2 clusters). Migrating existing data from SQLite to Postgres is a one-time table-by-table copy, but most users start fresh on `standard/` rather than carrying state forward.
 
 ## Requirements

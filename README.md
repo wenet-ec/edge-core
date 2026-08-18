@@ -10,6 +10,13 @@
 
 Edge Core manages Linux machines you do not physically touch: cloud VMs, on-premises servers, factory equipment, Raspberry Pis, homelab boxes, and IoT devices. It gives operators one place to connect to, observe, and operate those machines without exposing every host to the public internet.
 
+Edge Admin coordinates the fleet as an operational hub-and-spoke system. It
+owns the control-plane metadata and assigns each edge cluster to one Admin;
+the owning Admin starts one in-process `VirtualGateway` for that cluster.
+Agents in a cluster still communicate over their direct full-mesh WireGuard
+network, while commands, metrics, SSH verification, and proxy operations are
+coordinated through the responsible virtual gateway.
+
 The name comes from our original edge-device use case, but **edge means any machine that is remote from the operator**. A VM in Frankfurt and a Raspberry Pi in a factory present the same control-plane problem; the difference is how hostile and unreliable the surrounding network can be.
 
 ## The edge version of a cloud control plane
@@ -60,6 +67,7 @@ Cloud or self-hosted control plane
 ├── Edge Admin (one or more peers)
 │   ├── REST API, OpenAPI, MCP, events, and metrics
 │   ├── Cluster ownership and background operations
+│   ├── One VirtualGateway per owned edge cluster
 │   └── HTTP + SOCKS5 forward proxies
 ├── PostgreSQL (standard) or SQLite (lite)
 └── Netmaker VPN stack
@@ -125,6 +133,6 @@ Edge Core ships under multiple licenses; see [`LICENSE`](LICENSE) for the comple
 | Edge Admin | [Elastic License 2.0](edge_admin/LICENSE) | Source available |
 | Examples, docs, deploy, and scripts | Apache License 2.0 unless otherwise stated | Open source |
 
-You may self-host, modify, and use Edge Core internally or as part of your own services. The Elastic License restricts offering Edge Admin itself, or a thin wrapper around it, as a hosted service to third parties. Contact **licensing@wenet-ec.com** if your use case needs clarification or a commercial license.
+You may self-host, modify, and use Edge Core internally or as part of your own services. The Elastic License restricts offering Edge Admin itself, or a thin wrapper around it, as a hosted service to third parties. Contact **<licensing@wenet-ec.com>** if your use case needs clarification or a commercial license.
 
 Contributions are welcome. See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the contribution flow and DCO requirements.

@@ -121,7 +121,7 @@ node-{uuid}.{cluster_name}.<EDGE_VPN_DEFAULT_DOMAIN>
 
 The agent does have a VPN IP underneath — Netmaker has to assign one — but **we do not expose it through the admin API and you should not rely on it**. Tracking IPs and keeping them in sync across enrollments, re-enrollments, cluster moves, and DERP fallbacks is the kind of bookkeeping that's a nightmare to get right; the hostname convention abstracts it away. Use `node-{uuid}.{cluster_name}.<DOMAIN>` (or its alias form, see below) everywhere — in commands, in proxy chaining usernames, in your own scripts.
 
-From any node-A in `cluster-prod`, `ping node-B.cluster-prod.nm.internal` works out of the box. **Exactly one admin owns each cluster at a time** (cluster ownership sharding) — this is invisible to you, but it's why you don't see "which admin is talking to my node" anywhere in the API.
+From any node-A in `cluster-prod`, `ping node-B.cluster-prod.nm.internal` works out of the box. **Exactly one Admin owns each cluster at a time** (cluster ownership sharding) and runs its per-cluster `VirtualGateway`. This creates a coordinated operational hub-and-spoke path for commands, metrics, SSH, and proxy access, while Agents retain direct full-mesh WireGuard connectivity. The ownership is invisible to you, which is why you don't see "which admin is talking to my node" anywhere in the API.
 
 **Alias.** A friendly name for a node. Instead of `node-3f8a-…-deadbeef.cluster-prod.nm.internal`, you can give a node the alias `web-1` and reach it as `web-1.cluster-prod.nm.internal`. Pure convenience — aliases are 1:1 with nodes inside a cluster.
 

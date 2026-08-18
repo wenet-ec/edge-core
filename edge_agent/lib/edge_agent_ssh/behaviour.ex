@@ -1,5 +1,5 @@
-# edge_agent/lib/edge_agent/ssh_server/behaviour.ex
-defmodule EdgeAgent.SshServer.Behaviour do
+# edge_agent/lib/edge_agent_ssh/behaviour.ex
+defmodule EdgeAgentSsh.Behaviour do
   @moduledoc """
   Behaviour for SSH server operations to enable testing.
   """

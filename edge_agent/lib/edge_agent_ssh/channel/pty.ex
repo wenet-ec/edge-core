@@ -1,5 +1,5 @@
-# edge_agent/lib/edge_agent/ssh_server/channel/pty.ex
-defmodule EdgeAgent.SshServer.Channel.Pty do
+# edge_agent/lib/edge_agent_ssh/channel/pty.ex
+defmodule EdgeAgentSsh.Channel.Pty do
   @moduledoc "Pure PTY, shell-environment, and exit-status helpers."
 
   @default_term ~c"xterm"

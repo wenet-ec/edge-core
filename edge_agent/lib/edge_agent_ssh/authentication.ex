@@ -1,5 +1,5 @@
-# edge_agent/lib/edge_agent/ssh_server/authentication.ex
-defmodule EdgeAgent.SshServer.Authentication do
+# edge_agent/lib/edge_agent_ssh/authentication.ex
+defmodule EdgeAgentSsh.Authentication do
   @moduledoc """
   Handles SSH authentication against EdgeAdmin.
 
@@ -8,7 +8,7 @@ defmodule EdgeAgent.SshServer.Authentication do
   """
 
   alias EdgeAgent.AdminGateway.Client
-  alias EdgeAgent.SshServer.Authentication.KeyEncoding
+  alias EdgeAgentSsh.Authentication.KeyEncoding
 
   require Logger
 

@@ -1,5 +1,5 @@
-# edge_agent/lib/edge_agent/ssh_server/host_keys.ex
-defmodule EdgeAgent.SshServer.HostKeys do
+# edge_agent/lib/edge_agent_ssh/host_keys.ex
+defmodule EdgeAgentSsh.HostKeys do
   @moduledoc """
   Manages SSH host keys — generation, loading, and lookup for the embedded
   agent SSH daemon.
@@ -39,7 +39,7 @@ defmodule EdgeAgent.SshServer.HostKeys do
   `{:error, :no_host_keys}` only if all three fail.
   """
 
-  alias EdgeAgent.SshServer.Config
+  alias EdgeAgentSsh.Config
 
   require Logger
 

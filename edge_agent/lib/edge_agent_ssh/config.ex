@@ -1,5 +1,5 @@
-# edge_agent/lib/edge_agent/ssh_server/config.ex
-defmodule EdgeAgent.SshServer.Config do
+# edge_agent/lib/edge_agent_ssh/config.ex
+defmodule EdgeAgentSsh.Config do
   @moduledoc """
   SSH server configuration management.
 
@@ -8,7 +8,7 @@ defmodule EdgeAgent.SshServer.Config do
   Edge VPN CLI state on the persistent volume — they survive container
   restarts. The `users` subdirectory is required by `:ssh.daemon`'s
   `:user_dir` option but is otherwise unused (we delegate authentication
-  to admin via `EdgeAgent.SshServer.Authentication`, not authorized_keys
+  to admin via `EdgeAgentSsh.Authentication`, not authorized_keys
   files).
   """
 
@@ -117,7 +117,7 @@ defmodule EdgeAgent.SshServer.Config do
       {:preferred_algorithms, @ssh_algorithms},
       {:parallel_login, true},
       {:subsystems, []},
-      {:ssh_cli, {EdgeAgent.SshServer.Channel, []}}
+      {:ssh_cli, {EdgeAgentSsh.Channel, []}}
     ]
   end
 end

@@ -1,8 +1,8 @@
-# edge_agent/test/edge_agent/ssh_server/channel/pty_test.exs
-defmodule EdgeAgent.SshServer.Channel.PtyTest do
+# edge_agent/test/edge_agent_ssh/channel/pty_test.exs
+defmodule EdgeAgentSsh.Channel.PtyTest do
   use ExUnit.Case, async: true
 
-  alias EdgeAgent.SshServer.Channel.Pty, as: Channel
+  alias EdgeAgentSsh.Channel.Pty, as: Channel
   # pty_term/1 — normalises the `TERM` value coming out of the SSH pty-req.
   # The Erlang :ssh app delivers it as a charlist for well-formed clients,
   # but the spec also allows empty/missing values. erlexec wants a non-empty

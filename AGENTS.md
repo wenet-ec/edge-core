@@ -224,7 +224,7 @@ This guide keeps durable rules and contracts. It should not cache module lists, 
 - Agent API routes/controllers: `edge_agent/lib/edge_agent_web/router.ex`, `edge_agent/lib/edge_agent_web/controllers/`.
 - Agent boot/enrollment: `edge_agent/lib/edge_agent/bootstrap.ex`.
 - Command lifecycle: `edge_admin/lib/edge_admin/commands/`, `edge_agent/lib/edge_agent/commands/`.
-- SSH flow: `edge_admin/lib/edge_admin/ssh/`, `edge_agent/lib/edge_agent/ssh_server*`.
+- SSH flow: `edge_admin/lib/edge_admin/ssh/`, `edge_agent/lib/edge_agent_ssh/`.
 - Events/broker/webhooks: `edge_admin/lib/edge_admin/events/`.
 
 **Data, auth, and deployment**

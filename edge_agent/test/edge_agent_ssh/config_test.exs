@@ -1,8 +1,8 @@
-# edge_agent/test/edge_agent/ssh_server/config_test.exs
-defmodule EdgeAgent.SshServer.ConfigTest do
+# edge_agent/test/edge_agent_ssh/config_test.exs
+defmodule EdgeAgentSsh.ConfigTest do
   use ExUnit.Case, async: true
 
-  alias EdgeAgent.SshServer.Config
+  alias EdgeAgentSsh.Config
   # supported_host_key_types — pinned list of algorithms we have keys for.
   # Drift here would let SSH advertise a key type whose private key isn't on
   # disk; signature verification would silently fail.

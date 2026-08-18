@@ -78,7 +78,7 @@ defmodule EdgeAgentHealth do
 
   @spec ssh_server_health() :: :ok | {:error, String.t()}
   def ssh_server_health do
-    case EdgeAgent.SshServer.server_status() do
+    case EdgeAgentSsh.server_status() do
       :running ->
         :ok
 

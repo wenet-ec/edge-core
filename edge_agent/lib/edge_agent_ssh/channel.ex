@@ -1,5 +1,5 @@
-# edge_agent/lib/edge_agent/ssh_server/channel.ex
-defmodule EdgeAgent.SshServer.Channel do
+# edge_agent/lib/edge_agent_ssh/channel.ex
+defmodule EdgeAgentSsh.Channel do
   @moduledoc """
   SSH channel handler for shell and exec sessions.
 
@@ -19,7 +19,7 @@ defmodule EdgeAgent.SshServer.Channel do
   @behaviour :ssh_server_channel
 
   alias EdgeAgent.Settings
-  alias EdgeAgent.SshServer.Channel.Pty
+  alias EdgeAgentSsh.Channel.Pty
 
   require Logger
 

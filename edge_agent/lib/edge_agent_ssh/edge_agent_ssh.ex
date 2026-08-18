@@ -1,27 +1,27 @@
-# edge_agent/lib/edge_agent/ssh_server/ssh_server.ex
-defmodule EdgeAgent.SshServer do
+# edge_agent/lib/edge_agent_ssh/edge_agent_ssh.ex
+defmodule EdgeAgentSsh do
   @moduledoc """
   SSH server GenServer
   """
 
   @behaviour :ssh_server_key_api
-  @behaviour EdgeAgent.SshServer.Behaviour
+  @behaviour EdgeAgentSsh.Behaviour
 
   use GenServer
 
-  alias EdgeAgent.SshServer.Authentication
-  alias EdgeAgent.SshServer.Config
-  alias EdgeAgent.SshServer.HostKeys
+  alias EdgeAgentSsh.Authentication
+  alias EdgeAgentSsh.Config
+  alias EdgeAgentSsh.HostKeys
 
   require Logger
 
-  @impl EdgeAgent.SshServer.Behaviour
+  @impl EdgeAgentSsh.Behaviour
   def start_server, do: GenServer.call(__MODULE__, :start_server)
 
-  @impl EdgeAgent.SshServer.Behaviour
+  @impl EdgeAgentSsh.Behaviour
   def stop_server, do: GenServer.call(__MODULE__, :stop_server)
 
-  @impl EdgeAgent.SshServer.Behaviour
+  @impl EdgeAgentSsh.Behaviour
   def server_status, do: GenServer.call(__MODULE__, :server_status)
 
   def start_link(opts \\ []) do

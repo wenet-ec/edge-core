@@ -1,5 +1,5 @@
-# edge_agent/lib/edge_agent/ssh_server/authentication/key_encoding.ex
-defmodule EdgeAgent.SshServer.Authentication.KeyEncoding do
+# edge_agent/lib/edge_agent_ssh/authentication/key_encoding.ex
+defmodule EdgeAgentSsh.Authentication.KeyEncoding do
   @moduledoc "Pure conversion from Erlang SSH key terms to OpenSSH strings."
 
   require Logger

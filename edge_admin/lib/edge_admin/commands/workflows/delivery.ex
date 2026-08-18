@@ -9,6 +9,8 @@ defmodule EdgeAdmin.Commands.Workflows.Delivery do
 
   import Ecto.Query, warn: false
 
+  alias EdgeAdmin.AdminGateway.Router, as: GatewayRouter
+  alias EdgeAdmin.AdminGateway.Worker, as: GatewayWorker
   alias EdgeAdmin.Admins.Metadata
   alias EdgeAdmin.Commands.Forms
   alias EdgeAdmin.Commands.Resources.Commands, as: CommandResource
@@ -16,7 +18,6 @@ defmodule EdgeAdmin.Commands.Workflows.Delivery do
   alias EdgeAdmin.Commands.Schemas.CommandExecution
   alias EdgeAdmin.Commands.Workers.CreateCommandExecutionsWorker
   alias EdgeAdmin.Commands.Workflows.CommandExecutionLifecycle
-  alias EdgeAdmin.EdgeClusters.AgentClient
   alias EdgeAdmin.Events
   alias EdgeAdmin.Events.Catalog
   alias EdgeAdmin.Nodes.Targeting
@@ -207,18 +208,20 @@ defmodule EdgeAdmin.Commands.Workflows.Delivery do
   end
 
   @doc """
-  Delivers pending command executions for clusters owned by this admin.
+  Delivers pending command executions for nodes currently assigned to this
+  Admin's Gateway routing domain.
 
   Called by the Quantum LocalScheduler on the `EXECUTION_DELIVERY_SCHEDULE`
-  cadence (default: every minute). Uses local metadata to determine
-  which clusters this admin owns, then delivers pending executions directly to agents.
+  cadence (default: every minute). Local metadata selects assigned clusters;
+  the delivery operation itself goes through the assigned Admin Gateway.
 
   ## Behavior
 
-  - Only processes executions for nodes in clusters owned by this admin
+  - Only processes executions for nodes in clusters assigned to this Admin's
+    current routing domain
   - Delivers executions in FIFO order per node
   - Uses Task.async_stream for parallel delivery across nodes
-  - Admin sends HTTP requests directly to agents (no Gateway intermediary)
+  - Admin routes HTTP requests to agents through the assigned Gateway process
   - Continues processing all executions even if some fail
 
   ## Returns
@@ -332,7 +335,7 @@ defmodule EdgeAdmin.Commands.Workflows.Delivery do
         status: "pending"
       }
 
-      case AgentClient.deliver_execution(node, execution_data) do
+      case deliver_execution_via_gateway(node, execution_data) do
         {:ok, :sent} ->
           # Agent received it — conditional transition pending → sent.
           # If the row is no longer :pending (agent already reported back, admin
@@ -369,5 +372,11 @@ defmodule EdgeAdmin.Commands.Workflows.Delivery do
     end)
 
     :ok
+  end
+
+  defp deliver_execution_via_gateway(node, execution_data) do
+    with {:ok, gateway} <- GatewayRouter.resolve_node(node) do
+      GatewayWorker.deliver_execution(gateway, node, execution_data)
+    end
   end
 end

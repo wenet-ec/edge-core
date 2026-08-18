@@ -1,6 +1,6 @@
-# edge_admin/lib/edge_admin/edge_clusters/reconciliation.ex
-defmodule EdgeAdmin.EdgeClusters.Reconciliation do
-  @moduledoc "Pure planner for EdgeClusters Gateway membership changes."
+# edge_admin/lib/edge_admin/admin_gateway/reconciliation.ex
+defmodule EdgeAdmin.AdminGateway.Reconciliation do
+  @moduledoc "Pure planner for Admin Gateway membership changes."
 
   @type plan :: %{
           to_join: MapSet.t(),

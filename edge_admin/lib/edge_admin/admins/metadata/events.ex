@@ -12,7 +12,7 @@ defmodule EdgeAdmin.Admins.Metadata.Events do
 
     * **Local recompute events** — `:recomputed` notifications. Published by
       `EdgeAdmin.Admins.Metadata` after a recomputation completes and consumed
-      by this admin's `EdgeAdmin.EdgeClusters` GenServer to drive gateway
+      by this admin's `EdgeAdmin.AdminGateway.Coordinator` GenServer to drive gateway
       reconciliation. Node-local, never leaves the VM.
 
   This module exists so call sites never construct topic strings or call

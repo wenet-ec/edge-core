@@ -34,7 +34,7 @@ defmodule EdgeAdmin.Admins.Membership do
      - Add this node to `:admin_scope`
      - Join the admin-cluster syn group with this admin's metadata
      - Enable cross-admin topology awareness (`:cluster_scope` for gateways
-       is initialized separately by `EdgeAdmin.EdgeClusters`)
+       is initialized separately by `EdgeAdmin.AdminGateway.Coordinator`)
 
   4. **Peer Discovery** (step 4)
      - Query Edge VPN for other admins in the cluster

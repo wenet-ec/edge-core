@@ -3,15 +3,17 @@ defmodule EdgeAdmin.Nodes.Workflows.HealthCheck do
   @moduledoc """
   Owns node liveness checks and health reports.
 
-  Direct VPN probes, HTTP fallback reports, status transitions, and their
-  telemetry/events are kept together here. The Nodes context delegates the
-  public entry points for compatibility.
+  Gateway-routed Agent probes, HTTP fallback reports, status transitions, and
+  their telemetry/events are kept together here. The Nodes context delegates
+  the public entry points for compatibility.
   """
 
   import Ecto.Query, warn: false
 
+  alias EdgeAdmin.AdminGateway.AgentClient
+  alias EdgeAdmin.AdminGateway.Router, as: GatewayRouter
+  alias EdgeAdmin.AdminGateway.Worker, as: GatewayWorker
   alias EdgeAdmin.Admins.Metadata
-  alias EdgeAdmin.EdgeClusters.AgentClient
   alias EdgeAdmin.Events
   alias EdgeAdmin.Events.Catalog
   alias EdgeAdmin.Nodes.Forms
@@ -142,7 +144,7 @@ defmodule EdgeAdmin.Nodes.Workflows.HealthCheck do
     start_time = System.monotonic_time(:millisecond)
 
     result =
-      case AgentClient.ping(node) do
+      case ping_via_gateway(node) do
         :healthy ->
           persist_node(node, %{status: :healthy, last_seen_at: now})
           maybe_publish_status_changed(node, :healthy)
@@ -167,6 +169,13 @@ defmodule EdgeAdmin.Nodes.Workflows.HealthCheck do
     )
 
     result
+  end
+
+  defp ping_via_gateway(node) do
+    case GatewayRouter.resolve_node(node) do
+      {:ok, gateway} -> GatewayWorker.ping(gateway, node)
+      {:error, _reason} -> :unreachable
+    end
   end
 
   # Only mark as unreachable if last_seen_at is > 5 minutes ago

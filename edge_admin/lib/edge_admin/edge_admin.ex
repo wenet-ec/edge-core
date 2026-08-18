@@ -5,7 +5,7 @@ defmodule EdgeAdmin do
 
   Top-level namespace. Business logic lives in per-domain contexts
   (`EdgeAdmin.Nodes`, `EdgeAdmin.Commands`, `EdgeAdmin.Vpn`,
-  `EdgeAdmin.EdgeClusters`, `EdgeAdmin.Events`, etc.); see
+  `EdgeAdmin.AdminGateway`, `EdgeAdmin.Events`, etc.); see
   `docs/architecture.md` for the full design.
   """
 end

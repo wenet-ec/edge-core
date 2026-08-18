@@ -1,8 +1,8 @@
-# edge_admin/test/edge_admin/edge_clusters/reconciliation_test.exs
-defmodule EdgeAdmin.EdgeClusters.ReconciliationTest do
+# edge_admin/test/edge_admin/admin_gateway/reconciliation_test.exs
+defmodule EdgeAdmin.AdminGateway.ReconciliationTest do
   use ExUnit.Case, async: true
 
-  alias EdgeAdmin.EdgeClusters.Reconciliation
+  alias EdgeAdmin.AdminGateway.Reconciliation
 
   test "plans joins and leaves from current and assigned clusters" do
     plan = Reconciliation.plan(MapSet.new(["shared", "leaving"]), ["shared", "joining"])

@@ -1,5 +1,5 @@
-# edge_admin/lib/edge_admin/edge_clusters/agent_client.ex
-defmodule EdgeAdmin.EdgeClusters.AgentClient do
+# edge_admin/lib/edge_admin/admin_gateway/agent_client.ex
+defmodule EdgeAdmin.AdminGateway.AgentClient do
   @moduledoc """
   HTTP client for all admin → agent communication.
 

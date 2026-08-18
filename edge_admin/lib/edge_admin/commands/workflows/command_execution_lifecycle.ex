@@ -11,12 +11,13 @@ defmodule EdgeAdmin.Commands.Workflows.CommandExecutionLifecycle do
 
   import Ecto.Query, warn: false
 
+  alias EdgeAdmin.AdminGateway.Router, as: GatewayRouter
+  alias EdgeAdmin.AdminGateway.Worker, as: GatewayWorker
   alias EdgeAdmin.Admins.Metadata
   alias EdgeAdmin.Commands.Checks
   alias EdgeAdmin.Commands.Forms
   alias EdgeAdmin.Commands.Schemas.Command
   alias EdgeAdmin.Commands.Schemas.CommandExecution
-  alias EdgeAdmin.EdgeClusters.Gateway
   alias EdgeAdmin.Events
   alias EdgeAdmin.Events.Catalog
   alias EdgeAdmin.Nodes
@@ -265,6 +266,18 @@ defmodule EdgeAdmin.Commands.Workflows.CommandExecutionLifecycle do
           # Conditional cancel: only flip pending → cancelled. If a peer admin
           # or this admin's scheduler moved the row to :sent in the meantime,
           # fall through to the :sent branch and ask the agent to cancel.
+          #
+          # Every status transition on a CommandExecution flows through one of the two
+          # helpers below. The point is to make each transition a single atomic SQL
+          # statement (`UPDATE ... WHERE id = ? AND status IN (...)`) so that stale
+          # in-memory structs can never overwrite a row that has moved on.
+          #
+          # Background: this code path runs on every admin in a multi-admin cluster,
+          # and ownership of an edge cluster can flap during reconciliation. Without a
+          # WHERE-status guard, two admins delivering the same execution (or a single
+          # admin whose HTTP round trip is slow enough for the agent to round-trip a
+          # result back) can clobber a terminal row back to :sent / :expired. See the
+          # incident write-up in the changelog.
           case transition_status(execution, [:pending],
                  status: :cancelled,
                  cancelled_at: DateTime.truncate(DateTime.utc_now(), :second)
@@ -288,20 +301,6 @@ defmodule EdgeAdmin.Commands.Workflows.CommandExecutionLifecycle do
       end
     end
   end
-
-  # Conditional status transitions
-  #
-  # Every status transition on a CommandExecution flows through one of the two
-  # helpers below. The point is to make each transition a single atomic SQL
-  # statement (`UPDATE ... WHERE id = ? AND status IN (...)`) so that stale
-  # in-memory structs can never overwrite a row that has moved on.
-  #
-  # Background: this code path runs on every admin in a multi-admin cluster,
-  # and ownership of an edge cluster can flap during reconciliation. Without a
-  # WHERE-status guard, two admins delivering the same execution (or a single
-  # admin whose HTTP round trip is slow enough for the agent to round-trip a
-  # result back) can clobber a terminal row back to :sent / :expired. See the
-  # incident write-up in the changelog.
 
   @doc "Conditionally transitions an execution from one of the allowed statuses."
   @spec transition_status(CommandExecution.t(), [CommandExecution.status()], keyword()) ::
@@ -383,8 +382,8 @@ defmodule EdgeAdmin.Commands.Workflows.CommandExecutionLifecycle do
     with {:ok, node} <- Nodes.get_node(execution.node_id),
          node_name = Node.node_name(node),
          {:ok, cluster_name, _admin_name} <- Metadata.find_node_cluster(node_name),
-         {:ok, gateway_pid} <- Gateway.lookup(cluster_name),
-         :ok <- Gateway.cancel_execution(gateway_pid, node, execution.id) do
+         {:ok, gateway} <- GatewayRouter.resolve(cluster_name),
+         :ok <- GatewayWorker.cancel_execution(gateway, node, execution.id) do
       Logger.info("Successfully sent cancellation request to agent for execution #{execution.id}")
 
       :ok

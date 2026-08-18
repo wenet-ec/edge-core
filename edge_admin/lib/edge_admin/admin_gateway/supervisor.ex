@@ -1,9 +1,9 @@
-# edge_admin/lib/edge_admin/edge_clusters/supervisor.ex
-defmodule EdgeAdmin.EdgeClusters.Supervisor do
+# edge_admin/lib/edge_admin/admin_gateway/supervisor.ex
+defmodule EdgeAdmin.AdminGateway.Supervisor do
   @moduledoc """
   DynamicSupervisor for Gateway processes.
 
-  Coordination lives in `EdgeAdmin.EdgeClusters`; this module only supervises
+  Coordination lives in `EdgeAdmin.AdminGateway.Coordinator`; this module only supervises
   per-cluster Gateway processes. Gateway children are started with `:transient`
   restart so normal assignment removal does not restart them.
   """
@@ -18,7 +18,7 @@ defmodule EdgeAdmin.EdgeClusters.Supervisor do
 
   @impl true
   def init(_opts) do
-    Logger.info("EdgeClusters.Supervisor starting")
+    Logger.info("AdminGateway.Supervisor starting")
     DynamicSupervisor.init(strategy: :one_for_one)
   end
 end

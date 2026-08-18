@@ -1,17 +1,14 @@
-# edge_admin/lib/edge_admin/edge_clusters/gateway.ex
-defmodule EdgeAdmin.EdgeClusters.Gateway do
+# edge_admin/lib/edge_admin/admin_gateway/worker.ex
+defmodule EdgeAdmin.AdminGateway.Worker do
   @moduledoc """
-  Gateway GenServer managing VPN connection and HTTP communication with an edge cluster.
+  Admin Gateway GenServer managing VPN connection and HTTP communication with an edge cluster.
 
   One Gateway process runs per cluster assigned to this admin. Each Gateway maintains
   a direct host-to-network VPN membership for that cluster and registers itself
   in `:cluster_scope` so other admins can route cluster-specific work to the
   owner.
 
-  Note: command-execution *delivery* (`AgentClient.deliver_execution/2`) does
-  NOT go through Gateway — `Commands` calls `AgentClient` directly. Only the
-  cancel path routes through Gateway, because cancellation needs to find the
-  owning admin's process via syn.
+  All Admin-to-Agent operations go through the Gateway process.
 
   ## Cross-Admin Routing
 
@@ -28,8 +25,8 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
 
   use GenServer
 
+  alias EdgeAdmin.AdminGateway.AgentClient
   alias EdgeAdmin.Admins.Metadata
-  alias EdgeAdmin.EdgeClusters.AgentClient
   alias EdgeAdmin.Vpn
 
   require Logger
@@ -124,6 +121,16 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   @doc "Cancels a command execution on an agent."
   def cancel_execution(gateway_pid, node, execution_id) do
     GenServer.call(gateway_pid, {:cancel_execution, node, execution_id}, AgentClient.command_call_timeout())
+  end
+
+  @doc "Pings an Agent health endpoint through this Gateway."
+  def ping(gateway_pid, node) do
+    GenServer.call(gateway_pid, {:ping, node}, AgentClient.health_check_call_timeout())
+  end
+
+  @doc "Delivers a command execution to an Agent through this Gateway."
+  def deliver_execution(gateway_pid, node, execution_data) do
+    GenServer.call(gateway_pid, {:deliver_execution, node, execution_data}, AgentClient.command_call_timeout())
   end
 
   @impl true
@@ -271,6 +278,18 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
       GenServer.reply(from, AgentClient.cancel_execution(node, execution_id))
     end)
 
+    {:noreply, state}
+  end
+
+  @impl true
+  def handle_call({:ping, node}, from, state) do
+    Task.start(fn -> GenServer.reply(from, AgentClient.ping(node)) end)
+    {:noreply, state}
+  end
+
+  @impl true
+  def handle_call({:deliver_execution, node, execution_data}, from, state) do
+    Task.start(fn -> GenServer.reply(from, AgentClient.deliver_execution(node, execution_data)) end)
     {:noreply, state}
   end
 

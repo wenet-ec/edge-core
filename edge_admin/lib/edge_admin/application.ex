@@ -6,7 +6,7 @@ defmodule EdgeAdmin.Application do
   Two child-tree shapes selected by `EDGE_ADMIN_MODE`:
 
     * `EDGE_ADMIN_MODE=test` — minimal tree (Vault, Repo, PubSub, Oban,
-      Endpoint). Used by the test env; skips PromEx, Membership, EdgeClusters,
+      Endpoint). Used by the test env; skips PromEx, Membership, AdminGateway,
       Metadata, LocalScheduler, ProxyServers, MCP, etc.
     * unset (default) — full server tree.
 
@@ -79,21 +79,49 @@ defmodule EdgeAdmin.Application do
   end
 
   defp build_children(:server) do
+    router_foundation_children() ++
+      gateway_coordination_children() ++
+      router_scheduler_children() ++
+      gateway_proxy_children() ++
+      router_endpoint_children()
+  end
+
+  # Router-owned children coordinate the Core and expose the public control
+  # plane.
+  defp router_foundation_children do
     [EdgeAdmin.PromEx, EdgeAdmin.Encryption] ++
       repo_children() ++
       [
         {Phoenix.PubSub, name: EdgeAdmin.PubSub},
         EdgeAdminWeb.Telemetry,
         {Oban, Application.fetch_env!(:edge_admin, Oban)},
-        EdgeAdmin.Admins.Membership,
-        EdgeAdmin.EdgeClusters.Supervisor,
-        EdgeAdmin.EdgeClusters,
-        EdgeAdmin.Admins.Metadata,
-        EdgeAdmin.LocalScheduler.History,
-        EdgeAdmin.LocalScheduler,
-        EdgeAdmin.ProxyServers.Supervisor,
-        {EdgeAdminMcp.Server, transport: :streamable_http, registry: {Anubis.Server.Registry.PG, []}},
-        EdgeAdminWeb.Endpoint
-      ] ++ event_broker_children()
+        EdgeAdmin.Admins.Membership
+      ]
+  end
+
+  # Gateway-owned children manage edge-cluster VPN memberships and data-plane
+  # proxy listeners.
+  defp gateway_coordination_children do
+    [
+      EdgeAdmin.AdminGateway.Supervisor,
+      EdgeAdmin.AdminGateway.Coordinator
+    ]
+  end
+
+  defp router_scheduler_children do
+    [EdgeAdmin.Admins.Metadata, EdgeAdmin.LocalScheduler.History, EdgeAdmin.LocalScheduler]
+  end
+
+  # The proxy supervisor is Gateway-owned because it includes the raw
+  # Admin-to-Admin data-plane listener and the edge-facing proxy servers.
+  defp gateway_proxy_children do
+    [EdgeAdmin.ProxyServers.Supervisor]
+  end
+
+  defp router_endpoint_children do
+    [
+      {EdgeAdminMcp.Server, transport: :streamable_http, registry: {Anubis.Server.Registry.PG, []}},
+      EdgeAdminWeb.Endpoint
+    ] ++ event_broker_children()
   end
 end

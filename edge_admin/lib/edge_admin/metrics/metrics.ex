@@ -31,8 +31,9 @@ defmodule EdgeAdmin.Metrics do
 
   import Ecto.Query, warn: false
 
+  alias EdgeAdmin.AdminGateway.Router, as: GatewayRouter
+  alias EdgeAdmin.AdminGateway.Worker, as: GatewayWorker
   alias EdgeAdmin.Admins.Metadata
-  alias EdgeAdmin.EdgeClusters.Gateway
   alias EdgeAdmin.Metrics.Forms.PushMetricsCacheForm
   alias EdgeAdmin.Metrics.Parsers.AdminMetricsParser
   alias EdgeAdmin.Metrics.Parsers.AgentMetricsParser
@@ -94,7 +95,7 @@ defmodule EdgeAdmin.Metrics do
   """
   @spec scrape_host_metrics(binary()) :: {:ok, String.t()} | {:error, term()}
   def scrape_host_metrics(node_id) do
-    scrape_node_metrics(node_id, :host, &Gateway.scrape_host_metrics/2)
+    scrape_node_metrics(node_id, :host, &GatewayWorker.scrape_host_metrics/2)
   end
 
   @doc """
@@ -122,7 +123,7 @@ defmodule EdgeAdmin.Metrics do
   """
   @spec scrape_agent_metrics(binary()) :: {:ok, String.t()} | {:error, term()}
   def scrape_agent_metrics(node_id) do
-    scrape_node_metrics(node_id, :agent, &Gateway.scrape_agent_metrics/2)
+    scrape_node_metrics(node_id, :agent, &GatewayWorker.scrape_agent_metrics/2)
   end
 
   @doc """
@@ -188,7 +189,7 @@ defmodule EdgeAdmin.Metrics do
   """
   @spec scrape_wireguard_metrics(binary()) :: {:ok, String.t()} | {:error, term()}
   def scrape_wireguard_metrics(node_id) do
-    scrape_node_metrics(node_id, :wireguard, &Gateway.scrape_wireguard_metrics/2)
+    scrape_node_metrics(node_id, :wireguard, &GatewayWorker.scrape_wireguard_metrics/2)
   end
 
   defp scrape_node_metrics(node_id, metrics_type, gateway_scrape_fn) do
@@ -199,10 +200,10 @@ defmodule EdgeAdmin.Metrics do
       # Attempt VPN scrape via ETS + Gateway; fall back to cache on any infra failure
       case Metadata.find_node_cluster(node_name) do
         {:ok, cluster_name, _admin_name} ->
-          case Gateway.lookup(cluster_name) do
-            {:ok, gateway_pid} ->
+          case GatewayRouter.resolve(cluster_name) do
+            {:ok, gateway} ->
               try do
-                case gateway_scrape_fn.(gateway_pid, node) do
+                case gateway_scrape_fn.(gateway, node) do
                   {:ok, metrics_text} ->
                     {:ok, metrics_text}
 

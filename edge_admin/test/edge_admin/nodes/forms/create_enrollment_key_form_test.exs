@@ -127,17 +127,19 @@ defmodule EdgeAdmin.Nodes.Forms.CreateEnrollmentKeyFormTest do
     end
   end
 
-  # changeset/1 — invalid param types (fallback clause returns empty map)
+  # changeset/1 — invalid param types
 
   describe "changeset/1 — invalid params" do
-    test "non-map params fall through to empty map (changeset(_) clause)" do
-      assert {:ok, result} = CreateEnrollmentKeyForm.changeset("bad")
-      assert result == %{}
+    test "non-map params return a base error" do
+      assert {:error, changeset} = CreateEnrollmentKeyForm.changeset("bad")
+      assert %{base: [msg]} = errors_on(changeset)
+      assert msg =~ "expected a map"
     end
 
-    test "nil params fall through to empty map (changeset(_) clause)" do
-      assert {:ok, result} = CreateEnrollmentKeyForm.changeset(nil)
-      assert result == %{}
+    test "nil params return a base error" do
+      assert {:error, changeset} = CreateEnrollmentKeyForm.changeset(nil)
+      assert %{base: [msg]} = errors_on(changeset)
+      assert msg =~ "expected a map"
     end
   end
 end

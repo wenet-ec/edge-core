@@ -3,6 +3,8 @@ defmodule EdgeAdmin.Nodes.Forms.UpdateEnrollmentKeyForm do
   @moduledoc "Validates attributes for updating an Admin enrollment key."
   use EdgeAdmin.Form
 
+  alias EdgeAdmin.Nodes.Validators.EnrollmentKeyValidators
+
   embedded_schema do
     field(:name, :string)
     field(:uses_remaining, :integer)
@@ -23,11 +25,18 @@ defmodule EdgeAdmin.Nodes.Forms.UpdateEnrollmentKeyForm do
     end
   end
 
-  def changeset(_), do: {:ok, %{}}
+  def changeset(_params) do
+    changeset =
+      %__MODULE__{}
+      |> cast(%{}, [])
+      |> add_error(:base, "invalid parameters - expected a map")
+
+    {:error, %{changeset | action: :update}}
+  end
 
   defp validate_uses_remaining(changeset) do
     validate_change(changeset, :uses_remaining, fn _, value ->
-      if value > 0 do
+      if EnrollmentKeyValidators.valid_uses_remaining?(value) do
         []
       else
         [uses_remaining: "must be a positive integer (or null for unlimited)"]
@@ -37,7 +46,7 @@ defmodule EdgeAdmin.Nodes.Forms.UpdateEnrollmentKeyForm do
 
   defp validate_expires_at(changeset) do
     validate_change(changeset, :expires_at, fn :expires_at, expires_at ->
-      if DateTime.after?(expires_at, DateTime.utc_now()) do
+      if EnrollmentKeyValidators.valid_expiry?(expires_at, DateTime.utc_now()) do
         []
       else
         [expires_at: "must be in the future"]

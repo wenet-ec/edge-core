@@ -34,5 +34,6 @@ defmodule EdgeAdmin.Nodes.Forms.ReregisterNodeFormTest do
              valid_attrs() |> Map.delete("version") |> ReregisterNodeForm.changeset()
 
     assert %{version: [_]} = errors_on(changeset)
+    assert changeset.action == :update
   end
 end

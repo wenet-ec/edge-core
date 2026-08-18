@@ -24,6 +24,7 @@ defmodule EdgeAdmin.Nodes.Forms.NodeHealthCheckForm do
   `status` must be `"healthy"` or `"unhealthy"` on the wire and is cast to
   an atom.
   """
+  @spec changeset(map()) :: {:ok, map()} | {:error, Ecto.Changeset.t()}
   def changeset(attrs) when is_map(attrs) do
     %__MODULE__{}
     |> cast(attrs, [:status])

@@ -20,9 +20,9 @@ defmodule EdgeAdmin.Nodes.Schemas.Alias do
   use EdgeAdmin.Schema
 
   alias Ecto.Association.NotLoaded
-  alias EdgeAdmin.Naming
   alias EdgeAdmin.Nodes.Schemas.Cluster
   alias EdgeAdmin.Nodes.Schemas.Node
+  alias EdgeAdmin.Nodes.Validators.AliasValidators
   alias EdgeAdmin.Vpn
 
   @type t :: %__MODULE__{
@@ -62,10 +62,11 @@ defmodule EdgeAdmin.Nodes.Schemas.Alias do
     alias_record
     |> cast(attrs, [:name, :node_id, :cluster_id])
     |> validate_required([:name, :node_id, :cluster_id])
-    |> validate_length(:name, min: Naming.alias_name_min_length(), max: Naming.alias_name_max_length())
-    |> validate_format(:name, Naming.alias_name_regex(),
-      message: "must be lowercase alphanumeric with hyphens, no leading/trailing hyphens"
-    )
+    |> validate_change(:name, fn :name, value ->
+      if AliasValidators.valid_name?(value),
+        do: [],
+        else: [name: "must be lowercase alphanumeric with hyphens, no leading/trailing hyphens"]
+    end)
     |> unique_constraint([:name, :cluster_id], name: :aliases_cluster_id_name_index)
     |> foreign_key_constraint(:node_id)
     |> foreign_key_constraint(:cluster_id)

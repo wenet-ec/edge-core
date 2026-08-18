@@ -8,7 +8,7 @@ defmodule EdgeAdmin.Nodes.Forms.CreateClusterForm do
   """
   use EdgeAdmin.Form
 
-  alias EdgeAdmin.Naming
+  alias EdgeAdmin.Nodes.Validators.ClusterValidators
 
   embedded_schema do
     field(:name, :string)
@@ -22,6 +22,7 @@ defmodule EdgeAdmin.Nodes.Forms.CreateClusterForm do
   def changeset(attrs) when is_map(attrs) do
     %__MODULE__{}
     |> cast(attrs, [:name, :ipv4_range, :ipv6_range, :node_limit])
+    |> validate_required([:name])
     |> validate_name()
     |> validate_ipv4_range()
     |> validate_ipv6_range()
@@ -42,37 +43,35 @@ defmodule EdgeAdmin.Nodes.Forms.CreateClusterForm do
     {:error, %{changeset | action: :insert}}
   end
 
-  # "default" is reserved — it's a URL keyword on `/api/v1/clusters/default/...`
-  # routes that resolves to whichever cluster `DEFAULT_CLUSTER_NAME` points at.
-  # Also enforced in `EdgeAdmin.Nodes.Schemas.Cluster.changeset/2`.
-  @reserved_names ~w(default)
-
   defp validate_name(changeset) do
-    changeset
-    |> validate_required([:name])
-    |> validate_length(:name, max: Naming.cluster_name_max_length())
-    |> validate_format(:name, Naming.cluster_name_regex(),
-      message: "must be lowercase alphanumeric with hyphens, cannot start/end with hyphen"
-    )
-    |> validate_exclusion(:name, @reserved_names, message: "is reserved")
+    validate_change(changeset, :name, fn :name, value ->
+      case ClusterValidators.name_error(value) do
+        :ok -> []
+        {:error, message} -> [name: message]
+      end
+    end)
   end
 
   defp validate_ipv4_range(changeset) do
-    # Basic CIDR format validation (x.x.x.x/prefix)
-    # Deeper validation happens in Cluster schema using Vpn.parse_cidr
-    validate_format(changeset, :ipv4_range, ~r/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\/\d{1,2}$/,
-      message: "must be in CIDR format (e.g., 100.64.0.0/24)"
-    )
+    validate_change(changeset, :ipv4_range, fn :ipv4_range, value ->
+      if ClusterValidators.valid_ipv4_cidr_format?(value),
+        do: [],
+        else: [ipv4_range: "must be in CIDR format (e.g., 100.64.0.0/24)"]
+    end)
   end
 
   defp validate_ipv6_range(changeset) do
-    validate_format(changeset, :ipv6_range, ~r/^[0-9A-Fa-f:]+\/[0-9]{1,3}$/,
-      message: "must be an IPv6 CIDR (e.g., fd7a:91c2:4e8b::/64)"
-    )
+    validate_change(changeset, :ipv6_range, fn :ipv6_range, value ->
+      if ClusterValidators.valid_ipv6_cidr_format?(value),
+        do: [],
+        else: [ipv6_range: "must be an IPv6 CIDR (e.g., fd7a:91c2:4e8b::/64)"]
+    end)
   end
 
   defp validate_node_limit(changeset) do
-    validate_number(changeset, :node_limit, greater_than: 0)
+    validate_change(changeset, :node_limit, fn :node_limit, value ->
+      if ClusterValidators.valid_node_limit?(value), do: [], else: [node_limit: "must be greater than 0"]
+    end)
   end
 
   defp to_map(%__MODULE__{} = form) do

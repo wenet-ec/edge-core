@@ -31,6 +31,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
   alias EdgeAdmin.Nodes.Schemas.Cluster
   alias EdgeAdmin.Nodes.Schemas.EnrollmentKey
   alias EdgeAdmin.Nodes.Schemas.NodeDiagnostic
+  alias EdgeAdmin.Nodes.Validators.NodeValidators
   alias EdgeAdmin.Ssh.Schemas.SshPublicKey
   alias EdgeAdmin.Ssh.Schemas.SshUsername
   alias EdgeAdmin.Vpn
@@ -215,11 +216,9 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
 
   defp validate_ports(changeset) do
     Enum.reduce(@port_fields, changeset, fn field, changeset ->
-      validate_number(changeset, field,
-        greater_than: 0,
-        less_than_or_equal_to: 65_535,
-        message: "must be between 1 and 65535"
-      )
+      validate_change(changeset, field, fn ^field, value ->
+        if NodeValidators.valid_port?(value), do: [], else: [{field, "must be between 1 and 65535"}]
+      end)
     end)
   end
 

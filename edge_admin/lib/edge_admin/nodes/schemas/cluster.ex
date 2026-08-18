@@ -21,17 +21,15 @@ defmodule EdgeAdmin.Nodes.Schemas.Cluster do
 
   alias Ecto.Association.NotLoaded
   alias EdgeAdmin.Commands.Schemas.CommandExecution
-  alias EdgeAdmin.Naming
   alias EdgeAdmin.Nodes.Schemas.Alias
   alias EdgeAdmin.Nodes.Schemas.EnrollmentKey
   alias EdgeAdmin.Nodes.Schemas.Node
+  alias EdgeAdmin.Nodes.Validators.ClusterValidators
   alias EdgeAdmin.Random
   alias EdgeAdmin.Vpn
 
   # /31 and /32 are unusable for an edge cluster: Edge VPN skips the network
   # address and the remaining addresses are reserved for Admin gateways.
-  @min_prefix 30
-
   @type t :: %__MODULE__{
           id: String.t(),
           name: String.t(),
@@ -84,15 +82,11 @@ defmodule EdgeAdmin.Nodes.Schemas.Cluster do
     |> cast(attrs, [:name, :ipv4_range, :ipv6_range, :node_limit])
     |> maybe_generate_name()
     |> validate_required([:name, :ipv4_range, :ipv6_range])
-    |> validate_length(:name, max: Naming.cluster_name_max_length())
-    |> validate_format(:name, Naming.cluster_name_regex())
-    |> validate_exclusion(:name, ~w(default), message: "is reserved")
-    |> validate_number(:node_limit, greater_than: 0)
+    |> validate_name()
+    |> validate_node_limit()
     |> check_constraint(:node_limit, name: :clusters_node_limit_positive)
-    |> validate_ipv4_cidr_format()
-    |> validate_ipv4_exclusions()
-    |> validate_ipv6_cidr()
-    |> validate_cidr_minimum_prefix()
+    |> validate_ipv4_range()
+    |> validate_ipv6_range()
     |> validate_node_limit_fits_cidr()
     |> unique_constraint(:name)
     |> unique_constraint(:ipv4_range)
@@ -138,63 +132,38 @@ defmodule EdgeAdmin.Nodes.Schemas.Cluster do
     end
   end
 
-  defp validate_ipv4_cidr_format(changeset) do
+  defp validate_name(changeset) do
+    validate_change(changeset, :name, fn :name, value ->
+      case ClusterValidators.name_error(value) do
+        :ok -> []
+        {:error, message} -> [name: message]
+      end
+    end)
+  end
+
+  defp validate_node_limit(changeset) do
+    validate_change(changeset, :node_limit, fn :node_limit, value ->
+      if ClusterValidators.valid_node_limit?(value), do: [], else: [node_limit: "must be greater than 0"]
+    end)
+  end
+
+  defp validate_ipv4_range(changeset) do
     validate_change(changeset, :ipv4_range, fn _, value ->
-      case Vpn.parse_cidr(value) do
-        {:ok, _} -> []
+      case ClusterValidators.ipv4_range_error(value) do
+        :ok -> []
         {:error, reason} -> [ipv4_range: reason]
       end
     end)
   end
 
-  defp validate_ipv4_exclusions(changeset) do
-    validate_change(changeset, :ipv4_range, fn _, value ->
-      case Vpn.parse_cidr(value) do
-        {:ok, {ip_tuple, _prefix}} ->
-          if excluded_range?(ip_tuple) do
-            [ipv4_range: "cannot use private, loopback, link-local, or multicast ranges"]
-          else
-            []
-          end
-
-        {:error, _} ->
-          []
-      end
-    end)
-  end
-
-  defp validate_ipv6_cidr(changeset) do
+  defp validate_ipv6_range(changeset) do
     validate_change(changeset, :ipv6_range, fn _, value ->
-      case Vpn.parse_ipv6_cidr(value) do
-        {:ok, {ip, 64}} ->
-          if ula_ipv6?(ip), do: [], else: [ipv6_range: "must be a private ULA range under fd00::/8"]
-
-        {:ok, {_ip, prefix}} ->
-          [ipv6_range: "must use a /64 prefix (got /#{prefix})"]
+      case ClusterValidators.ipv6_range_error(value) do
+        :ok ->
+          []
 
         {:error, reason} ->
           [ipv6_range: reason]
-      end
-    end)
-  end
-
-  defp ula_ipv6?({first, _, _, _, _, _, _, _}), do: first >= 0xFD00 and first <= 0xFDFF
-
-  defp excluded_range?({a, _, _, _}) do
-    a in [0, 10, 127, 169, 172, 192, 224, 240, 255]
-  end
-
-  defp validate_cidr_minimum_prefix(changeset) do
-    validate_change(changeset, :ipv4_range, fn _, value ->
-      case Vpn.parse_cidr(value) do
-        {:ok, {_ip, prefix}} when prefix > @min_prefix ->
-          [
-            ipv4_range:
-              "prefix /#{prefix} is too small — minimum is /#{@min_prefix} (#{Vpn.usable_ipv4_capacity(@min_prefix)} usable IPs)"
-          ]
-
-        _ ->
-          []
       end
     end)
   end
@@ -208,14 +177,14 @@ defmodule EdgeAdmin.Nodes.Schemas.Cluster do
       reservation = Vpn.admin_slot_reservation()
       max_limit = Vpn.usable_ipv4_capacity(prefix) - reservation
 
-      if limit > max_limit do
+      if ClusterValidators.node_limit_fits_ipv4_range?(limit, cidr, reservation) do
+        changeset
+      else
         add_error(
           changeset,
           :node_limit,
           "cannot exceed #{max_limit} for /#{prefix} (#{Vpn.usable_ipv4_capacity(prefix)} usable IPs minus #{reservation} Admin slots)"
         )
-      else
-        changeset
       end
     else
       _ -> changeset

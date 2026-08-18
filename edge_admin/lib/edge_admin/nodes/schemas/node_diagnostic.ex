@@ -8,6 +8,7 @@ defmodule EdgeAdmin.Nodes.Schemas.NodeDiagnostic do
 
   alias Ecto.Association.NotLoaded
   alias EdgeAdmin.Nodes.Schemas.Node
+  alias EdgeAdmin.Nodes.Validators.NodeDiagnosticValidators
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -31,6 +32,11 @@ defmodule EdgeAdmin.Nodes.Schemas.NodeDiagnostic do
     diagnostic
     |> cast(attrs, [:node_id, :report])
     |> validate_required([:node_id, :report])
+    |> validate_change(:report, fn :report, report ->
+      report
+      |> NodeDiagnosticValidators.errors()
+      |> Enum.map(&{:report, &1})
+    end)
     |> unique_constraint(:node_id, name: :node_diagnostics_node_id_index)
     |> foreign_key_constraint(:node_id)
   end

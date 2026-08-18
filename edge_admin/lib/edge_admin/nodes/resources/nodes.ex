@@ -21,7 +21,6 @@ defmodule EdgeAdmin.Nodes.Resources.Nodes do
   alias EdgeAdmin.Nodes.Persistence
   alias EdgeAdmin.Nodes.Queries.ClusterQueries
   alias EdgeAdmin.Nodes.Resources.Aliases
-  alias EdgeAdmin.Nodes.Resources.Clusters
   alias EdgeAdmin.Nodes.Schemas.Cluster
   alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.Nodes.Workflows.Registration
@@ -90,7 +89,7 @@ defmodule EdgeAdmin.Nodes.Resources.Nodes do
           | {:error, Ecto.Changeset.t()}
           | {:error, {:conflict, String.t()}}
   def change_cluster(%Node{} = node, params) do
-    with {:ok, new_cluster_name} <- Forms.ChangeNodeClusterForm.changeset(params, &Clusters.get/1),
+    with {:ok, %{"cluster_name" => new_cluster_name}} <- Forms.ChangeNodeClusterForm.changeset(params),
          {:ok, %{node: current_node, new_cluster: new_cluster, updated_node: updated_node}} <-
            move_to_active_cluster(node.id, new_cluster_name) do
       Aliases.cleanup_node_aliases(current_node)

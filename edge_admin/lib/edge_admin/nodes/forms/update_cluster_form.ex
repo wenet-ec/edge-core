@@ -7,6 +7,8 @@ defmodule EdgeAdmin.Nodes.Forms.UpdateClusterForm do
   """
   use EdgeAdmin.Form
 
+  alias EdgeAdmin.Nodes.Validators.ClusterValidators
+
   embedded_schema do
     field(:node_limit, :integer)
   end
@@ -34,7 +36,9 @@ defmodule EdgeAdmin.Nodes.Forms.UpdateClusterForm do
   end
 
   defp validate_node_limit(changeset) do
-    validate_number(changeset, :node_limit, greater_than: 0)
+    validate_change(changeset, :node_limit, fn :node_limit, value ->
+      if ClusterValidators.valid_node_limit?(value), do: [], else: [node_limit: "must be greater than 0"]
+    end)
   end
 
   # Preserve explicit null (key present, value nil) vs omitted (key absent)

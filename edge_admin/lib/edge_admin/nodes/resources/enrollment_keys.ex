@@ -127,7 +127,7 @@ defmodule EdgeAdmin.Nodes.Resources.EnrollmentKeys do
   """
   @spec verify(map()) :: {:ok, map()} | {:error, Ecto.Changeset.t()}
   def verify(params) do
-    with {:ok, key_blob} <- Forms.VerifyEnrollmentKeyForm.changeset(params) do
+    with {:ok, %{"key" => key_blob}} <- Forms.VerifyEnrollmentKeyForm.changeset(params) do
       {result, enrollment_key} =
         case Repo.get_by(EnrollmentKey, key: key_blob) do
           nil ->

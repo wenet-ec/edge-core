@@ -8,6 +8,8 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeForm do
   """
   use EdgeAdmin.Form
 
+  alias EdgeAdmin.Nodes.Validators.NodeValidators
+
   embedded_schema do
     field(:node_id, :string)
     field(:network_name, :string)
@@ -86,16 +88,14 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeForm do
 
   defp validate_network_name(changeset) do
     validate_change(changeset, :network_name, fn :network_name, value ->
-      if String.starts_with?(value, "cluster-") do
-        []
-      else
-        [network_name: "must start with 'cluster-'"]
-      end
+      if NodeValidators.valid_network_name?(value), do: [], else: [network_name: "must start with 'cluster-'"]
     end)
   end
 
   defp validate_port(changeset, field) do
-    validate_number(changeset, field, greater_than: 0, less_than_or_equal_to: 65_535)
+    validate_change(changeset, field, fn ^field, value ->
+      if NodeValidators.valid_port?(value), do: [], else: [{field, "must be between 1 and 65535"}]
+    end)
   end
 
   defp to_map(%__MODULE__{} = form) do

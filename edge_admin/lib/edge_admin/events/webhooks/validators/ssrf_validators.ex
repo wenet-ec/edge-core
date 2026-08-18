@@ -1,5 +1,5 @@
-# edge_admin/lib/edge_admin/events/webhooks/ssrf.ex
-defmodule EdgeAdmin.Events.Webhooks.Ssrf do
+# edge_admin/lib/edge_admin/events/webhooks/validators/ssrf_validators.ex
+defmodule EdgeAdmin.Events.Webhooks.Validators.SsrfValidators do
   @moduledoc """
   SSRF defence-in-depth checks for webhook destinations.
 

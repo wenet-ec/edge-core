@@ -9,7 +9,7 @@ defmodule EdgeAdmin.Nodes.Policies.EnrollmentKeyPolicyTest do
 
   # The fully-qualified Elixir.Application.* form dodges Credo's
   # ApplicationConfigInModuleAttribute heuristic. See the same pattern in
-  # events/webhooks/ssrf_test.exs and proxy_servers/http/handler_test.exs.
+  # events/webhooks/validators/ssrf_validators_test.exs and proxy_servers/http/handler_test.exs.
 
   setup do
     previous_cluster = Elixir.Application.get_env(:edge_admin, :default_cluster_name)

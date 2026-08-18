@@ -9,6 +9,7 @@ defmodule EdgeAdmin.Events.Webhooks.Resources.Webhooks do
   alias EdgeAdmin.Events.Webhooks.Filters.WebhookFilters
   alias EdgeAdmin.Events.Webhooks.Forms
   alias EdgeAdmin.Events.Webhooks.Schemas.Webhook
+  alias EdgeAdmin.Events.Webhooks.Validators.SsrfValidators
   alias EdgeAdmin.Repo
 
   @doc "Lists webhooks with filtering, sorting, and pagination."
@@ -42,12 +43,26 @@ defmodule EdgeAdmin.Events.Webhooks.Resources.Webhooks do
   @doc "Validates and creates an immutable webhook."
   @spec create(map()) :: {:ok, Webhook.t()} | {:error, Ecto.Changeset.t()}
   def create(attrs \\ %{}) do
-    with {:ok, validated_attrs} <- Forms.CreateWebhookForm.changeset(attrs) do
+    with {:ok, validated_attrs} <- Forms.CreateWebhookForm.changeset(attrs),
+         {:ok, validated_attrs} <- validate_ssrf(validated_attrs) do
       %Webhook{}
       |> Webhook.changeset(validated_attrs)
       |> Repo.insert()
     end
   end
+
+  defp validate_ssrf(%{"url" => url} = attrs) do
+    case SsrfValidators.validate_url(url) do
+      :ok ->
+        {:ok, attrs}
+
+      {:error, reason} ->
+        changeset = Webhook.changeset(%Webhook{}, attrs)
+        {:error, Ecto.Changeset.add_error(changeset, :url, SsrfValidators.format_error(reason))}
+    end
+  end
+
+  defp validate_ssrf(attrs), do: {:ok, attrs}
 
   @doc "Deletes a webhook."
   @spec delete(Webhook.t()) :: {:ok, Webhook.t()} | {:error, Ecto.Changeset.t()}

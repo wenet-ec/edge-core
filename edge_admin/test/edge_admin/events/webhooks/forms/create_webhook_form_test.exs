@@ -1,18 +1,8 @@
 # edge_admin/test/edge_admin/events/webhooks/forms/create_webhook_form_test.exs
 defmodule EdgeAdmin.Events.Webhooks.Forms.CreateWebhookFormTest do
-  # async: false — the form's URL validator runs SSRF, which reads the
-  # `:webhook_allow_private_ips` application env. We pin it to false here
-  # so the deny-list path is exercised regardless of dev/test env defaults.
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
 
   alias EdgeAdmin.Events.Webhooks.Forms.CreateWebhookForm
-
-  setup do
-    original = Elixir.Application.get_env(:edge_admin, :webhook_allow_private_ips, false)
-    Elixir.Application.put_env(:edge_admin, :webhook_allow_private_ips, false)
-    on_exit(fn -> Elixir.Application.put_env(:edge_admin, :webhook_allow_private_ips, original) end)
-    :ok
-  end
 
   defp errors_on(changeset) do
     Ecto.Changeset.traverse_errors(changeset, fn {msg, _opts} -> msg end)

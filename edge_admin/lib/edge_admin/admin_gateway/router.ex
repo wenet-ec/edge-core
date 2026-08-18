@@ -9,8 +9,8 @@ defmodule EdgeAdmin.AdminGateway.Router do
 
   alias EdgeAdmin.AdminClustering.Metadata
   alias EdgeAdmin.AdminGateway.Worker
-  alias EdgeAdmin.ProxyServers.AdminTunnel.Client, as: AdminTunnelClient
-  alias EdgeAdmin.ProxyServers.Config, as: ProxyConfig
+  alias EdgeAdminProxy.AdminTunnel.Client, as: AdminTunnelClient
+  alias EdgeAdminProxy.Config, as: ProxyConfig
 
   @spec resolve(String.t()) :: {:ok, pid()} | {:error, :no_owner | :gateway_not_found}
   def resolve(cluster_name) when is_binary(cluster_name) do

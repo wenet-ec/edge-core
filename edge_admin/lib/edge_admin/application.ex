@@ -7,7 +7,7 @@ defmodule EdgeAdmin.Application do
 
     * `EDGE_ADMIN_MODE=test` — minimal tree (Vault, Repo, PubSub, Oban,
       Endpoint). Used by the test env; skips PromEx, Membership, AdminGateway,
-      Metadata, LocalScheduler, ProxyServers, MCP, etc.
+      Metadata, LocalScheduler, EdgeAdminProxy, MCP, etc.
     * unset (default) — full server tree.
 
   The active repo is selected by `DB_ADAPTER` via `:repo_impl` (Postgres or
@@ -115,7 +115,7 @@ defmodule EdgeAdmin.Application do
   # The proxy supervisor is Gateway-owned because it includes the raw
   # Admin-to-Admin data-plane listener and the edge-facing proxy servers.
   defp gateway_proxy_children do
-    [EdgeAdmin.ProxyServers.Supervisor]
+    [EdgeAdminProxy.Supervisor]
   end
 
   defp router_endpoint_children do

@@ -1,6 +1,6 @@
 # Edge Core — Architecture
 
-**Last Updated: 2026-08-17**
+**Last Updated: 2026-08-18**
 
 Edge Core is an infrastructure management platform for fleets of Linux machines you don't physically touch — cloud VMs, on-premises servers, factory-floor equipment, Raspberry Pis, homelab boxes, IoT devices. Anywhere you have N machines and want a single HTTP API to operate them, the same primitives apply: a secure WireGuard mesh, remote command execution, SSH without exposing port 22, HTTP/SOCKS5 forward proxying through any node, Prometheus metrics aggregation.
 
@@ -524,7 +524,7 @@ This is why "fleet ops automated by an AI agent" is a real capability of Edge Co
 | Admin → Netmaker         | `MASTER_KEY` bearer token                                                       |
 | Agent → Admin            | Per-node API token (issued at enrollment)                                       |
 | Admin → Agent            | Per-node API token (same token, stored in admin DB)                             |
-| Admin ↔ Admin (Erlang)   | Shared `VPN_CLUSTER_COOKIE` + connection verified against PostgreSQL + Netmaker |
+| Admin ↔ Admin (Erlang)   | Shared `ADMIN_CLUSTER_COOKIE` + connection verified against PostgreSQL + Netmaker |
 | Agent proxy (direct use) | Basic auth: username `_`, password = agent `proxy_password`; secret is not exposed in normal node REST/MCP reads; can be disabled |
 | SSH                      | Username/password or public key, verified by admin on each connection attempt   |
 

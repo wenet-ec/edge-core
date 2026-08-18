@@ -159,7 +159,7 @@ secrets:
   #   ENCRYPTION_TAG. ADMIN_TCP_TUNNEL_SECRET is optional; when unset the Admin
   #   uses a built-in default and logs a warning. Single-instance deployments
   #   can leave this as-is.
-  # VPN_CLUSTER_COOKIE is optional; leave it empty to use the built-in default.
+  # ADMIN_CLUSTER_COOKIE is optional; leave it empty to use the built-in default.
   # Optional broker auth (only needed when EVENT_BROKER_ENABLED=true and broker requires auth).
   # RabbitMQ and Redis embed credentials in EVENT_BROKER_RABBITMQ_URL / EVENT_BROKER_REDIS_URL — no separate fields needed.
   # Leave fields empty to omit them from the Secret.
@@ -172,7 +172,7 @@ secrets:
   # Optional Admin-to-Admin raw TCP tunnel secret. Use the same value on every
   # Admin release in the same Admin cluster.
   adminTcpTunnelSecret: ""
-  vpnClusterCookie: ""
+  adminClusterCookie: ""
   # Encryption at rest. encryptionKey is 32 bytes of base64; encryptionTag is the identifier
   # paired with the key (convention: AES.GCM.V<N>, bumped on each rotation).
   # Required at boot — the admin will not start without these set.

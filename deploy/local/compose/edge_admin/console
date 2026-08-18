@@ -33,5 +33,5 @@ if ! getent hosts "$node_host" >/dev/null 2>&1; then
     printf '127.0.0.1 %s\n' "$node_host" >> /etc/hosts
 fi
 
-cookie="${VPN_CLUSTER_COOKIE:-edge_admin_default_cookie}"
+cookie="${ADMIN_CLUSTER_COOKIE:-edge_admin_default_cookie}"
 exec iex --name "console@127.0.0.1" --cookie "$cookie" --remsh "$node_name" "$@"

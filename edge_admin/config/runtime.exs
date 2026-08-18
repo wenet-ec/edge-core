@@ -474,7 +474,7 @@ config :edge_admin,
   admin_cluster_v6_subnet: get_env!("ADMIN_CLUSTER_V6_SUBNET"),
   # Static port for WireGuard (must match UDP port mapping in docker-compose for external connectivity)
   admin_wireguard_port: get_env("ADMIN_WIREGUARD_PORT", :integer),
-  vpn_cluster_cookie: get_env("VPN_CLUSTER_COOKIE", :atom, :edge_admin_default_cookie),
+  admin_cluster_cookie: get_env("ADMIN_CLUSTER_COOKIE", :atom, :edge_admin_default_cookie),
   admin_discovery_port: get_env("ADMIN_DISCOVERY_PORT", :integer, 44_000),
   admin_tcp_tunnel_port: get_env("ADMIN_TCP_TUNNEL_PORT", :integer, 45_207),
   admin_tcp_tunnel_secret: admin_tcp_tunnel_secret,

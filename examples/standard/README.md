@@ -73,7 +73,7 @@ Key things to configure:
 - `API_KEY` — scoped to REST API clients (optional, defaults to `MASTER_KEY`)
 - `METRICS_KEY` — scoped to metrics scrapers (optional, defaults to `MASTER_KEY`)
 - `ADMIN_TCP_TUNNEL_SECRET` — optional shared secret for private Admin-to-Admin proxy tunnels; when unset the Admin uses a built-in default and logs a warning. Use the same value on every Admin in one cluster.
-- `VPN_CLUSTER_COOKIE` — optional; if set, use the same value across admin instances in the same admin cluster
+- `ADMIN_CLUSTER_COOKIE` — optional; if set, use the same value across admin instances in the same admin cluster
 - `MQ_PASSWORD` and `EMQX_DASHBOARD_PASSWORD` — must match each other
 - Update `configs/prometheus.yml` — replace `change-me-your-metrics-key` with your actual `METRICS_KEY`
 - If using a domain with TLS: update `configs/Caddyfile` with your domain names. Use `edge-admin.yourdomain.com` as the load-balanced admin API/MCP hostname; the per-admin hostnames are mainly for direct debugging.

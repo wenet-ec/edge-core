@@ -23,7 +23,7 @@ docker exec -it production_edge_admin_a1 /console
 The console wrapper discovers the current ephemeral Erlang node through the
 authenticated `GET /api/v1/admins/me` endpoint, using the Admin container's
 `API_KEY` or `MASTER_KEY`, and connects with the configured
-`VPN_CLUSTER_COOKIE`. The Admin must be healthy and have completed membership
+`ADMIN_CLUSTER_COOKIE`. The Admin must be healthy and have completed membership
 startup first.
 
 The console runs IEx against the live Admin application. Press `Ctrl+C` twice to

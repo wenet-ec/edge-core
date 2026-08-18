@@ -65,7 +65,7 @@ defmodule EdgeAdmin.AdminClustering.Membership do
   - `:admin_max_wireguard_peers` - WireGuard peer budget for this admin (e.g., 250).
     Counts both admin-mesh peers and edge-node peers. The metadata layer derives
     `edge_node_capacity = max_wireguard_peers - (total_admins - 1)` from this.
-  - `:vpn_cluster_cookie` - Shared secret for Erlang distribution over the VPN cluster
+  - `:admin_cluster_cookie` - Shared secret for Erlang distribution within the Admin cluster
   - `:admin_cluster_v4_subnet` / `:admin_cluster_v6_subnet` - Required dual-stack CIDRs
 
   ## Examples
@@ -136,7 +136,7 @@ defmodule EdgeAdmin.AdminClustering.Membership do
   defp admin_cluster_v4_subnet, do: Application.get_env(:edge_admin, :admin_cluster_v4_subnet)
   defp admin_cluster_v6_subnet, do: Application.get_env(:edge_admin, :admin_cluster_v6_subnet)
   defp max_wireguard_peers, do: Application.get_env(:edge_admin, :admin_max_wireguard_peers)
-  defp vpn_cluster_cookie, do: Application.get_env(:edge_admin, :vpn_cluster_cookie)
+  defp admin_cluster_cookie, do: Application.get_env(:edge_admin, :admin_cluster_cookie)
   defp admin_wireguard_port, do: Application.get_env(:edge_admin, :admin_wireguard_port)
 
   defp do_establish_membership do
@@ -430,12 +430,12 @@ defmodule EdgeAdmin.AdminClustering.Membership do
   defp do_start_erlang_distribution(node_name) do
     case Node.start(node_name, name_domain: :longnames) do
       {:ok, _pid} ->
-        :erlang.set_cookie(node(), vpn_cluster_cookie())
+        :erlang.set_cookie(node(), admin_cluster_cookie())
         Logger.info("Erlang distribution started: #{node()}")
         :ok
 
       {:error, {:already_started, _pid}} ->
-        :erlang.set_cookie(node(), vpn_cluster_cookie())
+        :erlang.set_cookie(node(), admin_cluster_cookie())
         Logger.info("Erlang distribution already started: #{node()}")
         :ok
 

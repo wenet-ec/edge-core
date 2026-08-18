@@ -34,5 +34,5 @@ if ! getent hosts "$node_host" >/dev/null 2>&1; then
 fi
 
 export RELEASE_NODE="$node_name"
-export RELEASE_COOKIE="${VPN_CLUSTER_COOKIE:-edge_admin_default_cookie}"
+export RELEASE_COOKIE="${ADMIN_CLUSTER_COOKIE:-edge_admin_default_cookie}"
 exec /app/bin/console "$@"

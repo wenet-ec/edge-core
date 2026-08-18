@@ -242,16 +242,16 @@ ADMIN_MAX_WIREGUARD_PEERS=250
 # No-op when POD_INDEX is absent (Docker Compose / non-StatefulSet deployments).
 # ADMIN_WIREGUARD_PORT_BASE=51820
 
-# Shared Erlang cookie for VPN cluster. Optional; when unset the admin uses a
+# Shared Erlang cookie for the Admin cluster. Optional; when unset the admin uses a
 # built-in default and the start script logs a warning. If set, it must be
 # identical across all admin instances in the same admin cluster.
-VPN_CLUSTER_COOKIE=local-cookie
+ADMIN_CLUSTER_COOKIE=local-cookie
 
 # epmd port — default 44369, baked into the Dockerfile. Override here only if needed.
 # ERL_EPMD_PORT=44369
 
-# Fixed Erlang distribution port for VPN cluster (epmd replacement). Configured in vm.args.eex.
-VPN_CLUSTER_PORT=49125
+# Fixed Erlang distribution port for the Admin cluster (epmd replacement). Configured in vm.args.eex.
+ADMIN_CLUSTER_PORT=49125
 
 # Erlang net_ticktime (seconds). Failure detection window = 4 × this value (default 60 → 240s).
 # Lower values detect dead nodes faster but risk false positives on transient network blips.

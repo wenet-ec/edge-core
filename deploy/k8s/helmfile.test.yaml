@@ -115,7 +115,7 @@ releases:
           adminClusterV6Subnet: "fd7a:91c2:4e8c:1::/64"
           metricsBaseUrl: "edge-admin-a:44000"
         secrets:
-          vpnClusterCookie: "test-cookie-a"
+          adminClusterCookie: "test-cookie-a"
         nodePort:
           enabled: true
           apiPort: 30000
@@ -140,7 +140,7 @@ releases:
           adminClusterV6Subnet: "fd7a:91c2:4e8c:2::/64"
           metricsBaseUrl: "edge-admin-b:44000"
         secrets:
-          vpnClusterCookie: "test-cookie-b"
+          adminClusterCookie: "test-cookie-b"
         nodePort:
           enabled: true
           apiPort: 30002

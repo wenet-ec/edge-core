@@ -83,7 +83,7 @@ config :edge_admin,
   admin_name: "admin-test123456",
   admin_cluster_name: "admin-cluster-test",
   admin_max_wireguard_peers: 100,
-  vpn_cluster_cookie: :test_cookie,
+  admin_cluster_cookie: :test_cookie,
   admin_discovery_port: 44_000,
   edge_vpn_default_domain: "nm.internal"
 

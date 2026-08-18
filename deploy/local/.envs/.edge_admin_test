@@ -55,7 +55,7 @@ SOCKS5_PROXY_PORT=41080
 ADMIN_TCP_TUNNEL_SECRET=test-admin-tunnel-secret
 
 # Erlang distribution
-VPN_CLUSTER_COOKIE=test_cookie
+ADMIN_CLUSTER_COOKIE=test_cookie
 ADMIN_DISCOVERY_PORT=44000
 
 # Optional: Enable detailed test output

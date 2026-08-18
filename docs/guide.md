@@ -58,7 +58,7 @@ The admin is **API-first**. Every management operation goes through HTTP — the
 | `/`               | **Edge Admin guide.** A short introduction to the cluster-and-node model, with links into the API explorer. |
 | `/swaggerui`      | **Primary UI.** Interactive Swagger UI — browse every endpoint, fill in parameters, hit "Try it out", see live responses.              |
 | `/redoc`          | Same OpenAPI spec rendered as ReDoc — better for reading reference docs end-to-end.                                                    |
-| `/admin/debug` | **Admin debug** — runtime introspection for the Admin cluster (processes, queues, scheduler, database stats, connected Erlang nodes). Available only when `ADMIN_DEBUG_ENABLED=true`; the generic Basic Auth settings may protect it. Useful for troubleshooting the control plane, not for daily fleet operations. |
+| `/admin/debug` | **Admin debug** — runtime introspection for the Admin cluster (processes, queues, scheduler, database stats, connected Erlang nodes). Available only when `ADMIN_DEBUG_DASHBOARD_ENABLED=true`; `ADMIN_DEBUG_AUTH_ENABLED` controls its Basic Auth protection. Useful for troubleshooting the control plane, not for daily fleet operations. |
 | `/asyncdoc`       | AsyncAPI viewer for the event catalog (see [§7](#7-events--webhooks-and-brokers)).                                                     |
 | `/mcp`            | MCP server endpoint for AI assistants (see [§4](#4-mcp--ai-assistant-access)).                                                         |
 
@@ -169,9 +169,21 @@ If a command isn't being delivered to a cluster, check `edge_clusters` to see if
 
 ## 3. Authentication and keys
 
-The admin uses bearer-token auth. There is one master key and four scoped keys; **all scoped keys default to MASTER_KEY if unset**, so a minimal deployment can start with just `MASTER_KEY` and split keys later as the deployment grows.
+The admin uses bearer-token auth. `ALL_AUTH_ENABLED` provides the default for
+the REST API, proxy, MCP, and metrics surfaces; `API_AUTH_ENABLED`,
+`PROXY_AUTH_ENABLED`, `MCP_AUTH_ENABLED`, and `METRICS_AUTH_ENABLED` can each
+override it. There is one master key and four scoped keys; **all scoped keys
+default to MASTER_KEY if unset**, so a minimal deployment can start with just
+`MASTER_KEY` and split keys later as the deployment grows.
 
 ```env
+# Authentication defaults. A specific surface flag overrides this value.
+ALL_AUTH_ENABLED=true
+# API_AUTH_ENABLED=true
+# PROXY_AUTH_ENABLED=true
+# MCP_AUTH_ENABLED=true
+# METRICS_AUTH_ENABLED=true
+
 # Full admin access — required.
 MASTER_KEY=supersecretkey123456789
 
@@ -180,6 +192,15 @@ MASTER_KEY=supersecretkey123456789
 # METRICS_KEY=  # Read-only: metrics endpoints
 # PROXY_KEY=    # Proxy tunnel endpoints (HTTP + SOCKS5)
 # MCP_KEY=      # MCP server endpoint
+```
+
+The Admin Debug Dashboard has separate availability and authentication flags:
+
+```env
+ADMIN_DEBUG_DASHBOARD_ENABLED=false
+ADMIN_DEBUG_AUTH_ENABLED=true
+ADMIN_DEBUG_DASHBOARD_USERNAME=admin
+ADMIN_DEBUG_DASHBOARD_PASSWORD=change-me
 ```
 
 Every API request needs `Authorization: Bearer <key>`. The agent gets its own per-node API token at enrollment — that's a separate identity used only for agent → admin reporting.

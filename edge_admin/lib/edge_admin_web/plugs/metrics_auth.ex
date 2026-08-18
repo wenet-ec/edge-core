@@ -4,7 +4,7 @@ defmodule EdgeAdminWeb.Plugs.MetricsAuth do
   Plug for metrics endpoint authentication.
 
   Validates that requests include either a master key or metrics key in the Authorization header.
-  Can be disabled globally via AUTH_ENABLED=false configuration.
+  Controlled by `METRICS_AUTH_ENABLED`, which inherits from `ALL_AUTH_ENABLED`.
 
   Accepts either:
   - `Authorization: Bearer <MASTER_KEY>` (omnipotent access)
@@ -19,7 +19,7 @@ defmodule EdgeAdminWeb.Plugs.MetricsAuth do
   def init(opts), do: opts
 
   def call(conn, _opts) do
-    if Application.get_env(:edge_admin, :auth_enabled, true) do
+    if Application.get_env(:edge_admin, :metrics_auth_enabled, true) do
       validate_metrics_key(conn)
     else
       conn

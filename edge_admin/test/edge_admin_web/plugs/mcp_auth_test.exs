@@ -10,12 +10,12 @@ defmodule EdgeAdminWeb.Plugs.McpAuthTest do
   @opts McpAuth.init([])
 
   setup do
-    Application.put_env(:edge_admin, :auth_enabled, true)
+    Application.put_env(:edge_admin, :mcp_auth_enabled, true)
     Application.delete_env(:edge_admin, :master_key)
     Application.delete_env(:edge_admin, :mcp_key)
 
     on_exit(fn ->
-      Application.put_env(:edge_admin, :auth_enabled, true)
+      Application.put_env(:edge_admin, :mcp_auth_enabled, true)
       Application.delete_env(:edge_admin, :master_key)
       Application.delete_env(:edge_admin, :mcp_key)
     end)
@@ -33,20 +33,20 @@ defmodule EdgeAdminWeb.Plugs.McpAuthTest do
 
   describe "auth disabled" do
     test "passes through regardless of header" do
-      Application.put_env(:edge_admin, :auth_enabled, false)
+      Application.put_env(:edge_admin, :mcp_auth_enabled, false)
       conn = McpAuth.call(build_conn(), @opts)
       refute conn.halted
     end
 
     test "passes through with wrong key" do
-      Application.put_env(:edge_admin, :auth_enabled, false)
+      Application.put_env(:edge_admin, :mcp_auth_enabled, false)
       Application.put_env(:edge_admin, :mcp_key, "real-mcp-key")
       conn = "Bearer wrong-key" |> build_conn() |> McpAuth.call(@opts)
       refute conn.halted
     end
 
     test "passes through with no header" do
-      Application.put_env(:edge_admin, :auth_enabled, false)
+      Application.put_env(:edge_admin, :mcp_auth_enabled, false)
       conn = nil |> build_conn() |> McpAuth.call(@opts)
       refute conn.halted
     end
@@ -119,9 +119,9 @@ defmodule EdgeAdminWeb.Plugs.McpAuthTest do
     end
   end
 
-  describe "auth_enabled defaults to true" do
-    test "when :auth_enabled not set, auth is enforced" do
-      Application.delete_env(:edge_admin, :auth_enabled)
+  describe "MCP_AUTH_ENABLED defaults to true" do
+    test "when :mcp_auth_enabled not set, auth is enforced" do
+      Application.delete_env(:edge_admin, :mcp_auth_enabled)
       Application.put_env(:edge_admin, :mcp_key, "mcp-key")
       conn = nil |> build_conn() |> McpAuth.call(@opts)
       assert conn.halted

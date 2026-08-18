@@ -199,8 +199,13 @@ if get_env("PHX_SERVER", :boolean) == true do
   config :edge_admin, EdgeAdminWeb.Endpoint, server: true
 end
 
-auth_enabled = get_env("AUTH_ENABLED", :boolean, true)
-basic_auth_enabled = get_env("BASIC_AUTH_ENABLED", :boolean, false)
+all_auth_enabled = get_env("ALL_AUTH_ENABLED", :boolean, true)
+api_auth_enabled = get_env("API_AUTH_ENABLED", :boolean, all_auth_enabled)
+proxy_auth_enabled = get_env("PROXY_AUTH_ENABLED", :boolean, all_auth_enabled)
+mcp_auth_enabled = get_env("MCP_AUTH_ENABLED", :boolean, all_auth_enabled)
+metrics_auth_enabled = get_env("METRICS_AUTH_ENABLED", :boolean, all_auth_enabled)
+admin_debug_auth_enabled = get_env("ADMIN_DEBUG_AUTH_ENABLED", :boolean, all_auth_enabled)
+admin_debug_dashboard_enabled = get_env("ADMIN_DEBUG_DASHBOARD_ENABLED", :boolean, false)
 
 urls = EdgeAdmin.Config.get_http_url_list("ADMIN_URLS")
 
@@ -224,6 +229,9 @@ cors_headers =
 
 admin_api_port = get_env("ADMIN_API_PORT", :integer, 44_000)
 
+token_auth_enabled =
+  api_auth_enabled or proxy_auth_enabled or mcp_auth_enabled or metrics_auth_enabled
+
 config :edge_admin, Corsica,
   origins: get_env("CORS_ALLOWED_ORIGINS", :cors),
   allow_headers: cors_headers,
@@ -240,41 +248,36 @@ config :edge_admin, EdgeAdminWeb.Endpoint,
   ]
 
 config :edge_admin,
-  admin_debug_enabled: get_env("ADMIN_DEBUG_ENABLED", :boolean, false),
-  api_docs_enabled: get_env("API_DOCS_ENABLED", :boolean, true)
-
-config :edge_admin,
-  basic_auth_enabled: basic_auth_enabled,
-  basic_auth: [
-    username:
-      if(basic_auth_enabled,
-        do: get_env!("BASIC_AUTH_USERNAME"),
-        else: get_env("BASIC_AUTH_USERNAME")
-      ),
-    password:
-      if(basic_auth_enabled,
-        do: get_env!("BASIC_AUTH_PASSWORD"),
-        else: get_env("BASIC_AUTH_PASSWORD")
-      )
+  admin_debug_dashboard_auth: [
+    username: get_env("ADMIN_DEBUG_DASHBOARD_USERNAME"),
+    password: get_env("ADMIN_DEBUG_DASHBOARD_PASSWORD")
   ]
 
-if auth_enabled do
+config :edge_admin,
+  all_auth_enabled: all_auth_enabled,
+  admin_debug_dashboard_enabled: admin_debug_dashboard_enabled,
+  admin_debug_auth_enabled: admin_debug_auth_enabled,
+  api_docs_enabled: get_env("API_DOCS_ENABLED", :boolean, true)
+
+if token_auth_enabled do
   master_key = get_env!("MASTER_KEY")
-  api_key = get_env("API_KEY") || master_key
-  metrics_key = get_env("METRICS_KEY") || master_key
-  proxy_key = get_env("PROXY_KEY") || master_key
-  mcp_key = get_env("MCP_KEY") || master_key
 
   config :edge_admin,
-    auth_enabled: true,
+    api_auth_enabled: api_auth_enabled,
+    proxy_auth_enabled: proxy_auth_enabled,
+    mcp_auth_enabled: mcp_auth_enabled,
+    metrics_auth_enabled: metrics_auth_enabled,
     master_key: master_key,
-    api_key: api_key,
-    metrics_key: metrics_key,
-    proxy_key: proxy_key,
-    mcp_key: mcp_key
+    api_key: if(api_auth_enabled, do: get_env("API_KEY") || master_key),
+    metrics_key: if(metrics_auth_enabled, do: get_env("METRICS_KEY") || master_key),
+    proxy_key: if(proxy_auth_enabled, do: get_env("PROXY_KEY") || master_key),
+    mcp_key: if(mcp_auth_enabled, do: get_env("MCP_KEY") || master_key)
 else
   config :edge_admin,
-    auth_enabled: false,
+    api_auth_enabled: false,
+    proxy_auth_enabled: false,
+    mcp_auth_enabled: false,
+    metrics_auth_enabled: false,
     master_key: nil,
     api_key: nil,
     metrics_key: nil,

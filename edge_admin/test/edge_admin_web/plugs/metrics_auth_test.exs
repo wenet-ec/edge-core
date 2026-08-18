@@ -10,12 +10,14 @@ defmodule EdgeAdminWeb.Plugs.MetricsAuthTest do
   @opts MetricsAuth.init([])
 
   setup do
-    Application.put_env(:edge_admin, :auth_enabled, true)
+    Application.put_env(:edge_admin, :all_auth_enabled, true)
+    Application.put_env(:edge_admin, :metrics_auth_enabled, true)
     Application.delete_env(:edge_admin, :master_key)
     Application.delete_env(:edge_admin, :metrics_key)
 
     on_exit(fn ->
-      Application.put_env(:edge_admin, :auth_enabled, true)
+      Application.delete_env(:edge_admin, :all_auth_enabled)
+      Application.put_env(:edge_admin, :metrics_auth_enabled, true)
       Application.delete_env(:edge_admin, :master_key)
       Application.delete_env(:edge_admin, :metrics_key)
     end)
@@ -33,13 +35,13 @@ defmodule EdgeAdminWeb.Plugs.MetricsAuthTest do
 
   describe "auth disabled" do
     test "passes through with no header" do
-      Application.put_env(:edge_admin, :auth_enabled, false)
+      Application.put_env(:edge_admin, :metrics_auth_enabled, false)
       conn = MetricsAuth.call(build_conn(), @opts)
       refute conn.halted
     end
 
     test "passes through with wrong key" do
-      Application.put_env(:edge_admin, :auth_enabled, false)
+      Application.put_env(:edge_admin, :metrics_auth_enabled, false)
       Application.put_env(:edge_admin, :master_key, "master")
       Application.put_env(:edge_admin, :metrics_key, "metrics")
       conn = "Bearer garbage" |> build_conn() |> MetricsAuth.call(@opts)
@@ -124,10 +126,19 @@ defmodule EdgeAdminWeb.Plugs.MetricsAuthTest do
     end
   end
 
-  describe "auth_enabled defaults to true" do
-    test "when :auth_enabled not set, auth is enforced" do
-      Application.delete_env(:edge_admin, :auth_enabled)
+  describe "METRICS_AUTH_ENABLED defaults to true" do
+    test "when :metrics_auth_enabled not set, auth is enforced" do
+      Application.delete_env(:edge_admin, :metrics_auth_enabled)
       Application.put_env(:edge_admin, :master_key, "master-key")
+      Application.put_env(:edge_admin, :metrics_key, "metrics-key")
+      conn = nil |> build_conn() |> MetricsAuth.call(@opts)
+      assert conn.halted
+      assert conn.status == 401
+    end
+
+    test "specific metrics flag overrides disabled global auth" do
+      Application.put_env(:edge_admin, :all_auth_enabled, false)
+      Application.put_env(:edge_admin, :metrics_auth_enabled, true)
       Application.put_env(:edge_admin, :metrics_key, "metrics-key")
       conn = nil |> build_conn() |> MetricsAuth.call(@opts)
       assert conn.halted

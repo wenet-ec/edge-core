@@ -10,12 +10,14 @@ defmodule EdgeAdminWeb.Plugs.ApiKeyAuthTest do
   @opts ApiKeyAuth.init([])
 
   setup do
-    Application.put_env(:edge_admin, :auth_enabled, true)
+    Application.put_env(:edge_admin, :all_auth_enabled, true)
+    Application.put_env(:edge_admin, :api_auth_enabled, true)
     Application.delete_env(:edge_admin, :master_key)
     Application.delete_env(:edge_admin, :api_key)
 
     on_exit(fn ->
-      Application.put_env(:edge_admin, :auth_enabled, true)
+      Application.delete_env(:edge_admin, :all_auth_enabled)
+      Application.put_env(:edge_admin, :api_auth_enabled, true)
       Application.delete_env(:edge_admin, :master_key)
       Application.delete_env(:edge_admin, :api_key)
     end)
@@ -33,20 +35,20 @@ defmodule EdgeAdminWeb.Plugs.ApiKeyAuthTest do
 
   describe "auth disabled" do
     test "passes through regardless of header" do
-      Application.put_env(:edge_admin, :auth_enabled, false)
+      Application.put_env(:edge_admin, :api_auth_enabled, false)
       conn = ApiKeyAuth.call(build_conn(), @opts)
       refute conn.halted
     end
 
     test "passes through even with wrong key" do
-      Application.put_env(:edge_admin, :auth_enabled, false)
+      Application.put_env(:edge_admin, :api_auth_enabled, false)
       Application.put_env(:edge_admin, :api_key, "real-key")
       conn = "Bearer wrong-key" |> build_conn() |> ApiKeyAuth.call(@opts)
       refute conn.halted
     end
 
     test "passes through with no header" do
-      Application.put_env(:edge_admin, :auth_enabled, false)
+      Application.put_env(:edge_admin, :api_auth_enabled, false)
       conn = nil |> build_conn() |> ApiKeyAuth.call(@opts)
       refute conn.halted
     end
@@ -129,9 +131,18 @@ defmodule EdgeAdminWeb.Plugs.ApiKeyAuthTest do
     end
   end
 
-  describe "auth_enabled defaults to true" do
-    test "when :auth_enabled not set, auth is enforced" do
-      Application.delete_env(:edge_admin, :auth_enabled)
+  describe "API_AUTH_ENABLED precedence" do
+    test "specific API flag overrides disabled global auth" do
+      Application.put_env(:edge_admin, :all_auth_enabled, false)
+      Application.put_env(:edge_admin, :api_auth_enabled, true)
+      Application.put_env(:edge_admin, :api_key, "secret")
+      conn = nil |> build_conn() |> ApiKeyAuth.call(@opts)
+      assert conn.halted
+      assert conn.status == 401
+    end
+
+    test "when specific flag is not set, auth defaults to enabled" do
+      Application.delete_env(:edge_admin, :api_auth_enabled)
       Application.put_env(:edge_admin, :api_key, "secret")
       conn = nil |> build_conn() |> ApiKeyAuth.call(@opts)
       assert conn.halted

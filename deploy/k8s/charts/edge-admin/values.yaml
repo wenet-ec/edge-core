@@ -86,7 +86,8 @@ config:
 # Values are strings — quote integers and booleans.
 #
 # extraEnv:
-#   ADMIN_DEBUG_ENABLED: "false"
+#   ADMIN_DEBUG_DASHBOARD_ENABLED: "false"
+#   ADMIN_DEBUG_AUTH_ENABLED: "true"
 #   API_DOCS_ENABLED: "false"
 #   HEALTH_CHECK_TIMEOUT_MS: "15000"
 #   NODE_HEALTH_CHECK_CONCURRENCY: "200"

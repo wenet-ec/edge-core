@@ -5,6 +5,10 @@ defmodule EdgeAdminWeb.Controllers.Guide.IndexController do
   use EdgeAdminWeb, :html_controller
 
   def index(conn, _params) do
-    render(conn, :index, admin_debug_enabled: Application.get_env(:edge_admin, :admin_debug_enabled, false))
+    render(
+      conn,
+      :index,
+      admin_debug_dashboard_enabled: Application.get_env(:edge_admin, :admin_debug_dashboard_enabled, false)
+    )
   end
 end

@@ -4,7 +4,7 @@ defmodule EdgeAdminWeb.Plugs.McpAuth do
   Plug for MCP endpoint authentication.
 
   Validates that requests include either a master key or MCP key in the Authorization header.
-  Can be disabled globally via AUTH_ENABLED=false configuration.
+  Controlled by `MCP_AUTH_ENABLED`, which inherits from `ALL_AUTH_ENABLED`.
 
   Accepts either:
   - `Authorization: Bearer <MASTER_KEY>` (omnipotent fallback)
@@ -21,7 +21,7 @@ defmodule EdgeAdminWeb.Plugs.McpAuth do
   def init(opts), do: opts
 
   def call(conn, _opts) do
-    if Application.get_env(:edge_admin, :auth_enabled, true) do
+    if Application.get_env(:edge_admin, :mcp_auth_enabled, true) do
       validate_mcp_key(conn)
     else
       conn

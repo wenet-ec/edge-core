@@ -8,10 +8,10 @@ defmodule EdgeAdminWeb.Router do
   alias EdgeAdminWeb.Controllers.Agents
   alias EdgeAdminWeb.Plugs.ApiDocsEnabled
 
-  pipeline :browser_with_basic_auth do
+  pipeline :admin_debug_dashboard do
     plug(:fetch_session)
     plug(:fetch_live_flash)
-    plug(:basic_auth)
+    plug(:admin_debug_dashboard_auth)
   end
 
   pipeline :public_api do
@@ -77,7 +77,7 @@ defmodule EdgeAdminWeb.Router do
   end
 
   scope "/" do
-    pipe_through(:browser_with_basic_auth)
+    pipe_through(:admin_debug_dashboard)
 
     # ecto_stats auto-discovers the running repo at mount time via
     # Ecto.Repo.all_running/0 (see EctoStatsPage.auto_discover/1). The page
@@ -87,7 +87,7 @@ defmodule EdgeAdminWeb.Router do
     live_dashboard("/admin/debug",
       metrics: EdgeAdminWeb.Telemetry,
       home_app: {"Edge Admin", :edge_admin},
-      on_mount: [EdgeAdminWeb.AdminDebugAuth, EdgeAdminWeb.AdminDebugHooks],
+      on_mount: [EdgeAdminWeb.AdminDebugDashboard, EdgeAdminWeb.AdminDebugHooks],
       additional_pages: [
         oban: Oban.LiveDashboard,
         quantum: EdgeAdminWeb.Live.QuantumDashboard,
@@ -235,25 +235,25 @@ defmodule EdgeAdminWeb.Router do
     forward("/mcp", Anubis.Server.Transport.StreamableHTTP.Plug, server: EdgeAdminMcp.Server)
   end
 
-  # Basic auth helper for LiveDashboard.
+  # Admin Debug Dashboard authentication helper.
   #
-  # Behaviour is controlled by `:basic_auth_enabled` (default `false`):
-  # - `true`  → require username + password from `:basic_auth` config; raise at
+  # Behaviour is controlled by `:admin_debug_auth_enabled` (default `true`):
+  # - `true`  → require username + password from `:admin_debug_dashboard_auth` config; raise at
   #             request time if either is missing (loud failure beats silent open)
-  # - `false` → explicitly bypass basic auth (dev / open-source default)
+  # - `false` → explicitly bypass dashboard authentication
   #
   # The previous behaviour silently passed through when credentials were unset,
-  # which masks a misconfigured prod admin. Set BASIC_AUTH_ENABLED=true in
+  # which masks a misconfigured prod admin. Set ADMIN_DEBUG_AUTH_ENABLED=true in
   # production deployments.
-  defp basic_auth(conn, _opts) do
-    if Application.get_env(:edge_admin, :basic_auth_enabled, false) do
-      basic_auth_config = Application.get_env(:edge_admin, :basic_auth, [])
+  defp admin_debug_dashboard_auth(conn, _opts) do
+    if Application.get_env(:edge_admin, :admin_debug_auth_enabled, true) do
+      dashboard_auth = Application.get_env(:edge_admin, :admin_debug_dashboard_auth, [])
 
-      if !(basic_auth_config[:username] && basic_auth_config[:password]) do
-        raise "BASIC_AUTH_ENABLED=true but :basic_auth username or password is missing"
+      if !(dashboard_auth[:username] && dashboard_auth[:password]) do
+        raise "ADMIN_DEBUG_AUTH_ENABLED=true but Admin Debug Dashboard username or password is missing"
       end
 
-      Plug.BasicAuth.basic_auth(conn, basic_auth_config)
+      Plug.BasicAuth.basic_auth(conn, dashboard_auth)
     else
       conn
     end

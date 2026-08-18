@@ -54,7 +54,7 @@
       <div class="next__links"><a class="primary-link" href="/swaggerui">Open Swagger UI <span aria-hidden="true">→</span></a><a href="/redoc">Read the API reference</a><a href="/asyncdoc">Explore events</a><a href="https://wenet-ec.github.io/edge-core/">Read the full documentation</a></div>
     </section>
 
-    <%= if @admin_debug_enabled do %>
+    <%= if @admin_debug_dashboard_enabled do %>
       <section class="admin-debug" aria-labelledby="admin-debug-title">
         <h2 id="admin-debug-title">Admin debug</h2>
         <p>Inspect the Admin cluster's runtime, queues, scheduler, database activity, and connected Erlang nodes when troubleshooting the control plane.</p>

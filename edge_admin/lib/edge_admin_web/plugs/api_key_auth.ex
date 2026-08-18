@@ -4,7 +4,7 @@ defmodule EdgeAdminWeb.Plugs.ApiKeyAuth do
   Plug for REST API authentication.
 
   Validates that requests include either a master key or API key in the Authorization header.
-  Can be disabled globally via AUTH_ENABLED=false configuration.
+  Controlled by `API_AUTH_ENABLED`, which inherits from `ALL_AUTH_ENABLED`.
 
   Accepts either:
   - `Authorization: Bearer <MASTER_KEY>` (omnipotent fallback)
@@ -19,7 +19,7 @@ defmodule EdgeAdminWeb.Plugs.ApiKeyAuth do
   def init(opts), do: opts
 
   def call(conn, _opts) do
-    if Application.get_env(:edge_admin, :auth_enabled, true) do
+    if Application.get_env(:edge_admin, :api_auth_enabled, true) do
       validate_api_key(conn)
     else
       conn

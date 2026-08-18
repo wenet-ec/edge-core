@@ -81,7 +81,7 @@ defmodule EdgeAdminWeb.Endpoint do
   plug(EdgeAdminWeb.Router)
 
   defp request_logger_conditional(conn, _opts) do
-    if Application.get_env(:edge_admin, :admin_debug_enabled, false) do
+    if Application.get_env(:edge_admin, :admin_debug_dashboard_enabled, false) do
       RequestLogger.call(
         conn,
         RequestLogger.init(param_key: "request_logger")

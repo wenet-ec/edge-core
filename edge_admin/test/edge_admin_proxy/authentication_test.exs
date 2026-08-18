@@ -16,18 +16,18 @@ defmodule EdgeAdminProxy.AuthenticationTest do
   end
 
   defp with_auth_disabled(fun) do
-    Application.put_env(:edge_admin, :auth_enabled, false)
+    Application.put_env(:edge_admin, :proxy_auth_enabled, false)
     fun.()
   after
-    Application.delete_env(:edge_admin, :auth_enabled)
+    Application.delete_env(:edge_admin, :proxy_auth_enabled)
   end
 
   defp with_proxy_key(key, fun) do
-    Application.put_env(:edge_admin, :auth_enabled, true)
+    Application.put_env(:edge_admin, :proxy_auth_enabled, true)
     Application.put_env(:edge_admin, :proxy_key, key)
     fun.()
   after
-    Application.delete_env(:edge_admin, :auth_enabled)
+    Application.delete_env(:edge_admin, :proxy_auth_enabled)
     Application.delete_env(:edge_admin, :proxy_key)
   end
 
@@ -59,8 +59,8 @@ defmodule EdgeAdminProxy.AuthenticationTest do
 
   describe "authenticate_and_parse/2 - direct routing" do
     setup do
-      Application.put_env(:edge_admin, :auth_enabled, false)
-      on_exit(fn -> Application.delete_env(:edge_admin, :auth_enabled) end)
+      Application.put_env(:edge_admin, :proxy_auth_enabled, false)
+      on_exit(fn -> Application.delete_env(:edge_admin, :proxy_auth_enabled) end)
     end
 
     test "underscore username routes direct" do
@@ -76,11 +76,11 @@ defmodule EdgeAdminProxy.AuthenticationTest do
 
   describe "authenticate_and_parse/2 - DNS format" do
     setup do
-      Application.put_env(:edge_admin, :auth_enabled, false)
+      Application.put_env(:edge_admin, :proxy_auth_enabled, false)
       Application.put_env(:edge_admin, :edge_vpn_default_domain, "nm.internal")
 
       on_exit(fn ->
-        Application.delete_env(:edge_admin, :auth_enabled)
+        Application.delete_env(:edge_admin, :proxy_auth_enabled)
         Application.delete_env(:edge_admin, :edge_vpn_default_domain)
       end)
     end
@@ -155,11 +155,11 @@ defmodule EdgeAdminProxy.AuthenticationTest do
 
   describe "authenticate_and_parse/2 - node lookup" do
     setup do
-      Application.put_env(:edge_admin, :auth_enabled, false)
+      Application.put_env(:edge_admin, :proxy_auth_enabled, false)
       Application.put_env(:edge_admin, :edge_vpn_default_domain, "nm.internal")
 
       on_exit(fn ->
-        Application.delete_env(:edge_admin, :auth_enabled)
+        Application.delete_env(:edge_admin, :proxy_auth_enabled)
         Application.delete_env(:edge_admin, :edge_vpn_default_domain)
       end)
     end

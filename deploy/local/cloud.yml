@@ -116,7 +116,7 @@ services:
       - local_edge_admin_a2_build:/app/_build
       - /dev/net/tun:/dev/net/tun
     environment:
-      - AUTH_ENABLED=false
+      - ALL_AUTH_ENABLED=false
     ports:
       - "4001:44000" # API
       - "3129:43128" # HTTP Proxy

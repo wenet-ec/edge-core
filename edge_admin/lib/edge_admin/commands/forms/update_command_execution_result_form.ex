@@ -8,6 +8,8 @@ defmodule EdgeAdmin.Commands.Forms.UpdateCommandExecutionResultForm do
   """
   use EdgeAdmin.Form
 
+  alias EdgeAdmin.Commands.Validators.CommandExecutionValidators
+
   # Agent-reported terminal statuses. `commands.ex` may further override
   # `:completed` to `:cancelled` based on exit_code 143 (SIGTERM).
   @agent_reported_statuses [:completed, :expired]
@@ -43,22 +45,9 @@ defmodule EdgeAdmin.Commands.Forms.UpdateCommandExecutionResultForm do
 
   defp validate_completed_at(changeset) do
     validate_change(changeset, :completed_at, fn :completed_at, value ->
-      case value do
-        nil ->
-          []
-
-        timestamp when is_binary(timestamp) ->
-          case DateTime.from_iso8601(timestamp) do
-            {:ok, _dt, _offset} -> []
-            _ -> [completed_at: "must be a valid ISO8601 datetime"]
-          end
-
-        %DateTime{} ->
-          []
-
-        _ ->
-          [completed_at: "must be a valid ISO8601 datetime string or DateTime"]
-      end
+      if CommandExecutionValidators.valid_completed_at?(value),
+        do: [],
+        else: [completed_at: "must be a valid ISO8601 datetime string or DateTime"]
     end)
   end
 

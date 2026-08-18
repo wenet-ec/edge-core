@@ -5,6 +5,7 @@ defmodule EdgeAdmin.Commands.Schemas.Command do
 
   alias Ecto.Association.NotLoaded
   alias EdgeAdmin.Commands.Schemas.CommandExecution
+  alias EdgeAdmin.Commands.Validators.CommandValidators
   alias EdgeAdmin.Nodes.Schemas.Node
 
   @type t :: %__MODULE__{
@@ -57,34 +58,23 @@ defmodule EdgeAdmin.Commands.Schemas.Command do
   @doc false
   defp validate_command_text(changeset) do
     validate_change(changeset, :command_text, fn :command_text, command_text ->
-      if String.trim(command_text) == "" do
-        [command_text: "must not be blank"]
-      else
-        []
-      end
+      if CommandValidators.valid_command_text?(command_text), do: [], else: [command_text: "must not be blank"]
     end)
   end
 
   @doc false
   defp validate_timeout(changeset) do
     validate_change(changeset, :timeout, fn :timeout, timeout ->
-      cond do
-        is_nil(timeout) ->
-          []
-
-        timeout <= 0 ->
-          [timeout: "must be a positive number (in milliseconds)"]
-
-        true ->
-          []
-      end
+      if CommandValidators.valid_timeout?(timeout),
+        do: [],
+        else: [timeout: "must be a positive number (in milliseconds)"]
     end)
   end
 
   @doc false
   defp validate_expires_at(changeset) do
     validate_change(changeset, :expires_at, fn :expires_at, expires_at ->
-      if DateTime.after?(expires_at, DateTime.utc_now()) do
+      if CommandValidators.valid_expiry?(expires_at, DateTime.utc_now()) do
         []
       else
         [expires_at: "must be in the future"]

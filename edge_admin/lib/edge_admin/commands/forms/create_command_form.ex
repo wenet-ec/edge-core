@@ -8,6 +8,8 @@ defmodule EdgeAdmin.Commands.Forms.CreateCommandForm do
   """
   use EdgeAdmin.Form
 
+  alias EdgeAdmin.Commands.Validators.CommandValidators
+
   embedded_schema do
     field(:command_text, :string)
     field(:timeout, :integer)
@@ -67,15 +69,16 @@ defmodule EdgeAdmin.Commands.Forms.CreateCommandForm do
   end
 
   defp validate_timeout(changeset) do
-    validate_number(changeset, :timeout,
-      greater_than: 0,
-      message: "must be a positive number (in milliseconds)"
-    )
+    validate_change(changeset, :timeout, fn :timeout, value ->
+      if CommandValidators.valid_timeout?(value),
+        do: [],
+        else: [timeout: "must be a positive number (in milliseconds)"]
+    end)
   end
 
   defp validate_expires_at(changeset) do
     validate_change(changeset, :expires_at, fn :expires_at, expires_at ->
-      if DateTime.after?(expires_at, DateTime.utc_now()) do
+      if CommandValidators.valid_expiry?(expires_at, DateTime.utc_now()) do
         []
       else
         [expires_at: "must be in the future"]

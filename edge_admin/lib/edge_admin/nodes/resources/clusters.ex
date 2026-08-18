@@ -146,7 +146,10 @@ defmodule EdgeAdmin.Nodes.Resources.Clusters do
 
   @doc "Updates an active cluster after applying form and node-limit validation."
   @spec update(Cluster.t(), map()) ::
-          {:ok, Cluster.t()} | {:error, :not_found} | {:error, Ecto.Changeset.t()}
+          {:ok, Cluster.t()}
+          | {:error, :not_found}
+          | {:error, Ecto.Changeset.t()}
+          | {:error, {:conflict, String.t()}}
   def update(%Cluster{} = cluster, params) do
     with {:ok, attrs} <- Forms.UpdateClusterForm.changeset(params) do
       update_active_cluster(cluster.name, attrs)

@@ -1,8 +1,8 @@
-# edge_admin/test/edge_admin/nodes/checks/node_cluster_consistency_check_test.exs
-defmodule EdgeAdmin.Nodes.Checks.NodeClusterConsistencyCheckTest do
+# edge_admin/test/edge_admin/nodes/checks/alias_cluster_matches_node_check_test.exs
+defmodule EdgeAdmin.Nodes.Checks.AliasClusterMatchesNodeCheckTest do
   use EdgeAdmin.DataCase, async: false
 
-  alias EdgeAdmin.Nodes.Checks.NodeClusterConsistencyCheck
+  alias EdgeAdmin.Nodes.Checks.AliasClusterMatchesNodeCheck
   alias EdgeAdmin.Nodes.Schemas.Alias
   alias EdgeAdmin.Nodes.Schemas.Cluster
   alias EdgeAdmin.Nodes.Schemas.Node
@@ -41,7 +41,7 @@ defmodule EdgeAdmin.Nodes.Checks.NodeClusterConsistencyCheckTest do
 
     changeset = Alias.changeset(%Alias{}, %{name: "web", node_id: node.id, cluster_id: cluster.id})
 
-    assert {:ok, ^changeset} = NodeClusterConsistencyCheck.check(changeset)
+    assert :ok = AliasClusterMatchesNodeCheck.check(changeset)
   end
 
   test "rejects an alias whose cluster differs from the node cluster" do
@@ -52,7 +52,7 @@ defmodule EdgeAdmin.Nodes.Checks.NodeClusterConsistencyCheckTest do
     changeset =
       Alias.changeset(%Alias{}, %{name: "web", node_id: node.id, cluster_id: other_cluster.id})
 
-    assert {:error, changeset} = NodeClusterConsistencyCheck.check(changeset)
-    assert "must match the node's cluster" in errors_on(changeset).cluster_id
+    assert {:error, {:conflict, reason}} = AliasClusterMatchesNodeCheck.check(changeset)
+    assert reason == "alias cluster must match the node's current cluster"
   end
 end

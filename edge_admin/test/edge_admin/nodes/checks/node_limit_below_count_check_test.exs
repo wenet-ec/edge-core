@@ -84,42 +84,19 @@ defmodule EdgeAdmin.Nodes.Checks.NodeLimitBelowCountCheckTest do
   # check/2 — new_limit < node count
 
   describe "check/2 — new_limit below current node count" do
-    test "new_limit below node count returns changeset error" do
+    test "new_limit below node count returns a conflict" do
       cluster = insert_cluster()
       insert_node(cluster.id)
       insert_node(cluster.id)
-      assert {:error, %Ecto.Changeset{}} = NodeLimitBelowCountCheck.check(cluster, 1)
-    end
-
-    test "error includes the current node count as interpolation opt" do
-      cluster = insert_cluster()
-      insert_node(cluster.id)
-      insert_node(cluster.id)
-      {:error, changeset} = NodeLimitBelowCountCheck.check(cluster, 1)
-      {_msg, opts} = changeset.errors[:node_limit]
-      assert opts[:count] == 2
-    end
-
-    test "rendered error message contains the current node count" do
-      cluster = insert_cluster()
-      insert_node(cluster.id)
-      insert_node(cluster.id)
-      {:error, changeset} = NodeLimitBelowCountCheck.check(cluster, 1)
-
-      [msg] =
-        Ecto.Changeset.traverse_errors(changeset, fn {msg, opts} ->
-          Enum.reduce(opts, msg, fn {key, val}, acc ->
-            String.replace(acc, "%{#{key}}", to_string(val))
-          end)
-        end).node_limit
-
-      assert msg =~ "2"
+      assert {:error, {:conflict, reason}} = NodeLimitBelowCountCheck.check(cluster, 1)
+      assert reason == "node limit cannot be less than current node count (2)"
     end
 
     test "zero new_limit is always below a non-empty cluster" do
       cluster = insert_cluster()
       insert_node(cluster.id)
-      assert {:error, %Ecto.Changeset{}} = NodeLimitBelowCountCheck.check(cluster, 0)
+      assert {:error, {:conflict, reason}} = NodeLimitBelowCountCheck.check(cluster, 0)
+      assert reason == "node limit cannot be less than current node count (1)"
     end
   end
 end

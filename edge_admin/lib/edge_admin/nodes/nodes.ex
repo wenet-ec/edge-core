@@ -193,7 +193,7 @@ defmodule EdgeAdmin.Nodes do
   A later missing network does not make the active DB cluster disposable: the active
   row is the desired configuration, so reconciliation recreates the network from it.
 
-  Returns `{:ok, cluster}`, `{:error, changeset}` (validation), `{:error, {:conflict, reason}}` (CIDR overlap), or `{:error, :service_unavailable}` (health check or Edge VPN failure).
+  Returns `{:ok, cluster}`, `{:error, changeset}` (validation), `{:error, {:conflict, reason}}` (CIDR overlap or node-limit/resource-state conflict), or `{:error, :service_unavailable}` (health check or Edge VPN failure).
   """
   @spec create_cluster(map()) ::
           {:ok, Cluster.t()}
@@ -213,7 +213,10 @@ defmodule EdgeAdmin.Nodes do
   Returns `{:error, :not_found}` when the cluster was retired or no longer exists.
   """
   @spec update_cluster(Cluster.t(), map()) ::
-          {:ok, Cluster.t()} | {:error, :not_found} | {:error, Ecto.Changeset.t()}
+          {:ok, Cluster.t()}
+          | {:error, :not_found}
+          | {:error, Ecto.Changeset.t()}
+          | {:error, {:conflict, String.t()}}
   defdelegate update_cluster(cluster, params), to: Clusters, as: :update
 
   @doc """

@@ -23,24 +23,16 @@ defmodule EdgeAdmin.Nodes.Checks.NodeLimitBelowCountCheck do
   Returns an error if the proposed limit would make the cluster permanently over-capacity,
   locking out all future registrations with no way to resolve it short of deleting nodes.
   """
-  @spec check(Cluster.t(), integer() | nil) :: :ok | {:error, Ecto.Changeset.t()}
+  @spec check(Cluster.t(), integer() | nil) :: :ok | {:error, {:conflict, String.t()}}
   def check(_cluster, nil), do: :ok
 
-  def check(%Cluster{id: cluster_id} = cluster, new_limit) do
+  def check(%Cluster{id: cluster_id}, new_limit) do
     count = Repo.aggregate(from(n in Node, where: n.cluster_id == ^cluster_id), :count)
 
     if new_limit >= count do
       :ok
     else
-      changeset =
-        cluster
-        |> Ecto.Changeset.change()
-        |> Ecto.Changeset.add_error(:node_limit, "cannot be less than current node count (%{count})",
-          count: count,
-          validation: :node_limit_below_count
-        )
-
-      {:error, changeset}
+      {:error, {:conflict, "node limit cannot be less than current node count (#{count})"}}
     end
   end
 end

@@ -110,9 +110,10 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterController do
     responses: %{
       200 => {"Cluster updated successfully", "application/json", ClusterSchemas.ClusterSingleResponse},
       404 => {"Cluster not found", "application/json", CommonSchemas.NotFoundResponse},
-      422 =>
-        {"Validation error or node_limit below current node count", "application/json",
-         CommonSchemas.ChangesetErrorResponse},
+      409 =>
+        {"Node limit cannot be less than the cluster's current node count", "application/json",
+         CommonSchemas.ConflictResponse},
+      422 => {"Validation error", "application/json", CommonSchemas.ChangesetErrorResponse},
       503 => {"Service Unavailable", "application/json", CommonSchemas.ServiceUnavailableResponse}
     }
   )

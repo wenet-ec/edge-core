@@ -76,7 +76,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.AliasController do
       201 => {"Alias created successfully", "application/json", AliasSchemas.AliasSingleResponse},
       404 => {"Node not found", "application/json", CommonSchemas.NotFoundResponse},
       409 =>
-        {"Alias name already exists in this cluster, or node is not yet enrolled/has no IP in the VPN network",
+        {"Alias name already exists, node state conflicts with the requested alias, or node is not yet enrolled/has no IP in the VPN network",
          "application/json", CommonSchemas.ConflictResponse},
       422 => {"Validation error", "application/json", CommonSchemas.ChangesetErrorResponse},
       503 => {"Service Unavailable", "application/json", CommonSchemas.ServiceUnavailableResponse}

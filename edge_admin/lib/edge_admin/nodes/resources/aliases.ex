@@ -247,11 +247,11 @@ defmodule EdgeAdmin.Nodes.Resources.Aliases do
       alias_attrs = Map.merge(attrs, %{"node_id" => node.id, "cluster_id" => node.cluster_id})
       changeset = Alias.changeset(%Alias{}, alias_attrs)
 
-      case Checks.NodeClusterConsistencyCheck.check(changeset) do
-        {:error, changeset} ->
-          {:error, changeset}
+      case Checks.AliasClusterMatchesNodeCheck.check(changeset) do
+        {:error, _} = error ->
+          error
 
-        {:ok, changeset} ->
+        :ok ->
           # Query Edge VPN only after local/schema and DB-state checks pass.
           network_name = Cluster.network_name(node.cluster)
 

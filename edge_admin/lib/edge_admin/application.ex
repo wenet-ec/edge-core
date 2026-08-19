@@ -11,11 +11,10 @@ defmodule EdgeAdmin.Application do
       GatewayRegistry, Metadata, Quantum, EdgeAdminProxy, MCP, etc.
     * `:server` (default) — the bundled Admin tree.
 
-  The bundled Admin contains both conceptual responsibilities in one
-  application: Admin Clustering coordinates membership, metadata, ownership,
-  and reconciliation; the Gateway Registry supervises the local virtual
-  gateway workers and their data-plane access. Router and Worker are
-  architectural descriptions of these responsibilities, not runtime modes.
+  The bundled Admin contains Admin Clustering and the Gateway Registry in one
+  application. Admin Clustering coordinates membership, metadata, ownership,
+  and reconciliation; the Gateway Registry supervises local virtual gateways
+  and their data-plane access.
 
   The active repo is selected by `DB_ADAPTER` via `:repo_impl` (Postgres or
   SQLite). Postgres mode also starts a Notifier sub-repo for Oban LISTEN.
@@ -83,16 +82,15 @@ defmodule EdgeAdmin.Application do
   end
 
   defp build_children(:server) do
-    coordinator_foundation_children() ++
-      worker_runtime_children() ++
-      coordinator_scheduler_children() ++
-      data_plane_proxy_children() ++
-      public_endpoint_children()
+    admin_clustering_children() ++
+      gateway_registry_children() ++
+      admin_clustering_scheduler_children() ++
+      proxy_children() ++
+      endpoint_children()
   end
 
-  # Coordinator foundation: shared infrastructure and Admin-cluster
-  # membership used by the bundled Admin.
-  defp coordinator_foundation_children do
+  # Shared infrastructure and Admin-cluster membership.
+  defp admin_clustering_children do
     [EdgeAdmin.PromEx, EdgeAdmin.Encryption] ++
       repo_children() ++
       [
@@ -103,17 +101,17 @@ defmodule EdgeAdmin.Application do
       ]
   end
 
-  # Worker runtime: the Gateway Registry supervises edge-cluster VPN
-  # memberships and virtual Gateway lifecycles inside this same application.
-  defp worker_runtime_children do
+  # The Gateway Registry supervises edge-cluster VPN memberships and virtual
+  # Gateway lifecycles.
+  defp gateway_registry_children do
     [
       EdgeAdmin.GatewayRegistry.Supervisor,
       EdgeAdmin.GatewayRegistry.Coordinator
     ]
   end
 
-  # Coordinator scheduling and metadata recomputation.
-  defp coordinator_scheduler_children do
+  # Metadata recomputation and periodic Admin-cluster work.
+  defp admin_clustering_scheduler_children do
     [
       EdgeAdmin.AdminClustering.Metadata,
       EdgeAdmin.BackgroundJobs.Quantum.History,
@@ -121,15 +119,14 @@ defmodule EdgeAdmin.Application do
     ]
   end
 
-  # Data-plane proxy children include the raw Admin-to-Admin tunnel and the
-  # edge-facing proxy servers.
-  defp data_plane_proxy_children do
+  # Proxy children include the raw Admin-to-Admin tunnel and edge-facing
+  # proxy servers.
+  defp proxy_children do
     [EdgeAdminProxy.Supervisor]
   end
 
-  # Public control-plane endpoints. These remain in the bundled Admin and are
-  # not a declaration of a separate deployment.
-  defp public_endpoint_children do
+  # Public Admin endpoints.
+  defp endpoint_children do
     [
       EdgeAdmin.PromEx.Server,
       {EdgeAdminMcp.Server, transport: :streamable_http, registry: {Anubis.Server.Registry.PG, []}},

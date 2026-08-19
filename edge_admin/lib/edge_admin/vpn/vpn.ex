@@ -646,7 +646,7 @@ defmodule EdgeAdmin.Vpn do
   Pulls latest VPN configuration from Netmaker server.
 
   Forces the Edge VPN CLI to fetch full configuration via HTTP API, bypassing MQTT.
-  Used by `sync_vpn_config/0` (LocalScheduler periodic backstop) — no other
+  Used by `sync_vpn_config/0` (Quantum periodic backstop) — no other
   call sites today.
 
   Returns `:ok` or `{:error, reason}`.
@@ -659,7 +659,7 @@ defmodule EdgeAdmin.Vpn do
   Pulls latest VPN config from Netmaker as a periodic consistency backstop.
 
   Respects the VPN_CONFIG_SYNC_ENABLED flag — no-op if disabled.
-  Called by the LocalScheduler `vpn_config_sync` job (default: every 5 minutes).
+  Called by the Quantum `vpn_config_sync` job (default: every 5 minutes).
   """
   def sync_vpn_config do
     if Application.get_env(:edge_admin, :vpn_config_sync_enabled, true) do
@@ -773,9 +773,9 @@ defmodule EdgeAdmin.Vpn do
   end
 
   @doc """
-  Entry point for periodic zombie admin cleanup — called by the LocalScheduler.
+  Entry point for periodic zombie admin cleanup — called by Quantum.
 
-  The LocalScheduler runs this on every admin instance. To reduce duplicate work,
+  Quantum runs this on every admin instance. To reduce duplicate work,
   only the weak leader runs the actual cleanup — all other admins skip it. The weak
   leader is elected deterministically (alphabetically first admin ID in the current
   topology) so all admins independently agree on the same result without coordination.

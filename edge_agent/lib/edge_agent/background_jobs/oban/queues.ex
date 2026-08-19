@@ -1,10 +1,8 @@
-# edge_admin/lib/edge_admin/oban/queues.ex
-defmodule EdgeAdmin.Oban.Queues do
+# edge_agent/lib/edge_agent/background_jobs/oban/queues.ex
+defmodule EdgeAgent.BackgroundJobs.Oban.Queues do
   @moduledoc """
   Manifest of every Oban worker in this app, plus a boot-time consistency
   check against the runtime queue config.
-
-  ## The drift class this prevents
 
   An Oban worker declares its queue inline via `use Oban.Worker, queue: :foo`,
   while `runtime.exs` separately declares `queues: [foo: 2, ...]` (queue name +
@@ -17,35 +15,16 @@ defmodule EdgeAdmin.Oban.Queues do
   set of worker-declared queues doesn't exactly match the runtime config's
   `queues:` keys. The crash includes both directions of the diff so the
   operator can see what's missing or extra.
-
-  ## Adding a new worker
-
-    1. Create the worker module with `use Oban.Worker, queue: :your_queue, ...`.
-    2. Add the module to `@workers` below.
-    3. Add `your_queue: <concurrency>` to the `queues:` block in
-       `config/runtime.exs`.
-
-  Forgetting step 2 or 3 is caught at boot.
   """
 
-  alias EdgeAdmin.Commands.Workers.CreateCommandExecutionsWorker
-  alias EdgeAdmin.Commands.Workers.PruneCommandExecutionsWorker
-  alias EdgeAdmin.Events.Broker.Workers.PublishEventWorker
-  alias EdgeAdmin.Events.Webhooks.Workers.DeliverEventWorker
-  alias EdgeAdmin.Nodes.Workers.DeleteClusterWorker
-  alias EdgeAdmin.Nodes.Workers.ReconcileClusterWorker
-  alias EdgeAdmin.Nodes.Workers.ScheduleClusterReconciliationWorker
-  alias EdgeAdmin.SelfUpdates.Workers.TriggerSelfUpdateWorker
+  alias EdgeAgent.Commands.Workers.EnqueueExecutionWorker
+  alias EdgeAgent.Commands.Workers.ExecuteCommandWorker
+  alias EdgeAgent.Commands.Workers.ReportExecutionWorker
 
   @workers [
-    CreateCommandExecutionsWorker,
-    PruneCommandExecutionsWorker,
-    PublishEventWorker,
-    DeliverEventWorker,
-    DeleteClusterWorker,
-    ReconcileClusterWorker,
-    ScheduleClusterReconciliationWorker,
-    TriggerSelfUpdateWorker
+    EnqueueExecutionWorker,
+    ExecuteCommandWorker,
+    ReportExecutionWorker
   ]
 
   @doc "Every worker module, in registry order."
@@ -81,22 +60,22 @@ defmodule EdgeAdmin.Oban.Queues do
       :ok
     else
       raise """
-      EdgeAdmin Oban queue manifest mismatch.
+      EdgeAgent Oban queue manifest mismatch.
 
-      Workers declare queues that are NOT in `config :edge_admin, Oban, queues: [...]`:
+      Workers declare queues that are NOT in `config :edge_agent, Oban, queues: [...]`:
         #{format_atoms(missing)}
 
       Runtime config declares queues that NO worker uses:
         #{format_atoms(extra)}
 
       Either add the missing queues to runtime.exs, drop the extras, or update
-      `EdgeAdmin.Oban.Queues.@workers` to reflect the intended worker set.
+      `EdgeAgent.BackgroundJobs.Oban.Queues.@workers` to reflect the intended worker set.
       """
     end
   end
 
   defp configured_queues do
-    :edge_admin
+    :edge_agent
     |> Application.fetch_env!(Oban)
     |> Keyword.fetch!(:queues)
     |> Keyword.keys()

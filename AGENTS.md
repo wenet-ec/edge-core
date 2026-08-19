@@ -46,7 +46,7 @@ When working on anything related to the Netmaker API, netclient enrollment, DERP
 **Key Architectural Principles:**
 
 1. The database is the only source of truth — admins are stateless compute workers. PostgreSQL is the production default; SQLite is supported as a single-instance alternative selected at runtime via `DB_ADAPTER`. Same compiled binary either way. Multi-admin clustering, HA, and cluster ownership sharding all require PostgreSQL (LISTEN/NOTIFY for cross-admin coordination) — SQLite mode is single-admin only.
-2. Admin clustering is masterless peer-to-peer — no strong leader election, no primary/replica. Admins coordinate via Erlang distribution + `:syn` registry within the same admin cluster. A **weak leader** (alphabetically first admin ID in the current topology) is elected deterministically by each admin independently to reduce duplicate work from the LocalScheduler — but this is best-effort only, duplicate work is acceptable. See `EdgeAdmin.AdminClustering.Metadata.am_i_weak_leader?/0`. PostgreSQL only.
+2. Admin clustering is masterless peer-to-peer — no strong leader election, no primary/replica. Admins coordinate via Erlang distribution + `:syn` registry within the same admin cluster. A **weak leader** (alphabetically first admin ID in the current topology) is elected deterministically by each admin independently to reduce duplicate work from Quantum — but this is best-effort only, duplicate work is acceptable. See `EdgeAdmin.AdminClustering.Metadata.am_i_weak_leader?/0`. PostgreSQL only.
 3. Cluster ownership sharding — exactly one admin owns each edge cluster at a time (one-admin-per-cluster algorithm). The owning Admin runs one `EdgeAdmin.GatewayRegistry.VirtualGateway` per assigned edge cluster, creating an operational hub-and-spoke path for control-plane operations without changing the Agents' direct full-mesh WireGuard topology. HA comes from spinning up additional independent admin clusters sharing the same PostgreSQL database. PostgreSQL only.
 4. Agent primary deployment is one-per-machine — `network_mode: host`, privileged. Also works as a sidecar container on bridge networking (see `examples/sidecar/`). Multiple agents on one host is for testing only.
 5. Admin↔Agent communication is HTTP over WireGuard VPN, with graceful fallback: raw WireGuard → DERP relay → HTTP polling.
@@ -264,14 +264,14 @@ Tests mirror `lib/` only where the test policy allows unit coverage; see `TESTIN
 
 Admin and Agent both use Quantum for local periodic work and Oban for durable jobs. Do not maintain worker/job lists here.
 
-- Admin scheduler config: `edge_admin/config/runtime.exs` (`config :edge_admin, EdgeAdmin.LocalScheduler`).
-- Admin scheduler implementation/history: `edge_admin/lib/edge_admin/local_scheduler/`.
+- Admin Quantum config: `edge_admin/config/runtime.exs` (`config :edge_admin, EdgeAdmin.BackgroundJobs.Quantum`).
+- Admin Quantum implementation/history: `edge_admin/lib/edge_admin/background_jobs/quantum/`.
 - Admin Oban runtime config: `edge_admin/config/runtime.exs` (`config :edge_admin, Oban`).
-- Admin Oban worker/queue manifest: `edge_admin/lib/edge_admin/oban/queues.ex`.
-- Agent scheduler config: `edge_agent/config/runtime.exs` (`config :edge_agent, EdgeAgent.LocalScheduler`).
-- Agent scheduler task entrypoints: `edge_agent/lib/edge_agent/local_scheduler/tasks.ex`.
+- Admin Oban worker/queue manifest: `edge_admin/lib/edge_admin/background_jobs/oban/queues.ex`.
+- Agent Quantum config: `edge_agent/config/runtime.exs` (`config :edge_agent, EdgeAgent.BackgroundJobs.Quantum`).
+- Agent Quantum task entrypoints: `edge_agent/lib/edge_agent/background_jobs/quantum/tasks.ex`.
 - Agent Oban runtime config: `edge_agent/config/runtime.exs` (`config :edge_agent, Oban`).
-- Agent Oban worker/queue manifest: `edge_agent/lib/edge_agent/oban/queues.ex`.
+- Agent Oban worker/queue manifest: `edge_agent/lib/edge_agent/background_jobs/oban/queues.ex`.
 
 Rule of thumb:
 

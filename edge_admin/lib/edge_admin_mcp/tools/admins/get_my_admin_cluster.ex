@@ -9,7 +9,7 @@ defmodule EdgeAdminMcp.Tools.Admins.GetMyAdminCluster do
   - `degraded` — true when total_nodes > total_edge_capacity (over capacity)
   - `topology` — list of every peer admin (incl. self) with their assigned
     edge clusters
-  - `weak_leader` — alphabetically-first admin id; the LocalScheduler
+  - `weak_leader` — alphabetically-first admin id; Quantum
     skips weak-leader-only jobs on every other admin
   """
   use EdgeAdminMcp, :tool

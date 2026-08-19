@@ -8,7 +8,7 @@ defmodule EdgeAdmin.Application do
 
     * `:test` — minimal tree (Vault, Repo, PubSub, Oban,
       Endpoint). Used by the test env; skips PromEx, AdminClustering,
-      GatewayRegistry, Metadata, LocalScheduler, EdgeAdminProxy, MCP, etc.
+      GatewayRegistry, Metadata, Quantum, EdgeAdminProxy, MCP, etc.
     * `:server` (default) — the bundled Admin tree.
 
   The bundled Admin contains both conceptual responsibilities in one
@@ -31,7 +31,7 @@ defmodule EdgeAdmin.Application do
   @impl true
   def start(_type, _args) do
     # Crash early on Oban queue/worker drift — silent-failure class.
-    EdgeAdmin.Oban.Queues.assert_consistent!()
+    EdgeAdmin.BackgroundJobs.Oban.Queues.assert_consistent!()
 
     profile = Application.fetch_env!(:edge_admin, :supervision_profile)
     children = build_children(profile)
@@ -114,7 +114,11 @@ defmodule EdgeAdmin.Application do
 
   # Coordinator scheduling and metadata recomputation.
   defp coordinator_scheduler_children do
-    [EdgeAdmin.AdminClustering.Metadata, EdgeAdmin.LocalScheduler.History, EdgeAdmin.LocalScheduler]
+    [
+      EdgeAdmin.AdminClustering.Metadata,
+      EdgeAdmin.BackgroundJobs.Quantum.History,
+      EdgeAdmin.BackgroundJobs.Quantum
+    ]
   end
 
   # Data-plane proxy children include the raw Admin-to-Admin tunnel and the

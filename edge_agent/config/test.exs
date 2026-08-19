@@ -3,8 +3,8 @@ import Config
 
 # Disable Quantum job firing during tests — the scheduler isn't started in the
 # test supervision tree, but config is loaded module-wide; an empty jobs list
-# keeps the LocalScheduler inert if it ever does get started.
-config :edge_agent, EdgeAgent.LocalScheduler, jobs: []
+# keeps Quantum inert if it ever does get started.
+config :edge_agent, EdgeAgent.BackgroundJobs.Quantum, jobs: []
 config :edge_agent, EdgeAgent.Repo, pool: Ecto.Adapters.SQL.Sandbox
 config :edge_agent, EdgeAgentWeb.Endpoint, server: false
 config :edge_agent, Oban, testing: :manual

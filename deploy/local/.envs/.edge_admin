@@ -355,7 +355,7 @@ WEBHOOK_ALLOW_PRIVATE_IPS=true
 
 # Background Workers & Schedulers
 
-# Quantum LocalScheduler runs on every admin instance.
+# Quantum runs on every admin instance.
 # Scan VPN for other admin peers (default: every 5min).
 # ADMIN_DISCOVERY_SCHEDULE=*/5 * * * *
 # Recompute cluster ownership assignments (default: every 1min).

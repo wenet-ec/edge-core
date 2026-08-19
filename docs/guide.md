@@ -58,7 +58,7 @@ The admin is **API-first**. Every management operation goes through HTTP — the
 | `/`               | **Edge Admin guide.** A short introduction to the cluster-and-node model, with links into the API explorer. |
 | `/swaggerui`      | **Primary UI.** Interactive Swagger UI — browse every endpoint, fill in parameters, hit "Try it out", see live responses.              |
 | `/redoc`          | Same OpenAPI spec rendered as ReDoc — better for reading reference docs end-to-end.                                                    |
-| `/admin/debug` | **Admin debug** — runtime introspection for the Admin cluster (processes, queues, scheduler, database stats, connected Erlang nodes). Available only when `ADMIN_DEBUG_DASHBOARD_ENABLED=true`; `ADMIN_DEBUG_AUTH_ENABLED` controls its Basic Auth protection. Useful for troubleshooting the control plane, not for daily fleet operations. |
+| `/admin/debug` | **Admin debug** — runtime introspection for the Admin cluster (processes, Quantum scheduler, Oban queues, database stats, connected Erlang nodes). Available only when `ADMIN_DEBUG_DASHBOARD_ENABLED=true`; `ADMIN_DEBUG_AUTH_ENABLED` controls its Basic Auth protection. Useful for troubleshooting the control plane, not for daily fleet operations. |
 | `/asyncdoc`       | AsyncAPI viewer for the event catalog (see [§7](#7-events--webhooks-and-brokers)).                                                     |
 | `/mcp`            | MCP server endpoint for AI assistants (see [§4](#4-mcp--ai-assistant-access)).                                                         |
 

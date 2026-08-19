@@ -30,7 +30,7 @@ defmodule EdgeAgent.Bootstrap do
 
   Non-fatal conditions (logged as warning, bootstrap continues):
   - Admin discovery returns empty → Triggers HTTP fallback mode
-  - Command sync failures → Will retry later via `EdgeAgent.LocalScheduler.Tasks.sync_unprocessed_executions/0`
+  - Command sync failures → Will retry later via `EdgeAgent.BackgroundJobs.Quantum.Tasks.sync_unprocessed_executions/0`
 
   ## Configuration
 

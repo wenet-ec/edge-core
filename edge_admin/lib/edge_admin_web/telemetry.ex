@@ -103,12 +103,12 @@ defmodule EdgeAdminWeb.Telemetry do
       summary("quantum.job.stop.duration",
         tags: [:scheduler],
         unit: {:native, :millisecond},
-        description: "LocalScheduler job duration"
+        description: "Quantum job duration"
       ),
       counter("quantum.job.exception.count",
         measurement: :duration,
         tags: [:scheduler],
-        description: "LocalScheduler job exceptions — non-zero means a scheduled job is failing"
+        description: "Quantum job exceptions — non-zero means a scheduled job is failing"
       )
     ]
   end

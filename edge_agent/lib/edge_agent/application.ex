@@ -27,7 +27,7 @@ defmodule EdgeAgent.Application do
   @impl true
   def start(_type, _args) do
     # Crash early on Oban queue/worker drift — silent-failure class.
-    EdgeAgent.Oban.Queues.assert_consistent!()
+    EdgeAgent.BackgroundJobs.Oban.Queues.assert_consistent!()
 
     profile = Application.fetch_env!(:edge_agent, :supervision_profile)
     children = build_children(profile)
@@ -57,7 +57,7 @@ defmodule EdgeAgent.Application do
       EdgeAgent.Repo,
       {Phoenix.PubSub, name: EdgeAgent.PubSub},
       {Oban, Application.fetch_env!(:edge_agent, Oban)},
-      EdgeAgent.LocalScheduler,
+      EdgeAgent.BackgroundJobs.Quantum,
       EdgeAgent.PromEx,
       ExecutionRegistry,
       EdgeAgentSsh.Supervisor,

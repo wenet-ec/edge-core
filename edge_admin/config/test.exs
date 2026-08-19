@@ -40,11 +40,11 @@ test_repo_impl =
     :postgres -> Postgres
   end
 
+# Disable Quantum during tests.
+config :edge_admin, EdgeAdmin.BackgroundJobs.Quantum, jobs: []
+
 # Return gettext keys in tests instead of translated messages.
 config :edge_admin, EdgeAdmin.Gettext, priv: "priv/null", interpolation: EdgeAdmin.GettextInterpolation
-
-# Disable Quantum during tests.
-config :edge_admin, EdgeAdmin.LocalScheduler, jobs: []
 config :edge_admin, EdgeAdminWeb.Endpoint, server: false
 
 # Keep Oban jobs explicit in tests.

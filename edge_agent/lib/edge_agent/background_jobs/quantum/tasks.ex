@@ -1,7 +1,7 @@
-# edge_agent/lib/edge_agent/local_scheduler/tasks.ex
-defmodule EdgeAgent.LocalScheduler.Tasks do
+# edge_agent/lib/edge_agent/background_jobs/quantum/tasks.ex
+defmodule EdgeAgent.BackgroundJobs.Quantum.Tasks do
   @moduledoc """
-  Entry points called by `EdgeAgent.LocalScheduler`.
+  Entry points called by `EdgeAgent.BackgroundJobs.Quantum`.
 
   Each function below is what a cron tick invokes directly — no Oban job, no
   DB write for scheduling state. Functions are responsible for their own
@@ -35,9 +35,9 @@ defmodule EdgeAgent.LocalScheduler.Tasks do
   """
   @spec discover_admins() :: :ok
   def discover_admins do
-    Logger.debug("LocalScheduler: discover_admins started")
+    Logger.debug("Quantum: discover_admins started")
     {:ok, _network_name, admin_urls} = Discovery.discover_admins()
-    Logger.debug("LocalScheduler: discover_admins done — #{length(admin_urls)} Admin Gateway(s)")
+    Logger.debug("Quantum: discover_admins done — #{length(admin_urls)} Admin Gateway(s)")
 
     :telemetry.execute(
       [:edge_agent, :discovery, :scan],
@@ -66,11 +66,11 @@ defmodule EdgeAgent.LocalScheduler.Tasks do
   @spec report_health_check() :: :ok
   def report_health_check do
     if http_fallback_mode?() do
-      Logger.debug("LocalScheduler: report_health_check started")
+      Logger.debug("Quantum: report_health_check started")
       HealthCheck.report()
-      Logger.debug("LocalScheduler: report_health_check done")
+      Logger.debug("Quantum: report_health_check done")
     else
-      Logger.debug("LocalScheduler: report_health_check skipped (VPN up or fallback not configured)")
+      Logger.debug("Quantum: report_health_check skipped (VPN up or fallback not configured)")
     end
 
     :ok
@@ -82,11 +82,11 @@ defmodule EdgeAgent.LocalScheduler.Tasks do
   @spec push_diagnostics() :: :ok
   def push_diagnostics do
     if http_fallback_mode?() do
-      Logger.debug("LocalScheduler: push_diagnostics started")
+      Logger.debug("Quantum: push_diagnostics started")
       Diagnostics.push()
-      Logger.debug("LocalScheduler: push_diagnostics done")
+      Logger.debug("Quantum: push_diagnostics done")
     else
-      Logger.debug("LocalScheduler: push_diagnostics skipped (VPN up or fallback not configured)")
+      Logger.debug("Quantum: push_diagnostics skipped (VPN up or fallback not configured)")
     end
 
     :ok
@@ -101,11 +101,11 @@ defmodule EdgeAgent.LocalScheduler.Tasks do
   @spec push_metrics() :: :ok
   def push_metrics do
     if http_fallback_mode?() do
-      Logger.debug("LocalScheduler: push_metrics started")
+      Logger.debug("Quantum: push_metrics started")
       Metrics.push_metrics()
-      Logger.debug("LocalScheduler: push_metrics done")
+      Logger.debug("Quantum: push_metrics done")
     else
-      Logger.debug("LocalScheduler: push_metrics skipped (VPN up or fallback not configured)")
+      Logger.debug("Quantum: push_metrics skipped (VPN up or fallback not configured)")
     end
 
     :ok
@@ -120,11 +120,11 @@ defmodule EdgeAgent.LocalScheduler.Tasks do
   @spec sync_unprocessed_executions() :: :ok
   def sync_unprocessed_executions do
     if http_fallback_mode?() do
-      Logger.debug("LocalScheduler: sync_unprocessed_executions started")
+      Logger.debug("Quantum: sync_unprocessed_executions started")
       Commands.sync_unprocessed_command_executions()
-      Logger.debug("LocalScheduler: sync_unprocessed_executions done")
+      Logger.debug("Quantum: sync_unprocessed_executions done")
     else
-      Logger.debug("LocalScheduler: sync_unprocessed_executions skipped (VPN up or fallback not configured)")
+      Logger.debug("Quantum: sync_unprocessed_executions skipped (VPN up or fallback not configured)")
     end
 
     :ok
@@ -139,11 +139,11 @@ defmodule EdgeAgent.LocalScheduler.Tasks do
   @spec check_self_update() :: :ok
   def check_self_update do
     if http_fallback_mode?() and self_update_enabled?() do
-      Logger.debug("LocalScheduler: check_self_update started")
+      Logger.debug("Quantum: check_self_update started")
       SelfUpdates.check_self_update()
-      Logger.debug("LocalScheduler: check_self_update done")
+      Logger.debug("Quantum: check_self_update done")
     else
-      Logger.debug("LocalScheduler: check_self_update skipped (VPN up, no fallback, or self-update disabled)")
+      Logger.debug("Quantum: check_self_update skipped (VPN up, no fallback, or self-update disabled)")
     end
 
     :ok
@@ -158,22 +158,22 @@ defmodule EdgeAgent.LocalScheduler.Tasks do
   @spec pull_vpn_config() :: :ok
   def pull_vpn_config do
     if Application.get_env(:edge_agent, :pull_vpn_config_enabled, true) do
-      Logger.debug("LocalScheduler: pull_vpn_config started")
+      Logger.debug("Quantum: pull_vpn_config started")
 
       result =
         case Vpn.pull() do
           :ok ->
-            Logger.debug("LocalScheduler: pull_vpn_config done")
+            Logger.debug("Quantum: pull_vpn_config done")
             :success
 
           {:error, reason} ->
-            Logger.warning("LocalScheduler: pull_vpn_config failed: #{inspect(reason)}")
+            Logger.warning("Quantum: pull_vpn_config failed: #{inspect(reason)}")
             :failure
         end
 
       :telemetry.execute([:edge_agent, :vpn, :pull], %{count: 1}, %{result: result})
     else
-      Logger.debug("LocalScheduler: pull_vpn_config skipped (PULL_VPN_CONFIG_ENABLED=false)")
+      Logger.debug("Quantum: pull_vpn_config skipped (PULL_VPN_CONFIG_ENABLED=false)")
     end
 
     :ok

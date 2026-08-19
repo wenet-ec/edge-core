@@ -1,7 +1,7 @@
-# edge_admin/lib/edge_admin/local_scheduler/local_scheduler.ex
-defmodule EdgeAdmin.LocalScheduler do
+# edge_admin/lib/edge_admin/background_jobs/quantum.ex
+defmodule EdgeAdmin.BackgroundJobs.Quantum do
   @moduledoc """
-  Quantum scheduler for local (per-admin) periodic tasks.
+  Quantum scheduler for tasks running on each Admin instance.
 
   Quantum runs tasks locally on each admin node. Jobs that should avoid
   duplicate cluster-wide work use their own weak-leader guard; jobs that need

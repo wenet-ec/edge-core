@@ -111,7 +111,7 @@ defmodule EdgeAdmin.AdminClustering.Metadata do
   - Cluster created/deleted (PubSub event)
   - Node created/deleted (PubSub event)
   - Node cluster changed (PubSub event)
-  - Periodic scheduler (every minute via LocalScheduler, safety net)
+  - Periodic scheduler (every minute via Quantum, safety net)
   - Manual call via `recompute_now/0`
 
   ## Anti-Thrashing Pattern
@@ -314,7 +314,7 @@ defmodule EdgeAdmin.AdminClustering.Metadata do
   @doc """
   Returns true if this admin is the current weak leader of the admin cluster.
 
-  The LocalScheduler runs certain jobs on every admin instance — by design, since
+  Quantum runs certain jobs on every admin instance — by design, since
   there is no central coordinator. The weak leader is a best-effort optimisation
   to reduce duplicate work: all admins independently elect the same admin
   (alphabetically first admin ID in the current topology) and only that admin

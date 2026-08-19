@@ -2,7 +2,7 @@
 import Config
 import EdgeAgent.Config
 
-alias EdgeAgent.LocalScheduler.Tasks
+alias EdgeAgent.BackgroundJobs.Quantum.Tasks
 
 data_dir = get_env("DATA_DIR", :string, "/app/data")
 recovery_key = get_env("RECOVERY_KEY", :string)
@@ -42,7 +42,7 @@ pull_vpn_config_schedule = get_env("PULL_VPN_CONFIG_SCHEDULE", :string, "0 0 * *
 
 # In-process cron for stateless, idempotent housekeeping. Avoids writing an
 # `oban_jobs` row per tick on the agent's SQLite.
-config :edge_agent, EdgeAgent.LocalScheduler,
+config :edge_agent, EdgeAgent.BackgroundJobs.Quantum,
   jobs: [
     discover_admins: [
       schedule: discover_admins_schedule,

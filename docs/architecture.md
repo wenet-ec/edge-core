@@ -1,6 +1,6 @@
 # Edge Core — Architecture
 
-**Last Updated: 2026-08-18**
+**Last Updated: 2026-08-19**
 
 Edge Core is an infrastructure management platform for fleets of Linux machines you don't physically touch — cloud VMs, on-premises servers, factory-floor equipment, Raspberry Pis, homelab boxes, IoT devices. Anywhere you have N machines and want a single HTTP API to operate them, the same primitives apply: a secure WireGuard mesh, remote command execution, SSH without exposing port 22, HTTP/SOCKS5 forward proxying through any node, Prometheus metrics aggregation.
 
@@ -294,7 +294,7 @@ The scale target is what justifies the choice. We aim to operate **50–100 admi
 
 Our position: the BEAM cluster is a **coordination plane, not a data plane**. State that must be durable lives in PostgreSQL (slow, consistent, outside the cluster). State that must be fast lives in ETS (per-process, ephemeral, dies on restart). State that must be visible across the cluster lives in `:syn` (availability over consistency, eventually consistent registry, no consensus). Nothing in the BEAM cluster is authoritative — it's all derivable from PostgreSQL, so eventual consistency on registry state is fine. Duplicate work is possible during partitions, the system is idempotent, and reconciliation is cheap.
 
-This is what makes the 50–100-admin target tractable. Linear scale-out, no quorum, no replication lag, no split-brain recovery — both partitions just keep working until they reconnect, then the deterministic algorithm reconverges. The cost is duplicate work, which we mitigate where it matters (the weak-leader pattern reduces wasted work in the LocalScheduler) and accept where it doesn't.
+This is what makes the 50–100-admin target tractable. Linear scale-out, no quorum, no replication lag, no split-brain recovery — both partitions just keep working until they reconnect, then the deterministic algorithm reconverges. The cost is duplicate work, which we mitigate where it matters (the weak-leader pattern reduces wasted work in Quantum) and accept where it doesn't.
 
 ### Forward Proxy
 
@@ -560,7 +560,7 @@ This is why "fleet ops automated by an AI agent" is a real capability of Edge Co
 
 **Horizontal scale-out via additional admin clusters.** Beyond a single admin cluster, scale and HA come from running additional independent admin clusters that share only the PostgreSQL database. Admin clusters do not coordinate with each other — no Erlang distribution, no `:syn` visibility across the boundary — which makes an admin cluster the natural unit of failure isolation, geographic placement, and capacity planning.
 
-**Weak leader for LocalScheduler deduplication.** The LocalScheduler (Quantum) runs periodic jobs on every admin instance — that is its design. Some jobs (e.g. zombie admin cleanup) would produce wasteful duplicate work if every admin ran them. A **weak leader** is elected deterministically: the admin with the alphabetically first admin ID in the current topology. All admins compute this independently and agree without coordination. The weak leader runs the job; others skip it. Duplicate work is still possible during split brain and is acceptable — these jobs are idempotent. This is explicitly not a strong leader: no exactly-once guarantee, no consensus. If stronger semantics are ever needed, a `:strong_leader` concept can be introduced separately.
+**Weak leader for Quantum deduplication.** Quantum runs periodic jobs on every admin instance — that is its design. Some jobs (e.g. zombie admin cleanup) would produce wasteful duplicate work if every admin ran them. A **weak leader** is elected deterministically: the admin with the alphabetically first admin ID in the current topology. All admins compute this independently and agree without coordination. The weak leader runs the job; others skip it. Duplicate work is still possible during split brain and is acceptable — these jobs are idempotent. This is explicitly not a strong leader: no exactly-once guarantee, no consensus. If stronger semantics are ever needed, a `:strong_leader` concept can be introduced separately.
 
 **HTTP for agent-admin, Erlang distribution for admin-admin.** Agents are simple HTTP services — no Erlang cookie, no epmd, no Node.connect. Erlang distribution complexity is justified only for admin coordination, where cross-admin proxy routing requires transparent process-to-process calls that would be awkward over HTTP.
 

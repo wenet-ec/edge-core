@@ -1,7 +1,7 @@
 # edge_admin/lib/edge_admin_web/live/quantum_dashboard.ex
 defmodule EdgeAdminWeb.Live.QuantumDashboard do
   @moduledoc """
-  LiveDashboard page for `EdgeAdmin.LocalScheduler` Quantum jobs.
+  LiveDashboard page for `EdgeAdmin.BackgroundJobs.Quantum` jobs.
 
   Shows each configured cron job with its schedule, state, last/next firing,
   and recent outcome. Supports run-now / pause / resume actions per job.
@@ -9,15 +9,17 @@ defmodule EdgeAdminWeb.Live.QuantumDashboard do
   Reads route through `:erpc.call/4` to the node selected in the LiveDashboard
   node switcher; mutations also dispatch to that node so each admin's
   scheduler can be inspected and controlled independently. Quantum runs on
-  every admin (unlike Oban), so each admin has its own LocalScheduler that
+  every admin (unlike Oban), so each admin has its own Quantum scheduler that
   fires independently.
 
-  Run history is recorded by `EdgeAdmin.LocalScheduler.History`, an ETS-backed
+  Run history is recorded by `EdgeAdmin.BackgroundJobs.Quantum.History`, an ETS-backed
   GenServer that listens to Quantum telemetry and keeps one row per job
   (last firing only). Aggregate counters live in PromEx → Grafana.
   """
 
   use Phoenix.LiveDashboard.PageBuilder
+
+  alias EdgeAdmin.BackgroundJobs.Quantum
 
   @rpc_timeout 5_000
 
@@ -332,13 +334,13 @@ defmodule EdgeAdminWeb.Live.QuantumDashboard do
   end
 
   @doc false
-  # Called via :erpc on the selected node. Reads from LocalScheduler + History.
+  # Called via :erpc on the selected node. Reads from Quantum + History.
   def remote_snapshot do
-    history = EdgeAdmin.LocalScheduler.History.all()
+    history = EdgeAdmin.BackgroundJobs.Quantum.History.all()
     now = DateTime.utc_now()
 
     jobs =
-      EdgeAdmin.LocalScheduler.jobs()
+      Quantum.jobs()
       |> Enum.map(fn {_name, job} -> serialise_job(job, history, now) end)
       |> Enum.sort_by(& &1.name)
 
@@ -350,7 +352,7 @@ defmodule EdgeAdminWeb.Live.QuantumDashboard do
   @doc false
   # Mutating action dispatched via :erpc.
   def remote_action(action, name) when action in [:run_job, :activate_job, :deactivate_job] do
-    apply(EdgeAdmin.LocalScheduler, action, [name])
+    apply(Quantum, action, [name])
     :ok
   rescue
     e -> {:error, Exception.message(e)}

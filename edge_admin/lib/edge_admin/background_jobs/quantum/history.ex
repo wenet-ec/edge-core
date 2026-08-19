@@ -1,7 +1,7 @@
-# edge_admin/lib/edge_admin/local_scheduler/history.ex
-defmodule EdgeAdmin.LocalScheduler.History do
+# edge_admin/lib/edge_admin/background_jobs/quantum/history.ex
+defmodule EdgeAdmin.BackgroundJobs.Quantum.History do
   @moduledoc """
-  Per-job last-run history for `EdgeAdmin.LocalScheduler`.
+  Per-job last-run history for `EdgeAdmin.BackgroundJobs.Quantum`.
 
   Attaches to Quantum's `[:quantum, :job, :stop | :exception]` telemetry events
   and keeps the most recent outcome per job in an ETS table. One row per job,
@@ -16,8 +16,8 @@ defmodule EdgeAdmin.LocalScheduler.History do
 
   require Logger
 
-  @table :edge_admin_local_scheduler_history
-  @scheduler EdgeAdmin.LocalScheduler
+  @table :edge_admin_quantum_history
+  @scheduler EdgeAdmin.BackgroundJobs.Quantum
 
   def start_link(opts) do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)
@@ -65,7 +65,7 @@ defmodule EdgeAdmin.LocalScheduler.History do
     :ets.new(@table, [:set, :public, :named_table, read_concurrency: true])
 
     :telemetry.attach_many(
-      "edge-admin-local-scheduler-history",
+      "edge-admin-quantum-history",
       [
         [:quantum, :job, :stop],
         [:quantum, :job, :exception]
@@ -74,13 +74,13 @@ defmodule EdgeAdmin.LocalScheduler.History do
       nil
     )
 
-    Logger.info("LocalScheduler.History started")
+    Logger.info("Quantum.History started")
     {:ok, %{}}
   end
 
   @impl true
   def terminate(_reason, _state) do
-    :telemetry.detach("edge-admin-local-scheduler-history")
+    :telemetry.detach("edge-admin-quantum-history")
     :ok
   end
 
@@ -92,7 +92,7 @@ defmodule EdgeAdmin.LocalScheduler.History do
       record(event, measurements, metadata)
     end
   rescue
-    e -> Logger.error("History telemetry handler crashed: #{Exception.message(e)}")
+    e -> Logger.error("Quantum history telemetry handler crashed: #{Exception.message(e)}")
   end
 
   defp record([:quantum, :job, :stop], %{duration: duration}, %{job: job}) do

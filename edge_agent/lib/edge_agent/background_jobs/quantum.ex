@@ -1,5 +1,5 @@
-# edge_agent/lib/edge_agent/local_scheduler/local_scheduler.ex
-defmodule EdgeAgent.LocalScheduler do
+# edge_agent/lib/edge_agent/background_jobs/quantum.ex
+defmodule EdgeAgent.BackgroundJobs.Quantum do
   @moduledoc """
   Quantum scheduler for the agent's recurring, in-process, stateless tasks.
 
@@ -10,7 +10,7 @@ defmodule EdgeAgent.LocalScheduler do
   `EdgeAgent.Commands.Workers.ExecuteCommandWorker` for the only remaining
   Oban worker.
 
-  The job entry points live in `EdgeAgent.LocalScheduler.Tasks` — that module
+  The job entry points live in `EdgeAgent.BackgroundJobs.Quantum.Tasks` — that module
   is the only thing this scheduler calls into.
   """
 

@@ -46,7 +46,7 @@ defmodule EdgeAdmin.AdminClustering.Metadata.Algorithm do
     total_nodes: integer,           # total nodes across all clusters in the system
     total_edge_capacity: integer,   # sum of edge_node_capacity across all admins
     degraded: boolean,              # true when total_nodes > total_edge_capacity
-    weak_leader: admin_name         # alphabetically first admin ID — used to reduce duplicate LocalScheduler work
+    weak_leader: admin_name         # alphabetically first admin ID — used to reduce duplicate Quantum work
   }
 
   ## Example

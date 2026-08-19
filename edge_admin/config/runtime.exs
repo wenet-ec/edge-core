@@ -396,7 +396,7 @@ oban_queues =
 admin_tcp_tunnel_secret =
   get_env("ADMIN_TCP_TUNNEL_SECRET", :string, "edge_admin_default_tcp_tunnel_secret")
 
-config :edge_admin, EdgeAdmin.LocalScheduler,
+config :edge_admin, EdgeAdmin.BackgroundJobs.Quantum,
   jobs: [
     admin_discovery: [
       schedule: admin_discovery_schedule,

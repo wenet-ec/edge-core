@@ -14,7 +14,7 @@ defmodule EdgeAgent.AdminGateway.HealthCheck do
   @doc """
   Reports node health to the Admin Gateway via HTTP fallback.
 
-  Used by `EdgeAgent.LocalScheduler.Tasks.report_health_check/0`.
+  Used by `EdgeAgent.BackgroundJobs.Quantum.Tasks.report_health_check/0`.
   """
   @spec report() :: :ok | {:error, term()}
   def report do

@@ -10,7 +10,7 @@ defmodule EdgeAdminMcp.Tools.Metrics.GetAdminMetrics do
   - `membership` — admin Erlang/`:syn` membership health
   - `discovery` — admin peer discovery via VPN
   - `nodes` — direct VPN health-check outcomes, latest local sweep, and HTTP fallback reports
-  - `quantum` — LocalScheduler job runs
+  - `quantum` — Quantum job runs
   - `vpn` — Edge VPN API calls + Edge VPN CLI pulls
   - `commands` — command pipeline (creation, dispatch, completion)
   - `ssh` — SSH credential verification calls from agents

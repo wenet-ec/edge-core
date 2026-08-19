@@ -4133,6 +4133,7 @@
       "NodeResponse": {
         "description": "Edge node information",
         "example": {
+          "agent_metrics_port": 44000,
           "aliases": [
             {
               "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
@@ -4161,6 +4162,10 @@
           "wireguard_metrics_port": 49586
         },
         "properties": {
+          "agent_metrics_port": {
+            "description": "Agent PromEx metrics port",
+            "type": "integer"
+          },
           "aliases": {
             "description": "DNS aliases registered for this node",
             "items": { "$ref": "#/components/schemas/AliasSummary" },
@@ -4258,6 +4263,7 @@
           "cluster_name",
           "http_port",
           "ssh_port",
+          "agent_metrics_port",
           "host_metrics_port",
           "wireguard_metrics_port",
           "http_proxy_port",

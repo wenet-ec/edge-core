@@ -646,6 +646,7 @@
             "payload": {
               "corename": "prod-us",
               "data": {
+                "agent_metrics_port": 44000,
                 "cluster_name": "prod",
                 "host_metrics_port": 49100,
                 "http_port": 44000,
@@ -700,6 +701,7 @@
             "payload": {
               "corename": "prod-us",
               "data": {
+                "agent_metrics_port": 44000,
                 "cluster_name": "prod",
                 "host_metrics_port": 49100,
                 "http_port": 44000,
@@ -754,6 +756,7 @@
             "payload": {
               "corename": "prod-us",
               "data": {
+                "agent_metrics_port": 44000,
                 "cluster_name": "prod",
                 "host_metrics_port": 49100,
                 "http_port": 44000,
@@ -809,6 +812,7 @@
             "payload": {
               "corename": "prod-us",
               "data": {
+                "agent_metrics_port": 44000,
                 "cluster_name": "prod",
                 "host_metrics_port": 49100,
                 "http_port": 44000,
@@ -864,6 +868,7 @@
             "payload": {
               "corename": "prod-us",
               "data": {
+                "agent_metrics_port": 44000,
                 "cluster_name": "prod",
                 "host_metrics_port": 49100,
                 "http_port": 44000,
@@ -1135,6 +1140,7 @@
       },
       "NodeEvent": {
         "properties": {
+          "agent_metrics_port": { "type": "integer" },
           "cluster_name": { "type": "string" },
           "enrollment_key_id": { "format": "uuid", "type": ["string", "null"] },
           "host_metrics_port": { "type": "integer" },
@@ -1159,6 +1165,7 @@
       },
       "NodeStatusChangedEvent": {
         "properties": {
+          "agent_metrics_port": { "type": "integer" },
           "cluster_name": { "type": "string" },
           "enrollment_key_id": { "format": "uuid", "type": ["string", "null"] },
           "host_metrics_port": { "type": "integer" },
@@ -1194,6 +1201,7 @@
       },
       "NodeUpdateTriggeredEvent": {
         "properties": {
+          "agent_metrics_port": { "type": "integer" },
           "cluster_name": { "type": "string" },
           "enrollment_key_id": { "format": "uuid", "type": ["string", "null"] },
           "host_metrics_port": { "type": "integer" },
@@ -1229,6 +1237,7 @@
       },
       "NodeVersionChangedEvent": {
         "properties": {
+          "agent_metrics_port": { "type": "integer" },
           "cluster_name": { "type": "string" },
           "enrollment_key_id": { "format": "uuid", "type": ["string", "null"] },
           "host_metrics_port": { "type": "integer" },

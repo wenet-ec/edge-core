@@ -6,15 +6,15 @@ defmodule EdgeAdmin.Application do
   Two child-tree shapes selected by `EDGE_ADMIN_MODE`:
 
     * `EDGE_ADMIN_MODE=test` — minimal tree (Vault, Repo, PubSub, Oban,
-      Endpoint). Used by the test env; skips PromEx, Membership, GatewayRegistry,
-      Metadata, LocalScheduler, EdgeAdminProxy, MCP, etc.
-  * unset (default) — full server tree.
+      Endpoint). Used by the test env; skips PromEx, AdminClustering,
+      GatewayRegistry, Metadata, LocalScheduler, EdgeAdminProxy, MCP, etc.
+    * unset (default) — the bundled Admin tree.
 
-  The full server tree is the default bundled Admin role. It currently runs
-  both architectural responsibilities in one application: the Admin Router
-  and the Gateway Registry. A future `ADMIN_ROLE` configuration may select
-  `default` (both responsibilities), `router`, or `gateway_registry`; that
-  role split is not active yet, so the current server tree always starts both.
+  The bundled Admin contains both conceptual responsibilities in one
+  application: Admin Clustering coordinates membership, metadata, ownership,
+  and reconciliation; the Gateway Registry supervises the local virtual
+  gateway workers and their data-plane access. Router and Worker are
+  architectural descriptions of these responsibilities, not runtime modes.
 
   The active repo is selected by `DB_ADAPTER` via `:repo_impl` (Postgres or
   SQLite). Postgres mode also starts a Notifier sub-repo for Oban LISTEN.
@@ -85,16 +85,16 @@ defmodule EdgeAdmin.Application do
   end
 
   defp build_children(:server) do
-    router_foundation_children() ++
-      gateway_registry_children() ++
-      router_scheduler_children() ++
-      gateway_proxy_children() ++
-      router_endpoint_children()
+    coordinator_foundation_children() ++
+      worker_runtime_children() ++
+      coordinator_scheduler_children() ++
+      data_plane_proxy_children() ++
+      public_endpoint_children()
   end
 
-  # Router-owned children coordinate the Core and expose the public control
-  # plane.
-  defp router_foundation_children do
+  # Coordinator foundation: shared infrastructure and Admin-cluster
+  # membership used by the bundled Admin.
+  defp coordinator_foundation_children do
     [EdgeAdmin.PromEx, EdgeAdmin.Encryption] ++
       repo_children() ++
       [
@@ -105,26 +105,29 @@ defmodule EdgeAdmin.Application do
       ]
   end
 
-  # Gateway Registry children manage edge-cluster VPN memberships and virtual
-  # Gateway lifecycles.
-  defp gateway_registry_children do
+  # Worker runtime: the Gateway Registry supervises edge-cluster VPN
+  # memberships and virtual Gateway lifecycles inside this same application.
+  defp worker_runtime_children do
     [
       EdgeAdmin.GatewayRegistry.Supervisor,
       EdgeAdmin.GatewayRegistry.Coordinator
     ]
   end
 
-  defp router_scheduler_children do
+  # Coordinator scheduling and metadata recomputation.
+  defp coordinator_scheduler_children do
     [EdgeAdmin.AdminClustering.Metadata, EdgeAdmin.LocalScheduler.History, EdgeAdmin.LocalScheduler]
   end
 
   # Data-plane proxy children include the raw Admin-to-Admin tunnel and the
   # edge-facing proxy servers.
-  defp gateway_proxy_children do
+  defp data_plane_proxy_children do
     [EdgeAdminProxy.Supervisor]
   end
 
-  defp router_endpoint_children do
+  # Public control-plane endpoints. These remain in the bundled Admin and are
+  # not a declaration of a separate deployment.
+  defp public_endpoint_children do
     [
       EdgeAdmin.PromEx.Server,
       {EdgeAdminMcp.Server, transport: :streamable_http, registry: {Anubis.Server.Registry.PG, []}},

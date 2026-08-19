@@ -400,7 +400,7 @@ config :edge_admin, EdgeAdmin.BackgroundJobs.Quantum,
   jobs: [
     admin_discovery: [
       schedule: admin_discovery_schedule,
-      task: {EdgeAdmin.AdminClustering.Discovery, :scan_and_connect_admins, []}
+      task: {EdgeAdmin.AdminClustering.Membership.PeerDiscovery, :scan_and_connect_admins, []}
     ],
     metadata_recomputation: [
       schedule: metadata_recomputation_schedule,
@@ -424,7 +424,7 @@ config :edge_admin, EdgeAdmin.BackgroundJobs.Quantum,
     ],
     zombie_admin_cleanup: [
       schedule: zombie_admin_cleanup_schedule,
-      task: {EdgeAdmin.Vpn, :run_zombie_admin_cleanup, []}
+      task: {EdgeAdmin.AdminClustering.Membership.Cleanup, :run, []}
     ]
   ]
 

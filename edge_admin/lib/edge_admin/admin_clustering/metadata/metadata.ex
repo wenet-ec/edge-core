@@ -1,4 +1,4 @@
-# edge_admin/lib/edge_admin/admin_clustering/metadata.ex
+# edge_admin/lib/edge_admin/admin_clustering/metadata/metadata.ex
 defmodule EdgeAdmin.AdminClustering.Metadata do
   @moduledoc """
   Distributed metadata coordinator for admin cluster state and edge cluster assignments.

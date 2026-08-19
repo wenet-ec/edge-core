@@ -1,7 +1,7 @@
-# edge_admin/lib/edge_admin/admin_clustering/membership.ex
-defmodule EdgeAdmin.AdminClustering.Membership do
+# edge_admin/lib/edge_admin/admin_clustering/membership/bootstrap.ex
+defmodule EdgeAdmin.AdminClustering.Membership.Bootstrap do
   @moduledoc """
-  Establishes this admin's membership in the admin cluster.
+  Bootstraps this admin's membership in the admin cluster.
 
   Runs as a one-shot GenServer during application startup. Its only job is to
   put this admin instance on the admin VPN, wire up Erlang distribution, and
@@ -38,7 +38,7 @@ defmodule EdgeAdmin.AdminClustering.Membership do
 
   4. **Peer Discovery** (step 4)
      - Query Edge VPN for other admins in the cluster
-     - Connect to peer Erlang nodes via `Discovery.scan_and_connect_admins/0`
+     - Connect to peer Erlang nodes via `PeerDiscovery.scan_and_connect_admins/0`
 
   ## Membership Sequence
 
@@ -81,7 +81,8 @@ defmodule EdgeAdmin.AdminClustering.Membership do
 
   use GenServer
 
-  alias EdgeAdmin.AdminClustering.Discovery
+  alias EdgeAdmin.AdminClustering.Membership.Cleanup
+  alias EdgeAdmin.AdminClustering.Membership.PeerDiscovery
   alias EdgeAdmin.Vpn
 
   require Logger
@@ -210,7 +211,7 @@ defmodule EdgeAdmin.AdminClustering.Membership do
           Logger.error("Failed to join admin cluster network: #{inspect(reason)}")
           # If we got far enough that a host might exist in Edge VPN, delete
           # it so we don't leave a hostless orphan eating CIDR slots on retry.
-          maybe_cleanup_orphan_self(admin_name, reason)
+          Cleanup.remove_orphan(admin_name, reason)
           {:error, {:vpn_join_failed, reason}}
       end
 
@@ -331,37 +332,6 @@ defmodule EdgeAdmin.AdminClustering.Membership do
 
         Process.sleep(@join_retry_delay_ms)
         wait_for_edge_vpn_cli(network_name, attempt + 1, max_attempts)
-    end
-  end
-
-  # Step 1 may have registered this admin as a host in Edge VPN before failing
-  # (e.g. node creation hung, Edge VPN CLI didn't pick up the network). Such a
-  # host is an orphan: it occupies a slot but provides no functionality. Delete
-  # it before propagating the error so the next restart starts from a clean
-  # slate. Best-effort — failures here are logged but don't change the outcome.
-  #
-  # Skipped for `:admin_cluster_full` because we never attempted the join, so
-  # nothing was created.
-  defp maybe_cleanup_orphan_self(_admin_name, {:admin_cluster_full, _, _, _}), do: :ok
-
-  defp maybe_cleanup_orphan_self(admin_name, _reason) do
-    case Vpn.get_host_id(admin_name) do
-      {:ok, host_id} ->
-        Logger.warning("Cleaning up orphan host #{admin_name} (#{host_id}) before exiting")
-
-        case Vpn.delete_host(host_id) do
-          {:ok, _} ->
-            Logger.info("Deleted orphan host #{host_id}")
-            :ok
-
-          {:error, reason} ->
-            Logger.warning("Failed to delete orphan host #{host_id}: #{inspect(reason)}")
-            :ok
-        end
-
-      _ ->
-        # No host registered (or Edge VPN unreachable) — nothing to clean up.
-        :ok
     end
   end
 
@@ -486,7 +456,7 @@ defmodule EdgeAdmin.AdminClustering.Membership do
 
     start_time = System.monotonic_time(:millisecond)
 
-    Discovery.scan_and_connect_admins()
+    PeerDiscovery.scan_and_connect_admins()
 
     duration = System.monotonic_time(:millisecond) - start_time
 

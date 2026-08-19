@@ -1,5 +1,5 @@
-# edge_admin/lib/edge_admin/admin_clustering/discovery.ex
-defmodule EdgeAdmin.AdminClustering.Discovery do
+# edge_admin/lib/edge_admin/admin_clustering/membership/peer_discovery.ex
+defmodule EdgeAdmin.AdminClustering.Membership.PeerDiscovery do
   @moduledoc """
   Peer admin discovery and Erlang node connection.
 
@@ -32,8 +32,8 @@ defmodule EdgeAdmin.AdminClustering.Discovery do
 
   ## Examples
 
-      # Called during membership startup and on the discovery cron
-      iex> Discovery.scan_and_connect_admins()
+      # Called during membership startup and on the peer-discovery cron
+      iex> PeerDiscovery.scan_and_connect_admins()
       :ok
 
       iex> Node.list()

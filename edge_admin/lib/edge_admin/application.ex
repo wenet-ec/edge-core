@@ -99,7 +99,7 @@ defmodule EdgeAdmin.Application do
         {Phoenix.PubSub, name: EdgeAdmin.PubSub},
         EdgeAdminWeb.Telemetry,
         {Oban, Application.fetch_env!(:edge_admin, Oban)},
-        EdgeAdmin.AdminClustering.Membership
+        EdgeAdmin.AdminClustering.Membership.Bootstrap
       ]
   end
 

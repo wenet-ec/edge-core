@@ -8,6 +8,7 @@ config :edge_agent, EdgeAgent.LocalScheduler, jobs: []
 config :edge_agent, EdgeAgent.Repo, pool: Ecto.Adapters.SQL.Sandbox
 config :edge_agent, EdgeAgentWeb.Endpoint, server: false
 config :edge_agent, Oban, testing: :manual
+config :edge_agent, :supervision_profile, :test
 config :edge_agent, run_bootstrap: false
 
 config :logger, level: :warning

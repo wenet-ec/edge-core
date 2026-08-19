@@ -42,6 +42,7 @@ config :edge_admin, :password_hashers, [EdgeAdmin.PasswordHashers.Algorithms.Arg
 
 config :edge_admin,
   generators: [timestamp_type: :utc_datetime, binary_id: true],
+  supervision_profile: :server,
   version: version
 
 # The active Repo implementation is selected at runtime from DB_ADAPTER and

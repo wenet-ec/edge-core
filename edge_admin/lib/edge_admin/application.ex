@@ -3,12 +3,13 @@ defmodule EdgeAdmin.Application do
   @moduledoc """
   OTP application entry point and supervision tree.
 
-  Two child-tree shapes selected by `EDGE_ADMIN_MODE`:
+  Two child-tree shapes selected by the `:supervision_profile` application
+  setting:
 
-    * `EDGE_ADMIN_MODE=test` — minimal tree (Vault, Repo, PubSub, Oban,
+    * `:test` — minimal tree (Vault, Repo, PubSub, Oban,
       Endpoint). Used by the test env; skips PromEx, AdminClustering,
       GatewayRegistry, Metadata, LocalScheduler, EdgeAdminProxy, MCP, etc.
-    * unset (default) — the bundled Admin tree.
+    * `:server` (default) — the bundled Admin tree.
 
   The bundled Admin contains both conceptual responsibilities in one
   application: Admin Clustering coordinates membership, metadata, ownership,
@@ -32,7 +33,8 @@ defmodule EdgeAdmin.Application do
     # Crash early on Oban queue/worker drift — silent-failure class.
     EdgeAdmin.Oban.Queues.assert_consistent!()
 
-    children = build_children(runtime_mode())
+    profile = Application.fetch_env!(:edge_admin, :supervision_profile)
+    children = build_children(profile)
 
     :logger.add_handler(:sentry_handler, Sentry.LoggerHandler, %{
       config: %{metadata: [:file, :line, :request_id, :mfa, :domain]}
@@ -56,10 +58,6 @@ defmodule EdgeAdmin.Application do
     else
       []
     end
-  end
-
-  defp runtime_mode do
-    if System.get_env("EDGE_ADMIN_MODE") == "test", do: :test, else: :server
   end
 
   # Start the active repo impl (selected at runtime via DB_ADAPTER → :repo_impl).

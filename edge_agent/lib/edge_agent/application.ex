@@ -3,15 +3,16 @@ defmodule EdgeAgent.Application do
   @moduledoc """
   Application entry point and supervision tree builder for the edge agent.
 
-  ## Runtime modes
+  ## Supervision profiles
 
-  The supervision tree is selected by `EDGE_AGENT_MODE`:
+  The supervision tree is selected by the `:supervision_profile` application
+  setting:
 
-  - `"test"` — minimal tree: `Repo`, `PubSub`, `Oban`, `ExecutionRegistry`,
+  - `:test` — minimal tree: `Repo`, `PubSub`, `Oban`, `ExecutionRegistry`,
     `Endpoint`. No `Bootstrap`, `EdgeAgentSsh`, `EdgeAgentMetrics`, `EdgeAgentProxy`,
     `PromEx`, `DerpMapCache`, or `Mdns` — keeps tests free of external
     side effects (VPN join, port binds, OpenSSL host-key generation).
-  - any other value (incl. unset) — full `:server` tree.
+  - `:server` (default) — full server tree.
 
   Strategy is `:one_for_one`: each child supervises independently, so a
   Bootstrap failure restarts only Bootstrap (eventually crashing the
@@ -28,8 +29,8 @@ defmodule EdgeAgent.Application do
     # Crash early on Oban queue/worker drift — silent-failure class.
     EdgeAgent.Oban.Queues.assert_consistent!()
 
-    mode = runtime_mode()
-    children = build_children(mode)
+    profile = Application.fetch_env!(:edge_agent, :supervision_profile)
+    children = build_children(profile)
 
     opts = [strategy: :one_for_one, name: EdgeAgent.Supervisor]
     Supervisor.start_link(children, opts)
@@ -39,13 +40,6 @@ defmodule EdgeAgent.Application do
   def config_change(changed, _new, removed) do
     EdgeAgentWeb.Endpoint.config_change(changed, removed)
     :ok
-  end
-
-  defp runtime_mode do
-    case System.get_env("EDGE_AGENT_MODE") do
-      "test" -> :test
-      _ -> :server
-    end
   end
 
   defp build_children(:test) do

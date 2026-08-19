@@ -1,6 +1,5 @@
 # deploy/local/.envs/.edge_admin_test
 MIX_ENV=test
-EDGE_ADMIN_MODE=test
 ADMIN_API_PORT=44000
 
 # Authentication configuration (disabled for tests)

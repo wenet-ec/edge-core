@@ -19,6 +19,7 @@ config :edge_agent,
 
 config :edge_agent,
   ecto_repos: [EdgeAgent.Repo],
+  supervision_profile: :server,
   version: version
 
 # erlexec runs its port program (and therefore its child shells) as root

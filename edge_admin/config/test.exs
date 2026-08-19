@@ -49,6 +49,7 @@ config :edge_admin, EdgeAdminWeb.Endpoint, server: false
 
 # Keep Oban jobs explicit in tests.
 config :edge_admin, Oban, testing: :manual
+config :edge_admin, :supervision_profile, :test
 
 case test_db_adapter do
   :postgres ->

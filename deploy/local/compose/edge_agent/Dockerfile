@@ -5,7 +5,7 @@ FROM ghcr.io/wenet-ec/netclient:${NETCLIENT_VERSION} AS netclient-builder
 
 FROM quay.io/prometheus/node-exporter:v1.12.1 AS node-exporter-builder
 
-FROM elixir:1.20.2-otp-29-slim AS elixir-dev-stage
+FROM elixir:1.20.3-otp-29-slim AS elixir-dev-stage
 
 ARG APP_HOME=/app
 ENV MIX_ENV=dev

@@ -127,7 +127,7 @@ defmodule EdgeAdmin.Mixfile do
       {:excellent_migrations, "~> 0.1", only: [:dev, :test], runtime: false},
 
       # Errors
-      {:sentry, "~> 13.4"},
+      {:sentry, "~> 13.5"},
 
       # Telemetry
       {:prom_ex, "~> 1.12"},
@@ -171,7 +171,7 @@ defmodule EdgeAdmin.Mixfile do
       {:gnat, "~> 1.16"},
       {:brod, "~> 4.6"},
       {:amqp, "~> 4.1"},
-      {:redix, "~> 1.6"},
+      {:redix, "~> 1.7"},
       # Source build instead of Hex so emqtt's rebar.config.script runs on our
       # compile and honors BUILD_WITHOUT_QUIC=1 (set in the Dockerfiles). Hex
       # flattens dynamic deps at publish time, so the Hex package always lists

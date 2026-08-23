@@ -171,12 +171,12 @@ defmodule EdgeAdmin.Mixfile do
       {:gnat, "~> 1.16"},
       {:brod, "~> 4.6"},
       {:amqp, "~> 4.1"},
-      {:redix, "~> 1.7"},
+      {:redix, "~> 1.8"},
       # Source build instead of Hex so emqtt's rebar.config.script runs on our
       # compile and honors BUILD_WITHOUT_QUIC=1 (set in the Dockerfiles). Hex
       # flattens dynamic deps at publish time, so the Hex package always lists
       # `quicer` as non-optional even though the script would exclude it locally.
-      {:emqtt, github: "emqx/emqtt", tag: "1.15.4"},
+      {:emqtt, github: "emqx/emqtt", tag: "1.16.0"},
       {:ex_aws, "~> 2.7"},
       {:ex_aws_sns, "~> 2.3"},
       {:sweet_xml, "~> 0.7"},

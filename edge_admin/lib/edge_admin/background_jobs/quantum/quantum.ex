@@ -1,4 +1,4 @@
-# edge_admin/lib/edge_admin/background_jobs/quantum.ex
+# edge_admin/lib/edge_admin/background_jobs/quantum/quantum.ex
 defmodule EdgeAdmin.BackgroundJobs.Quantum do
   @moduledoc """
   Quantum scheduler for tasks running on each Admin instance.

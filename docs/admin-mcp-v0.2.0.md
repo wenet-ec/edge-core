@@ -6,7 +6,7 @@ Tool catalog for every operation the Edge Admin MCP server exposes at `POST /mcp
 
 Unlike OpenAPI (REST) and AsyncAPI (events), the [Model Context Protocol](https://modelcontextprotocol.io) does not yet have a standardised static spec format or off-the-shelf renderer. Discovery happens at runtime via the `tools/list` JSON-RPC method — any connected MCP client (Claude Desktop, Cursor, mcp-inspector) sees the live list. Operators who don't run a client also deserve visibility into what's there, so we maintain this catalog by hand.
 
-For interactive browsing of the live surface, run [`@modelcontextprotocol/inspector`](https://github.com/modelcontextprotocol/inspector) against `/mcp` with your `MCP_KEY`.
+For interactive browsing of the authenticated management surface, run [`@modelcontextprotocol/inspector`](https://github.com/modelcontextprotocol/inspector) against `/mcp` with your `MCP_KEY`. The transport also accepts requests without a bearer token so explicitly public tools can be added without creating a second MCP endpoint. Tool scope and degraded-mode behavior are registered in `EdgeAdminMcp.ToolRegistry`; the current catalog places all currently registered management tools in the authenticated scope, while the public scope is reserved for future anonymous tools.
 
 ## Reading this catalog
 
@@ -228,7 +228,7 @@ MCP-only tools surfacing the same content as `/asyncdoc`. Useful when picking va
 
 ## Operations blocked in degraded mode
 
-When the admin is in degraded mode (total nodes exceed total edge-capacity across the admin cluster), the following write tools return a degraded-mode error. Reads, alias ops, webhook ops, SSH ops, and commands all run unconditionally.
+When the admin is in degraded mode (total nodes exceed total edge-capacity across the admin cluster), tools registered with `degraded: :block` return a degraded-mode error. Tools without that option default to `degraded: :allow`. The current blocked registrations are:
 
 ```
 create_cluster              update_cluster              delete_cluster
@@ -237,4 +237,4 @@ create_enrollment_key       create_default_enrollment_key update_enrollment_key 
 create_self_update_request
 ```
 
-This mirrors the REST degraded-mode block list — same operations are blocked on both surfaces.
+The MCP middleware applies the same degraded-mode decision as the corresponding domain operation; the list above is documentation of the current registry metadata, not a second runtime blocklist.

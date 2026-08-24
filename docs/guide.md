@@ -227,7 +227,7 @@ Configure your client to point at:
 }
 ```
 
-Tools are discovered dynamically over the protocol (`tools/list`) — any connected client sees the live list. For a hand-maintained catalog you can read without running a client, see [`admin-mcp-v0.2.0.md`](admin-mcp-v0.2.0.md). For an interactive browser, point [`@modelcontextprotocol/inspector`](https://github.com/modelcontextprotocol/inspector) (`npx @modelcontextprotocol/inspector`) at `/mcp` with your `MCP_KEY`.
+Tools are discovered dynamically over the protocol (`tools/list`) — any connected client sees the live list. Use `Authorization: Bearer <MCP_KEY>` (or `MASTER_KEY`) for the authenticated tool scope. Requests without a bearer token can use only tools registered as public; the same `/mcp` endpoint supports both scopes. For a hand-maintained catalog, see [`admin-mcp-v0.2.0.md`](admin-mcp-v0.2.0.md). For an interactive browser, point [`@modelcontextprotocol/inspector`](https://github.com/modelcontextprotocol/inspector) (`npx @modelcontextprotocol/inspector`) at `/mcp` with your key.
 
 A few extras worth knowing:
 

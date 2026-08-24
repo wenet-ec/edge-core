@@ -51,6 +51,48 @@ defmodule EdgeAdminMcp do
     end
   end
 
+  @doc false
+  defmacro scope(name, do: block) when name in [:authenticated, :public] do
+    components = scoped_components(block, __CALLER__)
+
+    registrations =
+      Enum.map(components, fn {module, degraded} ->
+        tool_name = Anubis.Server.__derive_component_name__(module)
+
+        quote do
+          @mcp_scope_tools {unquote(name), unquote(tool_name)}
+          @mcp_scope_components {unquote(name), unquote(module), unquote(tool_name), unquote(degraded)}
+        end
+      end)
+
+    quote do
+      (unquote_splicing(registrations))
+    end
+  end
+
+  defp scoped_components(block, caller) do
+    {_block, components} =
+      Macro.prewalk(block, [], fn
+        {:component, _meta, [module]} = node, acc ->
+          {node, [{Macro.expand(module, caller), :allow} | acc]}
+
+        {:component, _meta, [module, opts]} = node, acc ->
+          opts = Macro.expand(opts, caller)
+          degraded = Keyword.get(opts, :degraded, :allow)
+
+          if degraded not in [:allow, :block] do
+            raise ArgumentError, "MCP component :degraded must be :allow or :block"
+          end
+
+          {node, [{Macro.expand(module, caller), degraded} | acc]}
+
+        node, acc ->
+          {node, acc}
+      end)
+
+    Enum.uniq(components)
+  end
+
   @doc """
   Recursively rewrites a Peri JSON Schema into a form the MCP
   inspector's `DynamicJsonForm` can render.

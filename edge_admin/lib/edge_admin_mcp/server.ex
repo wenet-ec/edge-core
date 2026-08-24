@@ -83,65 +83,42 @@ defmodule EdgeAdminMcp.Server do
     capabilities: [:tools]
 
   alias Anubis.Server.Handlers
-  alias Anubis.Server.Response
-  alias EdgeAdminMcp.ToolError
+  alias EdgeAdminMcp.Middlewares.DegradedMode
+  alias EdgeAdminMcp.Middlewares.McpAuth
 
-  # Tools that are blocked when `EdgeAdmin.AdminClustering.Metadata.degraded?/0` is true.
-  # Mirrors `plug DegradedMode, :block when action in [...]` on the REST side
-  # — same source of truth (`@metadata_module.degraded?/0`), same operations
-  # blocked. Reads, alias ops, webhook ops, SSH ops, commands all run
-  # unconditionally.
-  #
-  # When adding a new write tool: if its REST counterpart uses `:block`,
-  # append the tool name here. The decision (block vs. allow) lives next to
-  # the `component(...)` registrations in this file — both adjacent to make
-  # adding new tools coherent.
-  @blocked_when_degraded ~w(
-    create_cluster
-    update_cluster
-    delete_cluster
-    change_node_cluster
-    delete_node
-    create_node_recovery_key
-    delete_node_recovery_key
-    create_enrollment_key
-    create_default_enrollment_key
-    update_enrollment_key
-    delete_enrollment_key
-    create_self_update_request
-  )
-
-  # Compile-time dispatch matching `EdgeAdminWeb.Plugs.DegradedMode` — tests
-  # override `:metadata_module` in `config/test.exs` before compilation.
-  @metadata_module Application.compile_env(:edge_admin, :metadata_module, EdgeAdmin.AdminClustering.Metadata)
-  @compile {:no_warn_undefined, @metadata_module}
+  require EdgeAdminMcp.ToolRegistry
 
   @impl true
   def handle_request(request, frame) do
-    case check_not_degraded(request) do
-      :ok -> Handlers.handle(request, __MODULE__, frame)
-      :degraded -> {:reply, degraded_response(), frame}
+    with :ok <- McpAuth.call(request, frame),
+         :ok <- DegradedMode.call(request, frame) do
+      request
+      |> Handlers.handle(__MODULE__, frame)
+      |> filter_scoped_tool_list(request, frame)
+    else
+      {:error, response, frame} -> {:reply, response, frame}
     end
   end
 
-  @doc "Returns whether a request targets a tool blocked during degraded mode."
-  # Mirrors the REST `DegradedMode` plug — same `@metadata_module.degraded?/0`
-  # source of truth and same blocked tool list.
-  @spec check_not_degraded(map()) :: :ok | :degraded
-  def check_not_degraded(%{"method" => "tools/call", "params" => %{"name" => name}})
-      when name in @blocked_when_degraded do
-    if @metadata_module.degraded?(), do: :degraded, else: :ok
+  defp mcp_authenticated?(frame), do: McpAuth.authenticated?(frame)
+
+  defp filter_scoped_tool_list({:reply, payload, frame}, %{"method" => "tools/list"}, _request_frame)
+       when is_map(payload) do
+    if mcp_authenticated?(frame) do
+      {:reply, payload, frame}
+    else
+      tools = Map.get(payload, "tools", [])
+
+      {:reply,
+       Map.put(
+         payload,
+         "tools",
+         Enum.filter(tools, &(EdgeAdminMcp.ToolRegistry.scope_for_tool(&1["name"]) == :public))
+       ), frame}
+    end
   end
 
-  def check_not_degraded(_request), do: :ok
-
-  @doc "Returns the MCP tools blocked while the Admin cluster is degraded."
-  @spec blocked_when_degraded() :: [String.t()]
-  def blocked_when_degraded, do: @blocked_when_degraded
-
-  defp degraded_response do
-    Response.tool() |> Response.error(ToolError.message(:degraded_mode)) |> Response.to_protocol()
-  end
+  defp filter_scoped_tool_list(result, _request, _frame), do: result
 
   @impl true
   @spec server_instructions() :: String.t()
@@ -226,88 +203,5 @@ defmodule EdgeAdminMcp.Server do
     """
   end
 
-  # Admin info
-  component(EdgeAdminMcp.Tools.Admins.GetAdmin)
-  component(EdgeAdminMcp.Tools.Admins.GetMyAdminCluster)
-  component(EdgeAdminMcp.Tools.Admins.ListAdminClusters)
-  component(EdgeAdminMcp.Tools.Admins.ListEdgeClusters)
-  component(EdgeAdminMcp.Tools.Admins.ListOrphanedClusters)
-  component(EdgeAdminMcp.Tools.Admins.CheckAdminHealth)
-
-  # Clusters
-  component(EdgeAdminMcp.Tools.Nodes.ListClusters)
-  component(EdgeAdminMcp.Tools.Nodes.GetCluster)
-  component(EdgeAdminMcp.Tools.Nodes.CreateCluster)
-  component(EdgeAdminMcp.Tools.Nodes.UpdateCluster)
-  component(EdgeAdminMcp.Tools.Nodes.DeleteCluster)
-
-  # Nodes
-  component(EdgeAdminMcp.Tools.Nodes.ListNodes)
-  component(EdgeAdminMcp.Tools.Nodes.GetNode)
-  component(EdgeAdminMcp.Tools.Nodes.GetNodeDiagnostics)
-  component(EdgeAdminMcp.Tools.Nodes.DeleteNode)
-  component(EdgeAdminMcp.Tools.Nodes.ChangeNodeCluster)
-  component(EdgeAdminMcp.Tools.Nodes.CreateNodeRecoveryKey)
-  component(EdgeAdminMcp.Tools.Nodes.DeleteNodeRecoveryKey)
-
-  # Aliases
-  component(EdgeAdminMcp.Tools.Nodes.ListAliases)
-  component(EdgeAdminMcp.Tools.Nodes.GetAlias)
-  component(EdgeAdminMcp.Tools.Nodes.CreateAlias)
-  component(EdgeAdminMcp.Tools.Nodes.DeleteAlias)
-
-  # Enrollment keys
-  component(EdgeAdminMcp.Tools.Nodes.ListEnrollmentKeys)
-  component(EdgeAdminMcp.Tools.Nodes.GetEnrollmentKey)
-  component(EdgeAdminMcp.Tools.Nodes.CreateEnrollmentKey)
-  component(EdgeAdminMcp.Tools.Nodes.CreateDefaultEnrollmentKey)
-  component(EdgeAdminMcp.Tools.Nodes.UpdateEnrollmentKey)
-  component(EdgeAdminMcp.Tools.Nodes.DeleteEnrollmentKey)
-
-  # Commands
-  component(EdgeAdminMcp.Tools.Commands.ListCommands)
-  component(EdgeAdminMcp.Tools.Commands.GetCommand)
-  component(EdgeAdminMcp.Tools.Commands.CreateCommand)
-  component(EdgeAdminMcp.Tools.Commands.DeleteCommand)
-
-  # Command executions
-  component(EdgeAdminMcp.Tools.Commands.ListCommandExecutions)
-  component(EdgeAdminMcp.Tools.Commands.GetCommandExecution)
-  component(EdgeAdminMcp.Tools.Commands.CancelCommandExecution)
-  component(EdgeAdminMcp.Tools.Commands.DeleteCommandExecution)
-
-  # SSH usernames
-  component(EdgeAdminMcp.Tools.Ssh.ListSshUsernames)
-  component(EdgeAdminMcp.Tools.Ssh.GetSshUsername)
-  component(EdgeAdminMcp.Tools.Ssh.CreateSshUsername)
-  component(EdgeAdminMcp.Tools.Ssh.DeleteSshUsername)
-
-  # SSH public keys
-  component(EdgeAdminMcp.Tools.Ssh.ListSshPublicKeys)
-  component(EdgeAdminMcp.Tools.Ssh.GetSshPublicKey)
-  component(EdgeAdminMcp.Tools.Ssh.CreateSshPublicKey)
-  component(EdgeAdminMcp.Tools.Ssh.DeleteSshPublicKey)
-
-  # Self-updates
-  component(EdgeAdminMcp.Tools.SelfUpdates.ListSelfUpdateRequests)
-  component(EdgeAdminMcp.Tools.SelfUpdates.GetSelfUpdateRequest)
-  component(EdgeAdminMcp.Tools.SelfUpdates.CreateSelfUpdateRequest)
-  component(EdgeAdminMcp.Tools.SelfUpdates.DeleteSelfUpdateRequest)
-
-  # Metrics
-  component(EdgeAdminMcp.Tools.Metrics.GetNodeMetrics)
-  component(EdgeAdminMcp.Tools.Metrics.GetHostMetrics)
-  component(EdgeAdminMcp.Tools.Metrics.GetAgentMetrics)
-  component(EdgeAdminMcp.Tools.Metrics.GetAdminMetrics)
-
-  # Webhooks
-  component(EdgeAdminMcp.Tools.Events.ListWebhooks)
-  component(EdgeAdminMcp.Tools.Events.GetWebhook)
-  component(EdgeAdminMcp.Tools.Events.CreateWebhook)
-  component(EdgeAdminMcp.Tools.Events.DeleteWebhook)
-
-  # Event catalog / publish helpers
-  component(EdgeAdminMcp.Tools.Events.ListEventTypes)
-  component(EdgeAdminMcp.Tools.Events.ExplainEventType)
-  component(EdgeAdminMcp.Tools.Events.PublishTestEvent)
+  EdgeAdminMcp.ToolRegistry.register()
 end

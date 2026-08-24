@@ -3,15 +3,14 @@ defmodule EdgeAdminMcp.HttpServer do
   @moduledoc """
   Dedicated Bandit listener for the Admin MCP Streamable HTTP endpoint.
 
-  MCP is exposed at `/mcp` on `ADMIN_MCP_PORT` and is authenticated by the
-  same `McpAuth` Plug used by the former Phoenix route.
+  MCP is exposed at `/mcp` on `ADMIN_MCP_PORT`. Authentication and tool access
+  are handled by `EdgeAdminMcp.Server` from the MCP request context.
   """
 
   @behaviour Plug
 
   import Plug.Conn
 
-  alias EdgeAdminWeb.Plugs.McpAuth
   alias Plug.Conn
 
   @mcp_path "/mcp"
@@ -48,13 +47,7 @@ defmodule EdgeAdminMcp.HttpServer do
 
   @impl true
   def call(%Conn{request_path: @mcp_path} = conn, opts) do
-    conn = McpAuth.call(conn, [])
-
-    if conn.halted do
-      conn
-    else
-      Anubis.Server.Transport.StreamableHTTP.Plug.call(conn, opts)
-    end
+    Anubis.Server.Transport.StreamableHTTP.Plug.call(conn, opts)
   end
 
   def call(conn, _opts) do

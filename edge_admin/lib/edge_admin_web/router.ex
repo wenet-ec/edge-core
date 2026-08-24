@@ -23,9 +23,8 @@ defmodule EdgeAdminWeb.Router do
     plug(EdgeAdminWeb.Plugs.ApiKeyAuth)
   end
 
-  pipeline :mcp do
-    plug(:mcp_dedicated_guard)
-    plug(EdgeAdminWeb.Plugs.McpAuth)
+  pipeline :mcp_transport do
+    plug(EdgeAdminWeb.Plugs.McpDedicatedGuard)
   end
 
   pipeline :protected_metrics do
@@ -66,7 +65,7 @@ defmodule EdgeAdminWeb.Router do
   end
 
   scope "/" do
-    pipe_through(:mcp)
+    pipe_through(:mcp_transport)
 
     forward("/mcp", Anubis.Server.Transport.StreamableHTTP.Plug, server: EdgeAdminMcp.Server)
   end
@@ -255,17 +254,6 @@ defmodule EdgeAdminWeb.Router do
       end
 
       Plug.BasicAuth.basic_auth(conn, dashboard_auth)
-    else
-      conn
-    end
-  end
-
-  defp mcp_dedicated_guard(conn, _opts) do
-    if Application.get_env(:edge_admin, :admin_mcp_dedicated, false) do
-      conn
-      |> put_resp_content_type("text/plain")
-      |> send_resp(404, "Not Found")
-      |> halt()
     else
       conn
     end

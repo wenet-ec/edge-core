@@ -81,7 +81,6 @@ defmodule EdgeAdmin.Commands.Schemas.CommandExecution do
     timestamps()
   end
 
-  @doc "Builds a changeset for creating or updating a command execution."
   @spec changeset(t(), map()) :: Ecto.Changeset.t()
   def changeset(command_execution, attrs) do
     command_execution

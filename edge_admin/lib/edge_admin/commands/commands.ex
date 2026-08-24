@@ -36,15 +36,12 @@ defmodule EdgeAdmin.Commands do
   alias EdgeAdmin.Commands.Workflows.Delivery
   alias EdgeAdmin.Commands.Workflows.Retention
 
-  @doc "Gets a single command by ID."
   @spec get_command(String.t()) :: {:ok, Command.t()} | {:error, :not_found}
   defdelegate get_command(id), to: CommandResource, as: :get
 
-  @doc "Creates a new command."
   @spec create_command(map()) :: {:ok, Command.t()} | {:error, Ecto.Changeset.t()}
   defdelegate create_command(attrs \\ %{}), to: CommandResource, as: :create
 
-  @doc "Updates a command."
   @spec update_command(Command.t(), map()) :: {:ok, Command.t()} | {:error, Ecto.Changeset.t()}
   defdelegate update_command(command, attrs), to: CommandResource, as: :update
 
@@ -52,7 +49,6 @@ defmodule EdgeAdmin.Commands do
   @spec delete_command(Command.t()) :: {:ok, Command.t()} | {:error, {:conflict, String.t()}}
   defdelegate delete_command(command), to: CommandResource, as: :delete
 
-  @doc "Returns a changeset for command edits."
   @spec change_command(Command.t(), map()) :: Ecto.Changeset.t()
   defdelegate change_command(command, attrs \\ %{}), to: CommandResource, as: :change
 
@@ -75,15 +71,12 @@ defmodule EdgeAdmin.Commands do
   @spec list_commands(map()) :: {:ok, {[Command.t()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
   defdelegate list_commands(params \\ %{}), to: CommandResource, as: :list
 
-  @doc "Gets a single command execution by ID with its command preloaded."
   @spec get_command_execution(String.t()) :: {:ok, CommandExecution.t()} | {:error, :not_found}
   defdelegate get_command_execution(id), to: CommandExecutionResource, as: :get
 
-  @doc "Creates a new command execution."
   @spec create_command_execution(map()) :: {:ok, CommandExecution.t()} | {:error, Ecto.Changeset.t()}
   defdelegate create_command_execution(attrs \\ %{}), to: CommandExecutionResource, as: :create
 
-  @doc "Updates a command execution."
   @spec update_command_execution(CommandExecution.t(), map()) ::
           {:ok, CommandExecution.t()} | {:error, Ecto.Changeset.t()}
   defdelegate update_command_execution(command_execution, attrs), to: CommandExecutionResource, as: :update
@@ -93,7 +86,6 @@ defmodule EdgeAdmin.Commands do
           {:ok, CommandExecution.t()} | {:error, {:conflict, String.t()}}
   defdelegate delete_command_execution(command_execution), to: CommandExecutionResource, as: :delete
 
-  @doc "Returns a changeset for command-execution edits."
   @spec change_command_execution(CommandExecution.t(), map()) :: Ecto.Changeset.t()
   defdelegate change_command_execution(command_execution, attrs \\ %{}), to: CommandExecutionResource, as: :change
 
@@ -127,7 +119,6 @@ defmodule EdgeAdmin.Commands do
   @spec create_command_and_executions(map()) :: {:ok, Command.t()} | {:error, Ecto.Changeset.t()}
   defdelegate create_command_and_executions(params), to: Delivery
 
-  @doc "Creates command executions from targeting arguments."
   @spec create_command_executions(map()) :: {:ok, [CommandExecution.t()]} | {:error, String.t()}
   defdelegate create_command_executions(args), to: Delivery
 

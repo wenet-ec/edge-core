@@ -1,6 +1,6 @@
 # edge_admin/lib/edge_admin/commands/validators/command_validators.ex
 defmodule EdgeAdmin.Commands.Validators.CommandValidators do
-  @moduledoc "Pure value-level validators for commands."
+  @moduledoc false
 
   @spec valid_command_text?(term()) :: boolean()
   def valid_command_text?(text) when is_binary(text), do: String.trim(text) != ""

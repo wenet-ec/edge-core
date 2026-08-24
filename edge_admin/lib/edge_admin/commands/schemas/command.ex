@@ -43,7 +43,6 @@ defmodule EdgeAdmin.Commands.Schemas.Command do
     timestamps(type: :utc_datetime)
   end
 
-  @doc "Builds a changeset for creating or updating a command."
   @spec changeset(t(), map()) :: Ecto.Changeset.t()
   def changeset(command, attrs) do
     command

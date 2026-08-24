@@ -27,7 +27,6 @@ defmodule EdgeAdmin.Commands.Checks.CommandExecutionAcceptsResultCheck do
 
   alias EdgeAdmin.Commands.Schemas.CommandExecution
 
-  @doc "Checks whether an execution may accept a result from an Agent."
   @spec check(CommandExecution.t()) :: :ok | {:error, {:conflict, String.t()}}
   def check(%CommandExecution{status: :pending}), do: :ok
 

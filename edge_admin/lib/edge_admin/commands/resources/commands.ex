@@ -1,6 +1,6 @@
 # edge_admin/lib/edge_admin/commands/resources/commands.ex
 defmodule EdgeAdmin.Commands.Resources.Commands do
-  @moduledoc "Command persistence and filtering operations."
+  @moduledoc false
 
   import Ecto.Query, warn: false
   import EdgeAdmin.Query, only: [case_insensitive_like: 2]
@@ -12,7 +12,6 @@ defmodule EdgeAdmin.Commands.Resources.Commands do
   alias EdgeAdmin.Repo
   alias EdgeAdmin.RequestParser
 
-  @doc "Gets a command by ID."
   @spec get(String.t()) :: {:ok, Command.t()} | {:error, :not_found}
   def get(id) do
     case Repo.get(Command, id) do
@@ -23,13 +22,11 @@ defmodule EdgeAdmin.Commands.Resources.Commands do
     CastError -> {:error, :not_found}
   end
 
-  @doc "Creates a command."
   @spec create(map()) :: {:ok, Command.t()} | {:error, Ecto.Changeset.t()}
   def create(attrs \\ %{}) do
     %Command{} |> Command.changeset(attrs) |> Repo.insert()
   end
 
-  @doc "Updates a command."
   @spec update(Command.t(), map()) :: {:ok, Command.t()} | {:error, Ecto.Changeset.t()}
   def update(%Command{} = command, attrs) do
     command |> Command.changeset(attrs) |> Repo.update()
@@ -41,7 +38,6 @@ defmodule EdgeAdmin.Commands.Resources.Commands do
     with :ok <- PendingCommandExecutionsCheck.check(command), do: Repo.delete(command)
   end
 
-  @doc "Builds a command changeset."
   @spec change(Command.t(), map()) :: Ecto.Changeset.t()
   def change(%Command{} = command, attrs \\ %{}), do: Command.changeset(command, attrs)
 

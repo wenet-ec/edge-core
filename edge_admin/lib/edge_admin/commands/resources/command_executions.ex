@@ -1,6 +1,6 @@
 # edge_admin/lib/edge_admin/commands/resources/command_executions.ex
 defmodule EdgeAdmin.Commands.Resources.CommandExecutions do
-  @moduledoc "Command-execution persistence and filtering operations."
+  @moduledoc false
 
   import Ecto.Query, warn: false
   import EdgeAdmin.Query, only: [case_insensitive_like: 2]
@@ -12,7 +12,6 @@ defmodule EdgeAdmin.Commands.Resources.CommandExecutions do
   alias EdgeAdmin.Repo
   alias EdgeAdmin.RequestParser
 
-  @doc "Gets a command execution by ID with its command preloaded."
   @spec get(String.t()) :: {:ok, CommandExecution.t()} | {:error, :not_found}
   def get(id) do
     case Repo.get(CommandExecution, id) do
@@ -23,13 +22,11 @@ defmodule EdgeAdmin.Commands.Resources.CommandExecutions do
     CastError -> {:error, :not_found}
   end
 
-  @doc "Creates a command execution."
   @spec create(map()) :: {:ok, CommandExecution.t()} | {:error, Ecto.Changeset.t()}
   def create(attrs \\ %{}) do
     %CommandExecution{} |> CommandExecution.changeset(attrs) |> Repo.insert()
   end
 
-  @doc "Updates a command execution."
   @spec update(CommandExecution.t(), map()) ::
           {:ok, CommandExecution.t()} | {:error, Ecto.Changeset.t()}
   def update(%CommandExecution{} = execution, attrs) do
@@ -43,7 +40,6 @@ defmodule EdgeAdmin.Commands.Resources.CommandExecutions do
     with :ok <- CommandExecutionTerminalCheck.check(execution), do: Repo.delete(execution)
   end
 
-  @doc "Builds a command-execution changeset."
   @spec change(CommandExecution.t(), map()) :: Ecto.Changeset.t()
   def change(%CommandExecution{} = execution, attrs \\ %{}), do: CommandExecution.changeset(execution, attrs)
 

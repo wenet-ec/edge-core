@@ -1,6 +1,6 @@
 # edge_admin/lib/edge_admin/commands/validators/command_execution_validators.ex
 defmodule EdgeAdmin.Commands.Validators.CommandExecutionValidators do
-  @moduledoc "Pure value-level validators for command execution results."
+  @moduledoc false
 
   @spec valid_completed_at?(term()) :: boolean()
   def valid_completed_at?(nil), do: true

@@ -90,9 +90,6 @@ defmodule EdgeAdminWeb do
     end
   end
 
-  @doc """
-  Dispatches to the requested web-layer macro.
-  """
   defmacro __using__(which) when is_atom(which) do
     apply(__MODULE__, which, [])
   end

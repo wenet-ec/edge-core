@@ -1,8 +1,8 @@
-# edge_admin/test/edge_admin/commands/policies/command_execution_policy_test.exs
-defmodule EdgeAdmin.Commands.Policies.CommandExecutionPolicyTest do
+# edge_admin/test/edge_admin/commands/policies/command_execution_policies_test.exs
+defmodule EdgeAdmin.Commands.Policies.CommandExecutionPoliciesTest do
   use ExUnit.Case, async: true
 
-  alias EdgeAdmin.Commands.Policies.CommandExecutionPolicy
+  alias EdgeAdmin.Commands.Policies.CommandExecutionPolicies
 
   # The policy authorizes :update on a command execution iff the supplied
   # node owns the execution (node.id matches execution.node_id). Used by the
@@ -14,14 +14,14 @@ defmodule EdgeAdmin.Commands.Policies.CommandExecutionPolicyTest do
       node = %{id: "node-1"}
       execution = %{node_id: "node-1"}
 
-      assert CommandExecutionPolicy.authorize({:update, node, execution}) == :ok
+      assert CommandExecutionPolicies.authorize({:update, node, execution}) == :ok
     end
 
     test "denied when node.id differs from execution.node_id" do
       node = %{id: "node-1"}
       execution = %{node_id: "node-2"}
 
-      assert CommandExecutionPolicy.authorize({:update, node, execution}) ==
+      assert CommandExecutionPolicies.authorize({:update, node, execution}) ==
                {:error, :forbidden}
     end
 
@@ -29,26 +29,26 @@ defmodule EdgeAdmin.Commands.Policies.CommandExecutionPolicyTest do
       node = %{id: "node-1"}
       execution = %{node_id: "node-1 "}
 
-      assert CommandExecutionPolicy.authorize({:update, node, execution}) ==
+      assert CommandExecutionPolicies.authorize({:update, node, execution}) ==
                {:error, :forbidden}
     end
   end
 
   describe "authorize/1 — unknown actions" do
     test "any non-:update tuple is denied" do
-      assert CommandExecutionPolicy.authorize({:delete, %{id: "n"}, %{node_id: "n"}}) ==
+      assert CommandExecutionPolicies.authorize({:delete, %{id: "n"}, %{node_id: "n"}}) ==
                {:error, :forbidden}
     end
 
     test "atom action is denied" do
-      assert CommandExecutionPolicy.authorize(:read) == {:error, :forbidden}
+      assert CommandExecutionPolicies.authorize(:read) == {:error, :forbidden}
     end
 
     test "missing keys on the structs is denied (pattern doesn't match)" do
-      assert CommandExecutionPolicy.authorize({:update, %{}, %{node_id: "n"}}) ==
+      assert CommandExecutionPolicies.authorize({:update, %{}, %{node_id: "n"}}) ==
                {:error, :forbidden}
 
-      assert CommandExecutionPolicy.authorize({:update, %{id: "n"}, %{}}) ==
+      assert CommandExecutionPolicies.authorize({:update, %{id: "n"}, %{}}) ==
                {:error, :forbidden}
     end
   end

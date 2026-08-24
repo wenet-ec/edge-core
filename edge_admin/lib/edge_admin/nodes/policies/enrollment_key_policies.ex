@@ -1,5 +1,5 @@
-# edge_admin/lib/edge_admin/nodes/policies/enrollment_key_policy.ex
-defmodule EdgeAdmin.Nodes.Policies.EnrollmentKeyPolicy do
+# edge_admin/lib/edge_admin/nodes/policies/enrollment_key_policies.ex
+defmodule EdgeAdmin.Nodes.Policies.EnrollmentKeyPolicies do
   @moduledoc """
   Authorization policy for enrollment key actions.
 
@@ -7,11 +7,11 @@ defmodule EdgeAdmin.Nodes.Policies.EnrollmentKeyPolicy do
 
   ## Usage
 
-      with :ok <- EnrollmentKeyPolicy.authorize(:create_for_default) do
+      with :ok <- EnrollmentKeyPolicies.authorize(:create_for_default) do
         ...
       end
 
-      with :ok <- EnrollmentKeyPolicy.authorize(:create_for_public) do
+      with :ok <- EnrollmentKeyPolicies.authorize(:create_for_public) do
         ...
       end
   """
@@ -30,12 +30,4 @@ defmodule EdgeAdmin.Nodes.Policies.EnrollmentKeyPolicy do
   end
 
   def authorize?(_), do: false
-
-  @doc """
-  Returns the configured default cluster name.
-  Call this after a successful `authorize/1` to get the resolved value
-  without reading config twice.
-  """
-  @spec default_cluster_name() :: String.t() | nil
-  def default_cluster_name, do: Application.get_env(:edge_admin, :default_cluster_name)
 end

@@ -106,6 +106,7 @@ Tokens agents use to join a cluster's VPN mesh.
 | `list_enrollment_keys` | List Enrollment Keys | 🔍 | Filter/sort/paginate. Filters: `cluster_name` (wildcard), `cluster_name_in` (array), `name`, `has_name`, `key`, `uses_remaining`, `uses_remaining_gte/lte`, `is_unlimited`, `is_spent`, `is_expired`, `is_never_used`, `has_expiry`, `expires_at_*`, `last_used_at_*`, `inserted_at_*`, `updated_at_*`. |
 | `get_enrollment_key` | Get Enrollment Key | 🔍 | Required: `enrollment_key_id`. |
 | `create_enrollment_key` | Create Enrollment Key | | Required: `cluster_name`. Optional: `name` (label), `uses_remaining` (default 1), `expires_at` (ISO8601). |
+| `create_default_enrollment_key` | Create Default Enrollment Key | | Uses the configured `DEFAULT_CLUSTER_NAME`. Optional: `name` (label), `uses_remaining` (default 1), `expires_at` (ISO8601). Blocked while the Admin cluster is degraded. |
 | `update_enrollment_key` | Update Enrollment Key | ♻️ | Required: `enrollment_key_id`. Optional: `name`, `uses_remaining`, `expires_at`. Pass `null` on any field to clear it (unlimited / no expiry / no label). |
 | `delete_enrollment_key` | Delete Enrollment Key | ⚠️ | Required: `enrollment_key_id`. |
 
@@ -232,7 +233,7 @@ When the admin is in degraded mode (total nodes exceed total edge-capacity acros
 ```
 create_cluster              update_cluster              delete_cluster
 change_node_cluster         delete_node                 create_node_recovery_key       delete_node_recovery_key
-create_enrollment_key       update_enrollment_key       delete_enrollment_key
+create_enrollment_key       create_default_enrollment_key update_enrollment_key       delete_enrollment_key
 create_self_update_request
 ```
 

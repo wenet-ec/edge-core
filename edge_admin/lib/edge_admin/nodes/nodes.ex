@@ -165,6 +165,10 @@ defmodule EdgeAdmin.Nodes do
   @spec list_cluster_node_mappings(keyword()) :: [map()]
   defdelegate list_cluster_node_mappings(opts \\ []), to: Clusters, as: :list_node_mappings
 
+  @doc "Returns the configured default cluster name, if one is set."
+  @spec default_cluster_name() :: String.t() | nil
+  defdelegate default_cluster_name(), to: Clusters
+
   @doc """
   Gets a single cluster by name.
 

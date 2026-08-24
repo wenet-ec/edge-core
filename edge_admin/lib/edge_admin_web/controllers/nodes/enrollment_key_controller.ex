@@ -4,7 +4,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
   use OpenApiSpex.ControllerSpecs
 
   alias EdgeAdmin.Nodes
-  alias EdgeAdmin.Nodes.Policies.EnrollmentKeyPolicy
+  alias EdgeAdmin.Nodes.Policies.EnrollmentKeyPolicies
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias EdgeAdminWeb.Schemas.Nodes.EnrollmentKeySchemas
   alias EdgeAdminWeb.Schemas.PathParams
@@ -141,8 +141,8 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
   )
 
   def create_for_default(conn, params) do
-    with :ok <- EnrollmentKeyPolicy.authorize(:create_for_default),
-         {:ok, cluster} <- Nodes.get_cluster(EnrollmentKeyPolicy.default_cluster_name()),
+    with :ok <- EnrollmentKeyPolicies.authorize(:create_for_default),
+         {:ok, cluster} <- Nodes.get_cluster(Nodes.default_cluster_name()),
          {:ok, key} <- Nodes.create_enrollment_key(cluster, Map.merge(params, conn.body_params)) do
       conn
       |> put_status(:created)
@@ -166,8 +166,8 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
   )
 
   def create_for_public(conn, _params) do
-    with :ok <- EnrollmentKeyPolicy.authorize(:create_for_public),
-         {:ok, cluster} <- Nodes.get_cluster(EnrollmentKeyPolicy.default_cluster_name()),
+    with :ok <- EnrollmentKeyPolicies.authorize(:create_for_public),
+         {:ok, cluster} <- Nodes.get_cluster(Nodes.default_cluster_name()),
          {:ok, key} <- Nodes.create_enrollment_key(cluster, %{}) do
       conn
       |> put_status(:created)

@@ -5,7 +5,7 @@ defmodule EdgeAdminWeb.Controllers.Agents.CommandExecutionController do
 
   alias EdgeAdmin.Commands
   alias EdgeAdmin.Commands.Enums.CommandExecutionStatuses
-  alias EdgeAdmin.Commands.Policies.CommandExecutionPolicy
+  alias EdgeAdmin.Commands.Policies.CommandExecutionPolicies
   alias EdgeAdmin.Sort
   alias EdgeAdminWeb.Schemas.Agents.CommandExecutionSchemas
   alias EdgeAdminWeb.Schemas.CommonSchemas
@@ -79,7 +79,7 @@ defmodule EdgeAdminWeb.Controllers.Agents.CommandExecutionController do
 
   def acknowledge(conn, %{id: id} = params) do
     with {:ok, execution} <- Commands.get_command_execution(id),
-         :ok <- CommandExecutionPolicy.authorize({:update, conn.assigns.current_node, execution}),
+         :ok <- CommandExecutionPolicies.authorize({:update, conn.assigns.current_node, execution}),
          {:ok, updated_execution} <- Commands.acknowledge_command_execution(execution, params) do
       render(conn, :show, conn: conn, command_execution: updated_execution)
     end
@@ -105,7 +105,7 @@ defmodule EdgeAdminWeb.Controllers.Agents.CommandExecutionController do
 
   def report_result(conn, %{id: id}) do
     with {:ok, execution} <- Commands.get_command_execution(id),
-         :ok <- CommandExecutionPolicy.authorize({:update, conn.assigns.current_node, execution}),
+         :ok <- CommandExecutionPolicies.authorize({:update, conn.assigns.current_node, execution}),
          {:ok, updated_execution} <-
            Commands.update_command_execution_result(execution, conn.body_params) do
       render(conn, :show, conn: conn, command_execution: updated_execution)

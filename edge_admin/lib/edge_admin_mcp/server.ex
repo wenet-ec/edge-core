@@ -105,6 +105,7 @@ defmodule EdgeAdminMcp.Server do
     create_node_recovery_key
     delete_node_recovery_key
     create_enrollment_key
+    create_default_enrollment_key
     update_enrollment_key
     delete_enrollment_key
     create_self_update_request
@@ -259,6 +260,7 @@ defmodule EdgeAdminMcp.Server do
   component(EdgeAdminMcp.Tools.Nodes.ListEnrollmentKeys)
   component(EdgeAdminMcp.Tools.Nodes.GetEnrollmentKey)
   component(EdgeAdminMcp.Tools.Nodes.CreateEnrollmentKey)
+  component(EdgeAdminMcp.Tools.Nodes.CreateDefaultEnrollmentKey)
   component(EdgeAdminMcp.Tools.Nodes.UpdateEnrollmentKey)
   component(EdgeAdminMcp.Tools.Nodes.DeleteEnrollmentKey)
 

@@ -25,6 +25,10 @@ defmodule EdgeAdmin.Nodes.Resources.Clusters do
 
   require Logger
 
+  @doc "Returns the configured default cluster name, if one is set."
+  @spec default_cluster_name() :: String.t() | nil
+  def default_cluster_name, do: Application.get_env(:edge_admin, :default_cluster_name)
+
   @doc "Lists active clusters with filtering, sorting, and pagination."
   @spec list(map()) :: {:ok, {[Cluster.t()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
   def list(params \\ %{}), do: run_list_query(ClusterQueries.active(), params)

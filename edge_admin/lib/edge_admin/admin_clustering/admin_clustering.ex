@@ -62,9 +62,6 @@ defmodule EdgeAdmin.AdminClustering do
   Normalises a single raw `list_admin_cluster_networks/0` entry into the
   admin-domain shape returned by `list_admin_clusters/0`.
 
-  Public so the transform — which is the real contract this module exposes —
-  can be unit-tested directly without standing up Edge VPN.
-
   Input is a `%{network: net_map, members: [%{node: node, host: host}, ...]}`
   with raw Edge VPN string-keyed maps. Output is the per-cluster map documented
   on `list_admin_clusters/0`, with admins sorted by name.

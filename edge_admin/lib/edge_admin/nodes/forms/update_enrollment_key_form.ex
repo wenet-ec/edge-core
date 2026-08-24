@@ -1,6 +1,6 @@
 # edge_admin/lib/edge_admin/nodes/forms/update_enrollment_key_form.ex
 defmodule EdgeAdmin.Nodes.Forms.UpdateEnrollmentKeyForm do
-  @moduledoc "Validates attributes for updating an Admin enrollment key."
+  @moduledoc false
   use EdgeAdmin.Form
 
   alias EdgeAdmin.Nodes.Validators.EnrollmentKeyValidators

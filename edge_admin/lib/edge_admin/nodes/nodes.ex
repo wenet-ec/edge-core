@@ -237,7 +237,6 @@ defmodule EdgeAdmin.Nodes do
           | {:error, :service_unavailable}
   defdelegate delete_cluster(cluster), to: Clusters, as: :delete
 
-  @doc "Returns a changeset for tracking cluster changes."
   @spec change_cluster(Cluster.t(), map()) :: Ecto.Changeset.t()
   defdelegate change_cluster(cluster, attrs \\ %{}), to: Clusters, as: :change
 
@@ -249,11 +248,9 @@ defmodule EdgeAdmin.Nodes do
   @spec get_node(String.t()) :: {:ok, Node.t()} | {:error, :not_found}
   defdelegate get_node(id), to: NodeResource, as: :get
 
-  @doc "Creates a new node."
   @spec create_node(map()) :: {:ok, Node.t()} | {:error, Ecto.Changeset.t()}
   defdelegate create_node(attrs \\ %{}), to: NodeResource, as: :create
 
-  @doc "Updates a node."
   @spec update_node(Node.t(), map()) :: {:ok, Node.t()} | {:error, Ecto.Changeset.t()}
   defdelegate update_node(node, attrs), to: NodeResource, as: :update
 
@@ -317,7 +314,6 @@ defmodule EdgeAdmin.Nodes do
   @spec delete_node(Node.t()) :: {:ok, Node.t()} | {:error, Ecto.Changeset.t()} | {:error, :service_unavailable}
   defdelegate delete_node(node), to: NodeResource
 
-  @doc "Returns a changeset for tracking node changes."
   @spec change_node(Node.t(), map()) :: Ecto.Changeset.t()
   defdelegate change_node(node, attrs \\ %{}), to: NodeResource, as: :change
 
@@ -427,11 +423,9 @@ defmodule EdgeAdmin.Nodes do
   @spec list_proxy_chain_identifiers(String.t()) :: {:ok, map()} | {:error, :not_found}
   defdelegate list_proxy_chain_identifiers(cluster_name), to: ProxyResource, as: :list_chain_identifiers
 
-  @doc "Delegates enrollment-key listing to the enrollment-key resource module."
   @spec list_enrollment_keys(map()) :: {:ok, {[EnrollmentKey.t()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
   def list_enrollment_keys(params \\ %{}), do: EnrollmentKeys.list(params)
 
-  @doc "Delegates enrollment-key lookup to the enrollment-key resource module."
   @spec get_enrollment_key(String.t()) :: {:ok, EnrollmentKey.t()} | {:error, :not_found}
   def get_enrollment_key(id), do: EnrollmentKeys.get(id)
 
@@ -516,7 +510,6 @@ defmodule EdgeAdmin.Nodes do
   @doc "Lists aliases with filtering and pagination."
   defdelegate list_aliases(params \\ %{}), to: Aliases, as: :list
 
-  @doc "Gets an alias by ID."
   defdelegate get_alias(id), to: Aliases, as: :get
 
   @doc "Creates an alias and its Edge VPN DNS entry."
@@ -525,7 +518,6 @@ defmodule EdgeAdmin.Nodes do
   @doc "Deletes an alias and its Edge VPN DNS entry."
   defdelegate delete_alias(alias_record), to: Aliases, as: :delete
 
-  @doc "Returns an alias changeset."
   defdelegate change_alias(alias_record, attrs \\ %{}), to: Aliases, as: :change
 
   @doc "Reconciles alias DNS entries for active clusters."

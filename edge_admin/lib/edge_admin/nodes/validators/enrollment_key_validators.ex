@@ -1,6 +1,6 @@
 # edge_admin/lib/edge_admin/nodes/validators/enrollment_key_validators.ex
 defmodule EdgeAdmin.Nodes.Validators.EnrollmentKeyValidators do
-  @moduledoc "Pure value-level validators for enrollment keys."
+  @moduledoc false
 
   @spec valid_uses_remaining?(term()) :: boolean()
   def valid_uses_remaining?(nil), do: true

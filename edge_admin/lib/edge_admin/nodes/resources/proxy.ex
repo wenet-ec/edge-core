@@ -1,6 +1,6 @@
 # edge_admin/lib/edge_admin/nodes/resources/proxy.ex
 defmodule EdgeAdmin.Nodes.Resources.Proxy do
-  @moduledoc "Proxy-specific node identifier lookup."
+  @moduledoc false
 
   import Ecto.Query, warn: false
 

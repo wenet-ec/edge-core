@@ -1,6 +1,6 @@
 # edge_admin/lib/edge_admin/nodes/validators/alias_validators.ex
 defmodule EdgeAdmin.Nodes.Validators.AliasValidators do
-  @moduledoc "Pure value-level validators for node aliases."
+  @moduledoc false
 
   alias EdgeAdmin.Naming
 

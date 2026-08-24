@@ -1,6 +1,6 @@
 # edge_admin/lib/edge_admin/nodes/validators/node_diagnostic_validators.ex
 defmodule EdgeAdmin.Nodes.Validators.NodeDiagnosticValidators do
-  @moduledoc "Pure validators for Agent-pushed diagnostic reports."
+  @moduledoc false
 
   @check_names ~w(
     wireguard_interface

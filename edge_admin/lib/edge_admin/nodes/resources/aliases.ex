@@ -369,7 +369,6 @@ defmodule EdgeAdmin.Nodes.Resources.Aliases do
     end
   end
 
-  @doc "Returns a changeset for tracking alias changes."
   @spec change(Alias.t(), map()) :: Ecto.Changeset.t()
   def change(%Alias{} = alias_record, attrs \\ %{}) do
     Alias.changeset(alias_record, attrs)

@@ -1,5 +1,5 @@
 defmodule EdgeAdmin.Nodes.Forms.VerifyEnrollmentKeyForm do
-  @moduledoc "Validates an enrollment key supplied by an Agent during bootstrap."
+  @moduledoc false
   use EdgeAdmin.Form
 
   embedded_schema do

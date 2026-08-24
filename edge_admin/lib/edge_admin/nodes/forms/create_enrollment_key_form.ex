@@ -1,6 +1,6 @@
 # edge_admin/lib/edge_admin/nodes/forms/create_enrollment_key_form.ex
 defmodule EdgeAdmin.Nodes.Forms.CreateEnrollmentKeyForm do
-  @moduledoc "Validates attributes for creating an Admin enrollment key."
+  @moduledoc false
   use EdgeAdmin.Form
 
   alias EdgeAdmin.Nodes.Validators.EnrollmentKeyValidators

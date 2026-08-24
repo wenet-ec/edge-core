@@ -117,13 +117,14 @@ defmodule EdgeAdminHealth do
       {:error, "Health check exception"}
   end
 
-  @doc "Checks whether the Admin proxy servers have initialized."
+  @doc "Checks whether the Admin proxy listeners are accepting connections."
   @spec proxy_servers_health() :: :ok | {:error, String.t()}
   def proxy_servers_health do
-    if EdgeAdminProxy.initialized?() do
-      :ok
-    else
-      {:error, "Proxy servers not initialized"}
+    case EdgeAdminProxy.status() do
+      :running -> :ok
+      :not_started -> {:error, "Proxy servers not started"}
+      :error -> {:error, "Proxy servers unavailable"}
+      :unknown -> {:error, "Proxy server status unavailable"}
     end
   end
 

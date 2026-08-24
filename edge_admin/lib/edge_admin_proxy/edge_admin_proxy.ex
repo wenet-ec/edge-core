@@ -59,21 +59,24 @@ defmodule EdgeAdminProxy do
   end
 
   @doc """
-  Returns true if the proxy GenServer has finished its `init/1` callback.
+  Returns the listener status:
 
-  Returns `false` if the process is missing or the call times out (1s).
-  Used by health checks.
+  - `:running` — both Ranch listeners are accepting connections
+  - `:error` — one or both listeners failed to start; background retries continue
+  - `:not_started` — the GenServer process is missing
+  - `:unknown` — the status call timed out
   """
-  def initialized? do
+  @spec status() :: :running | :error | :not_started | :unknown
+  def status do
     case Process.whereis(__MODULE__) do
       nil ->
-        false
+        :not_started
 
       pid ->
         try do
-          GenServer.call(pid, :initialized?, 1000)
+          GenServer.call(pid, :status, 1000)
         catch
-          :exit, _ -> false
+          :exit, _ -> :unknown
         end
     end
   end
@@ -92,7 +95,7 @@ defmodule EdgeAdminProxy do
       http_port: http_port,
       socks5_port: socks5_port,
       listen_address: listen_address,
-      initialized: false
+      status: :error
     }
 
     case start_listeners(state) do
@@ -100,31 +103,29 @@ defmodule EdgeAdminProxy do
         Logger.info("Admin proxy servers started successfully")
         Logger.info("  HTTP proxy: #{format_ip(listen_address)}:#{http_port}")
         Logger.info("  SOCKS5 proxy: #{format_ip(listen_address)}:#{socks5_port}")
-        {:ok, %{new_state | initialized: true}}
+        {:ok, %{new_state | status: :running}}
 
       {:error, reason, new_state} ->
         Logger.warning("Failed to start proxy servers: #{inspect(reason)}; retrying")
         schedule_listener_retry()
-        {:ok, %{new_state | initialized: true}}
+        {:ok, %{new_state | status: :error}}
     end
   end
 
   @impl true
-  def handle_call(:initialized?, _from, state) do
-    {:reply, Map.get(state, :initialized, false), state}
-  end
+  def handle_call(:status, _from, state), do: {:reply, state.status, state}
 
   @impl true
   def handle_info(:retry_listener_start, %{http_listener_ref: nil, socks5_listener_ref: nil} = state) do
     case start_listeners(state) do
       {:ok, new_state} ->
         Logger.info("Admin proxy servers recovered")
-        {:noreply, new_state}
+        {:noreply, %{new_state | status: :running}}
 
       {:error, reason, new_state} ->
         Logger.warning("Admin proxy servers are still unavailable: #{inspect(reason)}; retrying")
         schedule_listener_retry()
-        {:noreply, new_state}
+        {:noreply, %{new_state | status: :error}}
     end
   end
 

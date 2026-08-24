@@ -91,44 +91,34 @@ defmodule EdgeAdmin.GatewayRegistry.VirtualGateway do
     result || {:error, :gateway_not_found}
   end
 
-  @doc "Scrapes host metrics from a node's Node Exporter."
   def scrape_host_metrics(gateway_pid, node) do
     GenServer.call(gateway_pid, {:scrape_host_metrics, node}, AgentClient.metrics_call_timeout())
   end
 
-  @doc "Scrapes agent application metrics from a node's PromEx endpoint."
   def scrape_agent_metrics(gateway_pid, node) do
     GenServer.call(gateway_pid, {:scrape_agent_metrics, node}, AgentClient.metrics_call_timeout())
   end
 
-  @doc "Scrapes WireGuard metrics from a node's WireGuard Exporter endpoint."
   def scrape_wireguard_metrics(gateway_pid, node) do
     GenServer.call(gateway_pid, {:scrape_wireguard_metrics, node}, AgentClient.metrics_call_timeout())
   end
 
-  @doc """
-  Retrieves an Agent self-diagnostic report.
-  """
   def get_diagnostics(gateway_pid, node) do
     GenServer.call(gateway_pid, {:get_diagnostics, node}, AgentClient.diagnostics_call_timeout())
   end
 
-  @doc "Triggers self-update on an agent."
   def trigger_self_update(gateway_pid, node) do
     GenServer.call(gateway_pid, {:trigger_self_update, node}, AgentClient.command_call_timeout())
   end
 
-  @doc "Cancels a command execution on an agent."
   def cancel_execution(gateway_pid, node, execution_id) do
     GenServer.call(gateway_pid, {:cancel_execution, node, execution_id}, AgentClient.command_call_timeout())
   end
 
-  @doc "Pings an Agent health endpoint through this Gateway."
   def ping(gateway_pid, node) do
     GenServer.call(gateway_pid, {:ping, node}, AgentClient.health_check_call_timeout())
   end
 
-  @doc "Delivers a command execution to an Agent through this Gateway."
   def deliver_execution(gateway_pid, node, execution_data) do
     GenServer.call(gateway_pid, {:deliver_execution, node, execution_data}, AgentClient.command_call_timeout())
   end

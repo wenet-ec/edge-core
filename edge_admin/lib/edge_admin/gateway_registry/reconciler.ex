@@ -1,6 +1,6 @@
 # edge_admin/lib/edge_admin/gateway_registry/reconciler.ex
 defmodule EdgeAdmin.GatewayRegistry.Reconciler do
-  @moduledoc "Pure planner for Admin Gateway membership changes."
+  @moduledoc false
 
   @type plan :: %{
           to_join: MapSet.t(),
@@ -8,7 +8,6 @@ defmodule EdgeAdmin.GatewayRegistry.Reconciler do
           retained: MapSet.t()
         }
 
-  @doc "Calculates Gateway joins, leaves, and retained clusters."
   @spec plan(Enumerable.t(), Enumerable.t()) :: plan()
   def plan(current_clusters, assigned_clusters) do
     current = MapSet.new(current_clusters)

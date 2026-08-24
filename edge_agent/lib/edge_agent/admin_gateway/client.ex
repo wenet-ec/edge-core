@@ -211,16 +211,8 @@ defmodule EdgeAgent.AdminGateway.Client do
     end)
   end
 
-  @doc """
-  Lists command executions from admin with filtering and pagination.
-
-  `:status` is required. Empty results are returned as `data: []`, not
-  `:not_found`.
-
-  GET /api/v1/agents/command_executions
-  """
   @spec list_command_executions(keyword()) :: {:ok, map()} | {:error, term()}
-  def list_command_executions(opts \\ []) do
+  defp list_command_executions(opts) do
     path = "/api/v1/agents/command_executions"
 
     query_params = %{

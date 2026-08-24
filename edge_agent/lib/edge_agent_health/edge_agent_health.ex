@@ -3,7 +3,7 @@ defmodule EdgeAgentHealth do
   @moduledoc """
   Health check configuration for EdgeAgent.
 
-  Verifies that all critical services have successfully initialized:
+  Verifies that all critical runtime dependencies are available and healthy:
   - Database connection (`SELECT 1` on the SQLite repo)
   - Bootstrap completion (identity, VPN join, admin registration)
   - Edge VPN CLI WireGuard interface health (per the VPN adapter health check)

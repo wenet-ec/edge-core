@@ -5,7 +5,7 @@ defmodule EdgeAgent.Vpn do
 
   Handles joining the Edge VPN network and verifying connection health.
   The vpn_enrollment_key is expected to already be in Settings (written by
-  `EdgeAgent.EnrollmentKey.ensure_verified/0` during bootstrap).
+  `EdgeAgent.Enrollment.ensure_verified/0` during bootstrap).
 
   ## Configuration
 

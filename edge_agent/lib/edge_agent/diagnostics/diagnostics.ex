@@ -15,7 +15,7 @@ defmodule EdgeAgent.Diagnostics do
   @type status :: :pass | :warn | :fail
 
   @spec snapshot() :: map()
-  def snapshot do
+  defp snapshot do
     build_report(local_checks())
   end
 

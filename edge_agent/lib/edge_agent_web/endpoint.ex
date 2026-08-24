@@ -14,6 +14,8 @@ defmodule EdgeAgentWeb.Endpoint do
   - `/api/v1/agents/me/metrics/raw` — `PromEx.Plug` exporter, conditionally
     auth-guarded by `:metrics_auth_conditional` (toggled via
     `AGENT_METRICS_AUTH_ENABLED`).
+  - `/api/v1` — REST API routes from `EdgeAgentWeb.Router`, including the
+    public DERP reflection endpoint and bearer-authenticated Agent APIs.
 
   Plug order is deliberate: `Security` first (CSP headers on every reply),
   then code reloading in dev, then `AssignRequestId` (UUID generation +

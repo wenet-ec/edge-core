@@ -9,7 +9,7 @@ defmodule EdgeAgentProxy do
 
   Both proxies use simple authentication:
   - Username: "_" (underscore)
-  - Password: `proxy_password` from the settings table
+  - Password: `proxy_password` from Agent settings
 
   When `AGENT_PROXY_AUTH_ENABLED=false` (default `true`), credentials are
   not verified and any client is accepted. Intended for local dev only.
@@ -35,29 +35,6 @@ defmodule EdgeAgentProxy do
   end
 
   @doc """
-  Returns true if the proxy GenServer has finished its `init/1` callback.
-
-  This only confirms `init/1` returned, not that the Ranch listeners
-  are actually accepting connections — listener-startup errors are logged
-  and retried in the background without blocking the GenServer from coming
-  up. Use `status/0` for a liveness signal that reflects the actual listeners.
-  Returns `false` if the process is missing or the call times out (1s).
-  """
-  def initialized? do
-    case Process.whereis(__MODULE__) do
-      nil ->
-        false
-
-      pid ->
-        try do
-          GenServer.call(pid, :initialized?, 1000)
-        catch
-          :exit, _ -> false
-        end
-    end
-  end
-
-  @doc """
   Returns the listener status:
 
   - `:running` — both Ranch listeners are accepting connections
@@ -66,7 +43,7 @@ defmodule EdgeAgentProxy do
   - `:not_started` — the GenServer process is missing
   - `:unknown` — call timed out
 
-  Used by health checks where `initialized?/0` is too lenient.
+  Used by health checks to reflect the actual listener state.
   """
   @spec status() :: :running | :error | :not_started | :unknown
   def status do
@@ -97,7 +74,6 @@ defmodule EdgeAgentProxy do
       http_port: http_port,
       socks5_port: socks5_port,
       listen_address: listen_address,
-      initialized: false,
       status: :error
     }
 
@@ -106,18 +82,13 @@ defmodule EdgeAgentProxy do
         Logger.info("Proxy servers started successfully")
         Logger.info("  HTTP proxy: #{format_ip(listen_address)}:#{http_port}")
         Logger.info("  SOCKS5 proxy: #{format_ip(listen_address)}:#{socks5_port}")
-        {:ok, %{new_state | initialized: true, status: :running}}
+        {:ok, %{new_state | status: :running}}
 
       {:error, reason, new_state} ->
         Logger.warning("Failed to start proxy servers: #{inspect(reason)}; retrying")
         schedule_listener_retry()
-        {:ok, %{new_state | initialized: true, status: :error}}
+        {:ok, %{new_state | status: :error}}
     end
-  end
-
-  @impl true
-  def handle_call(:initialized?, _from, state) do
-    {:reply, Map.get(state, :initialized, false), state}
   end
 
   @impl true

@@ -32,12 +32,9 @@ defmodule EdgeAgentMetrics do
   sibling. The reconciler handles recovery.
   """
 
-  @behaviour EdgeAgentMetrics.Behaviour
-
   use GenServer
 
   alias EdgeAgentMetrics.Config
-  alias EdgeAgentMetrics.Network
   alias EdgeAgentMetrics.ProcessSupervisor
 
   require Logger
@@ -48,34 +45,11 @@ defmodule EdgeAgentMetrics do
   # even when nothing is asking.
   @check_health_interval_ms 30_000
 
-  @impl EdgeAgentMetrics.Behaviour
-  def start_servers, do: GenServer.call(__MODULE__, :start_servers, 10_000)
-
-  @impl EdgeAgentMetrics.Behaviour
-  def stop_servers, do: GenServer.call(__MODULE__, :stop_servers, 5_000)
-
-  @impl EdgeAgentMetrics.Behaviour
   def servers_status do
     GenServer.call(__MODULE__, :servers_status, 1_000)
   catch
     :exit, {:noproc, _} -> :not_started
     :exit, {:timeout, _} -> :unknown
-  end
-
-  @impl EdgeAgentMetrics.Behaviour
-  def servers_config do
-    GenServer.call(__MODULE__, :servers_config, 1_000)
-  catch
-    :exit, {:noproc, _} -> %{}
-    :exit, {:timeout, _} -> %{}
-  end
-
-  @impl EdgeAgentMetrics.Behaviour
-  def get_primary_interface_ip do
-    GenServer.call(__MODULE__, :get_primary_interface_ip, 5_000)
-  catch
-    :exit, {:noproc, _} -> {:error, :servers_not_started}
-    :exit, {:timeout, _} -> {:error, :timeout}
   end
 
   def start_link(opts \\ []) do
@@ -94,9 +68,7 @@ defmodule EdgeAgentMetrics do
       node_exporter_port_ref: nil,
       wireguard_exporter_pid: nil,
       wireguard_exporter_port_ref: nil,
-      status: :stopped,
-      config: Config.build_config(),
-      primary_interface_ip: nil
+      status: :stopped
     }
 
     result =
@@ -123,77 +95,9 @@ defmodule EdgeAgentMetrics do
   end
 
   @impl true
-  def handle_call(:start_servers, _from, state) do
-    case state.status do
-      :running ->
-        Logger.info("Metrics servers already running")
-        {:reply, {:ok, state.node_exporter_pid}, state}
-
-      _status ->
-        case do_start_servers(state) do
-          {:ok, new_state} ->
-            {:reply, {:ok, new_state.node_exporter_pid}, new_state}
-
-          {:error, reason, new_state} ->
-            {:reply, {:error, reason}, new_state}
-        end
-    end
-  end
-
-  @impl true
-  def handle_call(:stop_servers, _from, state) do
-    case state.status do
-      :stopped ->
-        Logger.info("Metrics servers already stopped")
-        {:reply, :ok, state}
-
-      :running ->
-        case do_stop_servers(state) do
-          {:ok, new_state} ->
-            {:reply, :ok, new_state}
-
-          {:error, reason, new_state} ->
-            {:reply, {:error, reason}, new_state}
-        end
-
-      _status ->
-        Logger.warning("Metrics servers in unknown state, marking as stopped")
-        new_state = reset_state(state)
-        {:reply, :ok, new_state}
-    end
-  end
-
-  @impl true
   def handle_call(:servers_status, _from, state) do
     {status, new_state} = check_status(state)
     {:reply, status, new_state}
-  end
-
-  @impl true
-  def handle_call(:servers_config, _from, state) do
-    config =
-      Map.merge(state.config, %{
-        status: state.status,
-        pid: state.node_exporter_pid,
-        primary_interface_ip: state.primary_interface_ip
-      })
-
-    {:reply, config, state}
-  end
-
-  @impl true
-  def handle_call(:get_primary_interface_ip, _from, state) do
-    case state.primary_interface_ip do
-      nil ->
-        ip = Network.detect_primary_interface_ip()
-        new_state = %{state | primary_interface_ip: ip}
-
-        result = if ip, do: {:ok, ip}, else: {:error, :no_interface_found}
-        {:reply, result, new_state}
-
-      ip ->
-        {:reply, {:ok, ip}, state}
-    end
   end
 
   @impl true
@@ -289,17 +193,13 @@ defmodule EdgeAgentMetrics do
 
         case start_wireguard_exporter_safe(state_with_node) do
           {:ok, wg_pid, wg_port} ->
-            primary_ip = Network.detect_primary_interface_ip()
-
             Logger.info("WireGuard exporter started with PID #{wg_pid} on port #{state.wireguard_metrics_port}")
-            if primary_ip, do: Logger.info("Primary interface IP: #{primary_ip}")
 
             new_state = %{
               state_with_node
               | wireguard_exporter_pid: wg_pid,
                 wireguard_exporter_port_ref: wg_port,
-                status: :running,
-                primary_interface_ip: primary_ip
+                status: :running
             }
 
             {:ok, new_state}
@@ -471,8 +371,7 @@ defmodule EdgeAgentMetrics do
         node_exporter_port_ref: nil,
         wireguard_exporter_pid: nil,
         wireguard_exporter_port_ref: nil,
-        status: :stopped,
-        primary_interface_ip: nil
+        status: :stopped
     }
   end
 end

@@ -8,9 +8,6 @@ defmodule EdgeAgent.Commands.Resources.CommandExecutions do
   alias EdgeAgent.Commands.Schemas.CommandExecution
   alias EdgeAgent.Repo
 
-  @spec list() :: [CommandExecution.t()]
-  def list, do: Repo.all(CommandExecution)
-
   @spec get(String.t()) :: {:ok, CommandExecution.t()} | {:error, :not_found}
   def get(id) do
     case Repo.get(CommandExecution, id) do
@@ -32,22 +29,9 @@ defmodule EdgeAgent.Commands.Resources.CommandExecutions do
     |> Repo.normalize_conflict([:id])
   end
 
-  @spec update(CommandExecution.t(), map()) ::
-          {:ok, CommandExecution.t()} | {:error, Ecto.Changeset.t()}
-  def update(%CommandExecution{} = execution, attrs) do
-    execution
-    |> CommandExecution.changeset(attrs)
-    |> Repo.update()
-  end
-
   @spec delete(CommandExecution.t()) ::
           {:ok, CommandExecution.t()} | {:error, Ecto.Changeset.t()}
   def delete(%CommandExecution{} = execution), do: Repo.delete(execution)
-
-  @spec change(CommandExecution.t(), map()) :: Ecto.Changeset.t()
-  def change(%CommandExecution{} = execution, attrs \\ %{}) do
-    CommandExecution.changeset(execution, attrs)
-  end
 
   @spec by_status([CommandExecutionStatuses.t()] | CommandExecutionStatuses.t()) ::
           [CommandExecution.t()]

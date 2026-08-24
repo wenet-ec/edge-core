@@ -24,14 +24,6 @@ defmodule EdgeAgent.Commands do
   require Logger
 
   @doc """
-  Lists all command executions from the database.
-
-  Returns all executions regardless of status.
-  """
-  @spec list_command_executions() :: [CommandExecution.t()]
-  defdelegate list_command_executions(), to: CommandExecutionResource, as: :list
-
-  @doc """
   Gets a command execution by ID.
 
   Returns `{:ok, execution}` if found, `{:error, :not_found}` otherwise.
@@ -59,15 +51,7 @@ defmodule EdgeAgent.Commands do
     end
   end
 
-  @doc """
-  Creates a command execution record.
-
-  Lower-level function for creating executions without enqueueing workers.
-  Most callers should use `create_command_execution_and_enqueue_worker/1` instead.
-  """
-  @spec create_command_execution(map()) ::
-          {:ok, CommandExecution.t()} | {:error, Ecto.Changeset.t()} | {:error, {:conflict, String.t()}}
-  defdelegate create_command_execution(attrs \\ %{}), to: CommandExecutionResource, as: :create
+  defp create_command_execution(attrs), do: CommandExecutionResource.create(attrs)
 
   defp get_or_create_command_execution(attrs) do
     case get_command_execution(attrs["id"]) do
@@ -79,29 +63,7 @@ defmodule EdgeAgent.Commands do
     end
   end
 
-  @doc """
-  Updates a command execution with new attributes.
-
-  Typically used to update status, output, exit_code, and completed_at after execution.
-  """
-  @spec update_command_execution(CommandExecution.t(), map()) ::
-          {:ok, CommandExecution.t()} | {:error, Ecto.Changeset.t()}
-  defdelegate update_command_execution(command_execution, attrs), to: CommandExecutionResource, as: :update
-
-  @doc """
-  Deletes a command execution from the database.
-
-  Used after successfully reporting execution to admin.
-  """
-  @spec delete_command_execution(CommandExecution.t()) ::
-          {:ok, CommandExecution.t()} | {:error, Ecto.Changeset.t()}
-  defdelegate delete_command_execution(command_execution), to: CommandExecutionResource, as: :delete
-
-  @doc """
-  Returns a changeset for tracking command execution changes.
-  """
-  @spec change_command_execution(CommandExecution.t(), map()) :: Ecto.Changeset.t()
-  defdelegate change_command_execution(command_execution, attrs \\ %{}), to: CommandExecutionResource, as: :change
+  defp delete_command_execution(command_execution), do: CommandExecutionResource.delete(command_execution)
 
   @doc """
   Enqueues all recoverable command executions as Oban jobs.
@@ -157,7 +119,7 @@ defmodule EdgeAgent.Commands do
         :telemetry.execute(
           [:edge_agent, :commands, :execution, :completed],
           %{duration: duration, exit_code: exit_code, count: 1, total: 1},
-          %{result: categorize_exit_code(exit_code)}
+          %{result: CommandExecutionResults.categorize_exit_code(exit_code)}
         )
 
       :stale ->
@@ -177,10 +139,6 @@ defmodule EdgeAgent.Commands do
   """
   @spec claim_command_execution(CommandExecution.t()) :: {:ok, CommandExecution.t()} | :stale
   defdelegate claim_command_execution(execution), to: CommandExecutionResource, as: :claim
-
-  @doc false
-  @spec truncate_output(String.t() | nil) :: String.t() | nil
-  defdelegate truncate_output(output), to: CommandExecutionOutput, as: :truncate
 
   defp run_command(execution) do
     timeout_ms = execution.timeout || :infinity
@@ -212,10 +170,6 @@ defmodule EdgeAgent.Commands do
       {:error, out, code} -> {out, code}
     end
   end
-
-  @doc false
-  @spec categorize_exit_code(integer()) :: :success | :timeout | :cancelled | :failure | :unknown
-  defdelegate categorize_exit_code(exit_code), to: CommandExecutionResults
 
   @doc """
   Reports all completed but unreported executions back to admin.
@@ -338,10 +292,6 @@ defmodule EdgeAgent.Commands do
       end
     end)
   end
-
-  @doc false
-  @spec build_report_params(CommandExecution.t()) :: map()
-  defdelegate build_report_params(execution), to: CommandExecutionResults
 
   defp delete_execution_after_report(execution) do
     case delete_command_execution(execution) do

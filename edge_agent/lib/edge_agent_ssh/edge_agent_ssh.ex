@@ -1,11 +1,11 @@
 # edge_agent/lib/edge_agent_ssh/edge_agent_ssh.ex
 defmodule EdgeAgentSsh do
   @moduledoc """
-  SSH server GenServer
+  GenServer that owns the embedded Agent SSH daemon lifecycle and implements
+  the Erlang SSH host-key and public-key authentication callbacks.
   """
 
   @behaviour :ssh_server_key_api
-  @behaviour EdgeAgentSsh.Behaviour
 
   use GenServer
 
@@ -15,13 +15,6 @@ defmodule EdgeAgentSsh do
 
   require Logger
 
-  @impl EdgeAgentSsh.Behaviour
-  def start_server, do: GenServer.call(__MODULE__, :start_server)
-
-  @impl EdgeAgentSsh.Behaviour
-  def stop_server, do: GenServer.call(__MODULE__, :stop_server)
-
-  @impl EdgeAgentSsh.Behaviour
   def server_status, do: GenServer.call(__MODULE__, :server_status)
 
   def start_link(opts \\ []) do
@@ -45,44 +38,6 @@ defmodule EdgeAgentSsh do
       {:error, reason} ->
         Logger.error("Failed to auto-start SSH server: #{inspect(reason)}")
         {:ok, %{daemon_ref: nil, status: :error}}
-    end
-  end
-
-  @impl true
-  def handle_call(:start_server, _from, state) do
-    case state.status do
-      :running ->
-        Logger.info("SSH server already running")
-        {:reply, :ok, state}
-
-      _status ->
-        case do_start_server() do
-          {:ok, daemon_ref} ->
-            Logger.info("SSH server started successfully on port #{Config.ssh_port()}")
-            {:reply, :ok, %{state | daemon_ref: daemon_ref, status: :running}}
-
-          {:error, reason} = error ->
-            Logger.error("Failed to start SSH server: #{inspect(reason)}")
-            {:reply, error, %{state | status: :error}}
-        end
-    end
-  end
-
-  @impl true
-  def handle_call(:stop_server, _from, state) do
-    case state.status do
-      :stopped ->
-        Logger.info("SSH server already stopped")
-        {:reply, :ok, state}
-
-      :running when not is_nil(state.daemon_ref) ->
-        :ok = :ssh.stop_daemon(state.daemon_ref)
-        Logger.info("SSH server stopped successfully")
-        {:reply, :ok, %{state | daemon_ref: nil, status: :stopped}}
-
-      _status ->
-        Logger.warning("SSH server in unknown state, marking as stopped")
-        {:reply, :ok, %{state | daemon_ref: nil, status: :stopped}}
     end
   end
 

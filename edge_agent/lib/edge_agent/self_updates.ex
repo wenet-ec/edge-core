@@ -24,11 +24,8 @@ defmodule EdgeAgent.SelfUpdates do
 
   require Logger
 
-  @doc """
-  Checks if self-update feature is enabled.
-  """
   @spec enabled? :: boolean()
-  def enabled? do
+  defp enabled? do
     Application.get_env(:edge_agent, :self_update_enabled, false)
   end
 
@@ -104,9 +101,8 @@ defmodule EdgeAgent.SelfUpdates do
     :ok
   end
 
-  @doc false
   @spec start_update_task() :: :ok
-  def start_update_task do
+  defp start_update_task do
     Task.start(fn ->
       Logger.info("Triggering self-update asynchronously")
 

@@ -1,6 +1,6 @@
 # edge_admin/lib/edge_admin_proxy/admin_tunnel/session.ex
 defmodule EdgeAdminProxy.AdminTunnel.Session do
-  @moduledoc "Authenticates and relays one Admin-to-Admin proxy tunnel."
+  @moduledoc false
 
   alias EdgeAdminProxy.AdminTunnel.Config
   alias EdgeAdminProxy.AdminTunnel.Protocol

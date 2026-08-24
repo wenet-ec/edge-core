@@ -1,20 +1,17 @@
 # edge_admin/lib/edge_admin_proxy/admin_tunnel/config.ex
 defmodule EdgeAdminProxy.AdminTunnel.Config do
-  @moduledoc "Configuration for the private Admin-to-Admin TCP tunnel."
+  @moduledoc false
 
   alias EdgeAdmin.Vpn
 
-  @doc "Returns the Admin-to-Admin TCP tunnel port."
   def port do
     Application.get_env(:edge_admin, :admin_tcp_tunnel_port, 45_207)
   end
 
-  @doc "Returns the shared Admin-to-Admin tunnel handshake secret."
   def secret do
     Application.get_env(:edge_admin, :admin_tcp_tunnel_secret, "edge_admin_default_tcp_tunnel_secret")
   end
 
-  @doc "Returns available local addresses on the Admin-cluster VPN network."
   def bind_addresses do
     admin_cluster_name = Application.fetch_env!(:edge_admin, :admin_cluster_name)
 

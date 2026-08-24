@@ -1,6 +1,6 @@
 # edge_admin/lib/edge_admin_proxy/admin_tunnel/listener.ex
 defmodule EdgeAdminProxy.AdminTunnel.Listener do
-  @moduledoc "Accepts authenticated Admin-to-Admin proxy data connections."
+  @moduledoc false
 
   use GenServer
 

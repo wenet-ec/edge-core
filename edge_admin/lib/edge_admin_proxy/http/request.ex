@@ -1,8 +1,6 @@
 # edge_admin/lib/edge_admin_proxy/http/request.ex
 defmodule EdgeAdminProxy.Http.Request do
-  @moduledoc """
-  Pure HTTP proxy request and header transformations used by the Admin handler.
-  """
+  @moduledoc false
 
   @hop_by_hop_headers ~w(connection keep-alive proxy-authenticate proxy-authorization proxy-connection te trailer transfer-encoding upgrade)
 

@@ -1,6 +1,6 @@
 # edge_admin/lib/edge_admin_proxy/admin_tunnel/client.ex
 defmodule EdgeAdminProxy.AdminTunnel.Client do
-  @moduledoc "Opens the raw TCP data channel to the owning Admin."
+  @moduledoc false
 
   alias EdgeAdminProxy.AdminTunnel.Config
   alias EdgeAdminProxy.AdminTunnel.Protocol

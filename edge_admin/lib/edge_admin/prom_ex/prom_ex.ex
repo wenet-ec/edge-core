@@ -1,8 +1,6 @@
 # edge_admin/lib/edge_admin/prom_ex/prom_ex.ex
 defmodule EdgeAdmin.PromEx do
-  @moduledoc """
-  PromEx configuration for Edge Admin.
-  """
+  @moduledoc false
 
   use PromEx, otp_app: :edge_admin
 

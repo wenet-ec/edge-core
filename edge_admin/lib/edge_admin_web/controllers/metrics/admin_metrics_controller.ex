@@ -38,9 +38,6 @@ defmodule EdgeAdminWeb.Controllers.Metrics.AdminMetricsController do
     }
   )
 
-  @doc """
-  Returns admin application metrics (PromEx).
-  """
   def show(conn, _params) do
     with {:ok, metrics} <- Metrics.get_admin_metrics() do
       render(conn, :show, conn: conn, metrics: metrics)

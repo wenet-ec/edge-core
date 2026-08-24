@@ -37,12 +37,6 @@ defmodule EdgeAdminWeb.Controllers.Metrics.NodeMetricsController do
     }
   )
 
-  @doc """
-  Returns unified metrics from all sources (host, agent, etc.).
-
-  Fetches metrics in parallel from all available sources and aggregates them.
-  Uses best-effort approach - partial failures don't fail the entire request.
-  """
   def show_unified(conn, %{node_id: node_id}) do
     {:ok, unified_metrics} = Metrics.get_unified_metrics(node_id)
     render(conn, :show_unified, conn: conn, metrics: unified_metrics)
@@ -71,9 +65,6 @@ defmodule EdgeAdminWeb.Controllers.Metrics.NodeMetricsController do
     }
   )
 
-  @doc """
-  Returns host-level metrics only (Node Exporter).
-  """
   def show_host(conn, %{node_id: node_id}) do
     with {:ok, metrics} <- Metrics.get_host_metrics(node_id) do
       render(conn, :show_host, conn: conn, metrics: metrics)
@@ -108,9 +99,6 @@ defmodule EdgeAdminWeb.Controllers.Metrics.NodeMetricsController do
     }
   )
 
-  @doc """
-  Returns agent application metrics (PromEx).
-  """
   def show_agent(conn, %{node_id: node_id}) do
     with {:ok, metrics} <- Metrics.get_agent_metrics(node_id) do
       render(conn, :show_agent, conn: conn, metrics: metrics)

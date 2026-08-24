@@ -1,6 +1,6 @@
 # edge_admin/lib/edge_admin/ssh/resources/usernames.ex
 defmodule EdgeAdmin.Ssh.Resources.SshUsernames do
-  @moduledoc "Persistence and queries for SSH usernames."
+  @moduledoc false
 
   import Ecto.Query, warn: false
   import EdgeAdmin.Query, only: [case_insensitive_like: 2]
@@ -29,15 +29,12 @@ defmodule EdgeAdmin.Ssh.Resources.SshUsernames do
   @spec preload_public_keys(SshUsername.t()) :: SshUsername.t()
   def preload_public_keys(%SshUsername{} = username), do: Repo.preload(username, :ssh_public_keys)
 
-  @doc "Creates an SSH username."
   @spec create(map()) :: {:ok, SshUsername.t()} | {:error, Ecto.Changeset.t()}
   def create(attrs \\ %{}),
     do: %SshUsername{} |> SshUsername.changeset(attrs) |> Repo.insert() |> Repo.normalize_conflict([:username])
 
-  @doc "Deletes an SSH username."
   def delete(%SshUsername{} = username), do: Repo.delete(username)
 
-  @doc "Builds an SSH username changeset."
   def change(%SshUsername{} = username, attrs \\ %{}), do: SshUsername.changeset(username, attrs)
 
   def create_with_keys(%Node{} = node, params) do

@@ -1,6 +1,6 @@
 # edge_admin/lib/edge_admin/ssh/validators/ssh_public_key_validators.ex
 defmodule EdgeAdmin.Ssh.Validators.SshPublicKeyValidators do
-  @moduledoc "Pure validators for SSH public-key names and key material."
+  @moduledoc false
 
   alias EdgeAdmin.Naming
 

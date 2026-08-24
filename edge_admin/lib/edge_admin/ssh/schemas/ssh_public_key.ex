@@ -36,7 +36,6 @@ defmodule EdgeAdmin.Ssh.Schemas.SshPublicKey do
     timestamps()
   end
 
-  @doc "Builds a changeset for creating or updating an SSH public key."
   @spec changeset(t(), map()) :: Ecto.Changeset.t()
   def changeset(ssh_public_key, attrs) do
     ssh_public_key

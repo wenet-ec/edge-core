@@ -22,15 +22,12 @@ defmodule EdgeAdmin.Ssh do
   @spec preload_ssh_public_keys(SshUsername.t()) :: SshUsername.t()
   defdelegate preload_ssh_public_keys(username), to: SshUsernames, as: :preload_public_keys
 
-  @doc "Creates an SSH username from validated attributes."
   @spec create_ssh_username(map()) :: {:ok, SshUsername.t()} | {:error, Ecto.Changeset.t()}
   defdelegate create_ssh_username(attrs \\ %{}), to: SshUsernames, as: :create
 
-  @doc "Deletes an SSH username."
   @spec delete_ssh_username(SshUsername.t()) :: {:ok, SshUsername.t()} | {:error, Ecto.Changeset.t()}
   defdelegate delete_ssh_username(username), to: SshUsernames, as: :delete
 
-  @doc "Builds an SSH username changeset for form rendering."
   @spec change_ssh_username(SshUsername.t(), map()) :: Ecto.Changeset.t()
   defdelegate change_ssh_username(username, attrs \\ %{}), to: SshUsernames, as: :change
 
@@ -42,19 +39,15 @@ defmodule EdgeAdmin.Ssh do
   @spec verify_ssh_credentials(String.t(), map()) :: {:ok, boolean()} | {:error, Ecto.Changeset.t()}
   defdelegate verify_ssh_credentials(node_id, params), to: Verification, as: :verify
 
-  @doc "Gets an SSH public key by ID."
   @spec get_ssh_public_key(String.t()) :: {:ok, SshPublicKey.t()} | {:error, :not_found}
   defdelegate get_ssh_public_key(id), to: SshPublicKeys, as: :get
 
-  @doc "Updates an SSH public key."
   @spec update_ssh_public_key(SshPublicKey.t(), map()) :: {:ok, SshPublicKey.t()} | {:error, Ecto.Changeset.t()}
   defdelegate update_ssh_public_key(key, attrs), to: SshPublicKeys, as: :update
 
-  @doc "Deletes an SSH public key."
   @spec delete_ssh_public_key(SshPublicKey.t()) :: {:ok, SshPublicKey.t()} | {:error, Ecto.Changeset.t()}
   defdelegate delete_ssh_public_key(key), to: SshPublicKeys, as: :delete
 
-  @doc "Builds an SSH public-key changeset for form rendering."
   @spec change_ssh_public_key(SshPublicKey.t(), map()) :: Ecto.Changeset.t()
   defdelegate change_ssh_public_key(key, attrs \\ %{}), to: SshPublicKeys, as: :change
 

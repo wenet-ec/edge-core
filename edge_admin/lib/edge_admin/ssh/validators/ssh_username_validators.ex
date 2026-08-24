@@ -1,6 +1,6 @@
 # edge_admin/lib/edge_admin/ssh/validators/ssh_username_validators.ex
 defmodule EdgeAdmin.Ssh.Validators.SshUsernameValidators do
-  @moduledoc "Pure value-level validators for SSH usernames and passwords."
+  @moduledoc false
 
   alias EdgeAdmin.Naming
 

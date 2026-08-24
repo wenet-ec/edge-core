@@ -1,6 +1,6 @@
 # edge_admin/lib/edge_admin/ssh/resources/public_keys.ex
 defmodule EdgeAdmin.Ssh.Resources.SshPublicKeys do
-  @moduledoc "Persistence and queries for SSH public keys."
+  @moduledoc false
 
   import Ecto.Query, warn: false
   import EdgeAdmin.Query, only: [case_insensitive_like: 2]
@@ -12,7 +12,6 @@ defmodule EdgeAdmin.Ssh.Resources.SshPublicKeys do
   alias EdgeAdmin.Ssh.Schemas.SshPublicKey
   alias EdgeAdmin.Ssh.Schemas.SshUsername
 
-  @doc "Gets an SSH public key by ID."
   @spec get(String.t()) :: {:ok, SshPublicKey.t()} | {:error, :not_found}
   def get(id) do
     case Repo.get(SshPublicKey, id) do
@@ -39,13 +38,10 @@ defmodule EdgeAdmin.Ssh.Resources.SshPublicKeys do
     |> Repo.normalize_conflict([:key_name])
   end
 
-  @doc "Updates an SSH public key."
   def update(%SshPublicKey{} = key, attrs), do: key |> SshPublicKey.changeset(attrs) |> Repo.update()
 
-  @doc "Deletes an SSH public key."
   def delete(%SshPublicKey{} = key), do: Repo.delete(key)
 
-  @doc "Builds an SSH public-key changeset."
   def change(%SshPublicKey{} = key, attrs \\ %{}), do: SshPublicKey.changeset(key, attrs)
 
   @spec list(map()) :: {:ok, {[SshPublicKey.t()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}

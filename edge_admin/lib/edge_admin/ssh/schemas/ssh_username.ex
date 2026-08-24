@@ -46,7 +46,6 @@ defmodule EdgeAdmin.Ssh.Schemas.SshUsername do
   def has_password?(%__MODULE__{password_hash: nil}), do: false
   def has_password?(%__MODULE__{password_hash: _hash}), do: true
 
-  @doc "Builds a changeset for creating or updating an SSH username."
   @spec changeset(t(), map()) :: Ecto.Changeset.t()
   def changeset(ssh_username, attrs) do
     ssh_username

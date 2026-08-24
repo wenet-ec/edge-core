@@ -1,6 +1,6 @@
 # edge_admin/lib/edge_admin/ssh/validators/credential_request_validators.ex
 defmodule EdgeAdmin.Ssh.Validators.CredentialRequestValidators do
-  @moduledoc "Pure validators for SSH credential-verification request shape."
+  @moduledoc false
 
   @spec error(term(), term()) :: :ok | {:error, String.t()}
   def error(nil, nil), do: {:error, "either password or public_key must be provided"}

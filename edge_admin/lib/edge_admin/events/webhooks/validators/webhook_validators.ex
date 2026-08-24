@@ -1,6 +1,6 @@
 # edge_admin/lib/edge_admin/events/webhooks/validators/webhook_validators.ex
 defmodule EdgeAdmin.Events.Webhooks.Validators.WebhookValidators do
-  @moduledoc "Pure value-level validators for webhook configuration."
+  @moduledoc false
 
   alias EdgeAdmin.Events.Catalog
   alias EdgeAdmin.Events.Webhooks.Limits

@@ -36,7 +36,6 @@ defmodule EdgeAdmin.Events.Webhooks.Schemas.Webhook do
     timestamps()
   end
 
-  @doc "Builds a changeset for creating or updating a webhook."
   @spec changeset(t(), map()) :: Ecto.Changeset.t()
   def changeset(webhook, attrs) do
     webhook

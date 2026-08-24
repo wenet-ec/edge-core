@@ -1,6 +1,6 @@
 # edge_admin/lib/edge_admin/events/webhooks/resources/webhooks.ex
 defmodule EdgeAdmin.Events.Webhooks.Resources.Webhooks do
-  @moduledoc "Persistence and filtering for configured event webhooks."
+  @moduledoc false
 
   import Ecto.Query, warn: false
   import EdgeAdmin.Query, only: [case_insensitive_like: 2]
@@ -29,7 +29,6 @@ defmodule EdgeAdmin.Events.Webhooks.Resources.Webhooks do
     Flop.validate_and_run(query, flop_params, for: Webhook, replace_invalid_params: true)
   end
 
-  @doc "Gets a webhook by ID."
   @spec get(String.t()) :: {:ok, Webhook.t()} | {:error, :not_found}
   def get(id) do
     case Repo.get(Webhook, id) do
@@ -64,7 +63,6 @@ defmodule EdgeAdmin.Events.Webhooks.Resources.Webhooks do
 
   defp validate_ssrf(attrs), do: {:ok, attrs}
 
-  @doc "Deletes a webhook."
   @spec delete(Webhook.t()) :: {:ok, Webhook.t()} | {:error, Ecto.Changeset.t()}
   def delete(%Webhook{} = webhook), do: Repo.delete(webhook)
 end

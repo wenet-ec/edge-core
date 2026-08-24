@@ -17,7 +17,6 @@ defmodule EdgeAdmin.Events.Webhooks do
           {:ok, {[Webhook.t()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
   defdelegate list_webhooks(params \\ %{}), to: WebhookResource, as: :list
 
-  @doc "Gets a webhook by ID."
   @spec get_webhook(String.t()) :: {:ok, Webhook.t()} | {:error, :not_found}
   defdelegate get_webhook(id), to: WebhookResource, as: :get
 
@@ -25,7 +24,6 @@ defmodule EdgeAdmin.Events.Webhooks do
   @spec create_webhook(map()) :: {:ok, Webhook.t()} | {:error, Ecto.Changeset.t()}
   defdelegate create_webhook(attrs \\ %{}), to: WebhookResource, as: :create
 
-  @doc "Deletes a webhook."
   @spec delete_webhook(Webhook.t()) :: {:ok, Webhook.t()} | {:error, Ecto.Changeset.t()}
   defdelegate delete_webhook(webhook), to: WebhookResource, as: :delete
 

@@ -15,7 +15,6 @@ defmodule EdgeAdmin.Nodes.Workflows.HealthCheck do
   alias EdgeAdmin.Events.Catalog
   alias EdgeAdmin.GatewayRegistry
   alias EdgeAdmin.GatewayRegistry.AgentClient
-  alias EdgeAdmin.GatewayRegistry.VirtualGateway
   alias EdgeAdmin.Nodes.Forms
   alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.Repo
@@ -173,7 +172,7 @@ defmodule EdgeAdmin.Nodes.Workflows.HealthCheck do
 
   defp ping_via_gateway(node) do
     case GatewayRegistry.resolve_node(node) do
-      {:ok, gateway} -> VirtualGateway.ping(gateway, node)
+      {:ok, gateway} -> GatewayRegistry.ping(gateway, node)
       {:error, _reason} -> :unreachable
     end
   end

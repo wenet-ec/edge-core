@@ -24,6 +24,40 @@ defmodule EdgeAdmin.GatewayRegistry do
 
   def resolve_node(_node), do: {:error, :cluster_not_loaded}
 
+  @doc "Scrapes host metrics through a resolved virtual gateway."
+  @spec scrape_host_metrics(pid(), struct()) :: {:ok, String.t()} | {:error, term()}
+  def scrape_host_metrics(gateway_pid, node), do: VirtualGateway.scrape_host_metrics(gateway_pid, node)
+
+  @doc "Scrapes agent metrics through a resolved virtual gateway."
+  @spec scrape_agent_metrics(pid(), struct()) :: {:ok, String.t()} | {:error, term()}
+  def scrape_agent_metrics(gateway_pid, node), do: VirtualGateway.scrape_agent_metrics(gateway_pid, node)
+
+  @doc "Scrapes WireGuard metrics through a resolved virtual gateway."
+  @spec scrape_wireguard_metrics(pid(), struct()) :: {:ok, String.t()} | {:error, term()}
+  def scrape_wireguard_metrics(gateway_pid, node), do: VirtualGateway.scrape_wireguard_metrics(gateway_pid, node)
+
+  @doc "Requests node diagnostics through a resolved virtual gateway."
+  @spec get_diagnostics(pid(), struct()) :: {:ok, map()} | {:error, term()}
+  def get_diagnostics(gateway_pid, node), do: VirtualGateway.get_diagnostics(gateway_pid, node)
+
+  @doc "Triggers a self-update through a resolved virtual gateway."
+  @spec trigger_self_update(pid(), struct()) :: :ok | {:error, term()}
+  def trigger_self_update(gateway_pid, node), do: VirtualGateway.trigger_self_update(gateway_pid, node)
+
+  @doc "Cancels a command execution through a resolved virtual gateway."
+  @spec cancel_execution(pid(), struct(), binary()) :: :ok | {:error, term()}
+  def cancel_execution(gateway_pid, node, execution_id),
+    do: VirtualGateway.cancel_execution(gateway_pid, node, execution_id)
+
+  @doc "Pings a node through a resolved virtual gateway."
+  @spec ping(pid(), struct()) :: :healthy | :unhealthy | :unreachable
+  def ping(gateway_pid, node), do: VirtualGateway.ping(gateway_pid, node)
+
+  @doc "Delivers a command execution through a resolved virtual gateway."
+  @spec deliver_execution(pid(), struct(), map()) :: {:ok, :sent} | {:error, term()}
+  def deliver_execution(gateway_pid, node, execution_data),
+    do: VirtualGateway.deliver_execution(gateway_pid, node, execution_data)
+
   @spec open_stream(String.t(), String.t(), 1..65_535) ::
           {:ok, :gen_tcp.socket()} | {:error, term()}
   def open_stream(cluster_name, target_host, target_port) do

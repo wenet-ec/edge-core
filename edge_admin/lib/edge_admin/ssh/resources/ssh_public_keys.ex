@@ -38,11 +38,7 @@ defmodule EdgeAdmin.Ssh.Resources.SshPublicKeys do
     |> Repo.normalize_conflict([:key_name])
   end
 
-  def update(%SshPublicKey{} = key, attrs), do: key |> SshPublicKey.changeset(attrs) |> Repo.update()
-
   def delete(%SshPublicKey{} = key), do: Repo.delete(key)
-
-  def change(%SshPublicKey{} = key, attrs \\ %{}), do: SshPublicKey.changeset(key, attrs)
 
   @spec list(map()) :: {:ok, {[SshPublicKey.t()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
   def list(params \\ %{}) do

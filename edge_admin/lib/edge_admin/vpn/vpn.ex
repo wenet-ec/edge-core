@@ -45,30 +45,6 @@ defmodule EdgeAdmin.Vpn do
   end
 
   @doc """
-  Returns the configured base ranges for auto-generating cluster subnets.
-  """
-  def cluster_auto_generated_v4_ranges do
-    Application.get_env(:edge_admin, :cluster_auto_generated_v4_ranges)
-  end
-
-  @doc """
-  Returns the target subnet prefix for auto-generated clusters.
-  """
-  def cluster_v4_subnet_prefix do
-    Application.get_env(:edge_admin, :cluster_v4_subnet_prefix)
-  end
-
-  @doc "Returns the configured ULA pools used to allocate edge-cluster IPv6 /64s."
-  def cluster_auto_generated_v6_ranges do
-    Application.get_env(:edge_admin, :cluster_auto_generated_v6_ranges)
-  end
-
-  @doc "Returns the target prefix for automatically allocated IPv6 edge networks."
-  def cluster_v6_subnet_prefix do
-    Application.get_env(:edge_admin, :cluster_v6_subnet_prefix, 64)
-  end
-
-  @doc """
   Returns the number of IP slots reserved for Admin Gateway nodes.
 
   Should be tuned to match the total number of Admin Gateway instances across all admin clusters per core.
@@ -81,22 +57,17 @@ defmodule EdgeAdmin.Vpn do
 
   defdelegate build_vpn_name(name, opts \\ []), to: VpnNaming
   defdelegate build_network_name(name, opts \\ []), to: VpnNaming
-  defdelegate validate_admin_cluster_suffix!(suffix), to: VpnNaming
   defdelegate build_vpn_domain(network, domain \\ nil), to: VpnNaming
   defdelegate build_vpn_hostname(host, network, domain \\ nil), to: VpnNaming
   defdelegate build_admin_erlang_node_name(hostname), to: VpnNaming
   defdelegate validate_network_name(name), to: VpnNaming
 
   defdelegate parse_cidr(cidr), to: VpnAddressing
-  defdelegate parse_ipv4(ip_str), to: VpnAddressing
   defdelegate generate_next_subnet(existing_ranges \\ []), to: VpnAddressing
   defdelegate generate_next_ipv6_subnet(existing_ranges \\ []), to: VpnAddressing
-  defdelegate find_available_subnet(base_cidr, target_prefix, existing_ranges), to: VpnAddressing
-  defdelegate find_available_ipv6_subnet(base_cidr, target_prefix, existing_ranges), to: VpnAddressing
   defdelegate parse_ipv6_cidr(cidr), to: VpnAddressing
   defdelegate ipv6_cidrs_overlap?(cidr, existing_ranges), to: VpnAddressing
   defdelegate ipv4_cidrs_overlap?(cidr, existing_ranges), to: VpnAddressing
-  defdelegate generate_subnets(base_ip, base_prefix, target_prefix), to: VpnAddressing
 
   @doc """
   Funnel for Netmaker API responses.
@@ -584,26 +555,6 @@ defmodule EdgeAdmin.Vpn do
   end
 
   @doc """
-  Creates an enrollment key for a Netmaker network.
-
-  Returns `{:ok, key}` or `{:error, :service_unavailable}`.
-  """
-  def create_enrollment_key(network_name, opts \\ %{}) do
-    network_name
-    |> EnrollmentKeys.create(opts)
-    |> normalize_netmaker_error()
-  end
-
-  @doc """
-  Lists all enrollment keys from Netmaker.
-
-  Returns `{:ok, keys}` or `{:error, :service_unavailable}`.
-  """
-  def list_enrollment_keys do
-    normalize_netmaker_error(EnrollmentKeys.list())
-  end
-
-  @doc """
   Gets the default enrollment key token for a network.
 
   Returns `{:ok, token}` or `{:error, :default_key_not_found}`.
@@ -641,16 +592,7 @@ defmodule EdgeAdmin.Vpn do
     Nexmaker.Cli.health_check(opts)
   end
 
-  @doc """
-  Pulls latest VPN configuration from Netmaker server.
-
-  Forces the Edge VPN CLI to fetch full configuration via HTTP API, bypassing MQTT.
-  Used by `sync_vpn_config/0` (Quantum periodic backstop) — no other
-  call sites today.
-
-  Returns `:ok` or `{:error, reason}`.
-  """
-  def pull do
+  defp pull do
     Nexmaker.Cli.pull()
   end
 
@@ -736,18 +678,6 @@ defmodule EdgeAdmin.Vpn do
   end
 
   @doc """
-  Lists all DNS entries for a network (node auto-generated + custom).
-
-  Returns `{:ok, dns_entries}` or `{:error, :service_unavailable}`.
-  """
-  @spec list_dns_entries(String.t()) :: {:ok, [map()]} | {:error, :service_unavailable}
-  def list_dns_entries(network_name) do
-    network_name
-    |> DNS.list()
-    |> normalize_netmaker_error()
-  end
-
-  @doc """
   Lists only custom DNS entries for a network (excludes auto-generated node entries).
 
   Returns `{:ok, dns_entries}` or `{:error, :service_unavailable}`.
@@ -788,19 +718,6 @@ defmodule EdgeAdmin.Vpn do
 
       {:error, reason} ->
         {:error, reason}
-    end
-  end
-
-  @doc """
-  Finds a node's Netmaker node ID by host ID.
-
-  Convenience wrapper around `find_node_by_host/2` that returns only the node ID.
-  """
-  @spec find_node_id_by_host(String.t(), String.t()) :: {:ok, String.t()} | {:error, :not_found | :service_unavailable}
-  def find_node_id_by_host(network_name, host_id) do
-    case find_node_by_host(network_name, host_id) do
-      {:ok, %{"id" => node_id}} -> {:ok, node_id}
-      {:error, reason} -> {:error, reason}
     end
   end
 end

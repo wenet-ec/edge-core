@@ -25,13 +25,10 @@ defmodule EdgeAdmin.Ssh.Resources.SshUsernames do
     CastError -> {:error, :not_found}
   end
 
-  @spec create(map()) :: {:ok, SshUsername.t()} | {:error, Ecto.Changeset.t()}
-  def create(attrs \\ %{}),
+  defp create(attrs),
     do: %SshUsername{} |> SshUsername.changeset(attrs) |> Repo.insert() |> Repo.normalize_conflict([:username])
 
   def delete(%SshUsername{} = username), do: Repo.delete(username)
-
-  def change(%SshUsername{} = username, attrs \\ %{}), do: SshUsername.changeset(username, attrs)
 
   def create_with_keys(%Node{} = node, params) do
     with {:ok, attrs} <- Forms.CreateSshUsernameForm.changeset(params) do

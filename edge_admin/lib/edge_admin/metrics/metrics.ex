@@ -33,7 +33,6 @@ defmodule EdgeAdmin.Metrics do
 
   alias EdgeAdmin.AdminClustering.Metadata
   alias EdgeAdmin.GatewayRegistry
-  alias EdgeAdmin.GatewayRegistry.VirtualGateway
   alias EdgeAdmin.Metrics.Forms.PushMetricsCacheForm
   alias EdgeAdmin.Metrics.Parsers.AdminMetricsParser
   alias EdgeAdmin.Metrics.Parsers.AgentMetricsParser
@@ -59,11 +58,7 @@ defmodule EdgeAdmin.Metrics do
     end
   end
 
-  @doc """
-  Scrapes raw Prometheus admin metrics directly from PromEx module.
-  """
-  @spec scrape_admin_metrics() :: {:ok, String.t()} | {:error, :prom_ex_unavailable}
-  def scrape_admin_metrics do
+  defp scrape_admin_metrics do
     case PromEx.get_metrics(EdgeAdmin.PromEx) do
       :prom_ex_down ->
         {:error, :prom_ex_unavailable}
@@ -95,7 +90,7 @@ defmodule EdgeAdmin.Metrics do
   """
   @spec scrape_host_metrics(binary()) :: {:ok, String.t()} | {:error, term()}
   def scrape_host_metrics(node_id) do
-    scrape_node_metrics(node_id, :host, &VirtualGateway.scrape_host_metrics/2)
+    scrape_node_metrics(node_id, :host, &GatewayRegistry.scrape_host_metrics/2)
   end
 
   @doc """
@@ -123,7 +118,7 @@ defmodule EdgeAdmin.Metrics do
   """
   @spec scrape_agent_metrics(binary()) :: {:ok, String.t()} | {:error, term()}
   def scrape_agent_metrics(node_id) do
-    scrape_node_metrics(node_id, :agent, &VirtualGateway.scrape_agent_metrics/2)
+    scrape_node_metrics(node_id, :agent, &GatewayRegistry.scrape_agent_metrics/2)
   end
 
   @doc """
@@ -189,7 +184,7 @@ defmodule EdgeAdmin.Metrics do
   """
   @spec scrape_wireguard_metrics(binary()) :: {:ok, String.t()} | {:error, term()}
   def scrape_wireguard_metrics(node_id) do
-    scrape_node_metrics(node_id, :wireguard, &VirtualGateway.scrape_wireguard_metrics/2)
+    scrape_node_metrics(node_id, :wireguard, &GatewayRegistry.scrape_wireguard_metrics/2)
   end
 
   defp scrape_node_metrics(node_id, metrics_type, gateway_scrape_fn) do
@@ -248,16 +243,7 @@ defmodule EdgeAdmin.Metrics do
     end
   end
 
-  @doc """
-  Upserts metrics cache for a node.
-
-  Creates a new cache entry or updates existing one (based on unique constraint
-  on node_id + metrics_type). This allows agents to push metrics repeatedly
-  without creating duplicate entries.
-  """
-  @spec upsert_metrics_cache(binary(), String.t(), String.t()) ::
-          {:ok, NodeMetricsCache.t()} | {:error, Ecto.Changeset.t()}
-  def upsert_metrics_cache(node_id, metrics_type, metrics_text) do
+  defp upsert_metrics_cache(node_id, metrics_type, metrics_text) do
     attrs = %{
       node_id: node_id,
       metrics_type: metrics_type,
@@ -272,15 +258,7 @@ defmodule EdgeAdmin.Metrics do
     )
   end
 
-  @doc """
-  Gets cached metrics for a node if not stale (within 5 minutes).
-
-  Returns nil if:
-  - No cache entry exists
-  - Cache entry is older than 5 minutes (stale)
-  """
-  @spec get_cached_metrics(binary(), String.t()) :: NodeMetricsCache.t() | nil
-  def get_cached_metrics(node_id, metrics_type) do
+  defp get_cached_metrics(node_id, metrics_type) do
     cutoff = DateTime.shift(DateTime.utc_now(), minute: -@cache_staleness_minutes)
 
     NodeMetricsCache
@@ -288,12 +266,4 @@ defmodule EdgeAdmin.Metrics do
     |> where([m], m.updated_at >= ^cutoff)
     |> Repo.one()
   end
-
-  @doc """
-  Returns the configured cache staleness threshold in minutes.
-
-  Cache entries older than this are not served.
-  """
-  @spec cache_staleness_minutes() :: non_neg_integer()
-  def cache_staleness_minutes, do: @cache_staleness_minutes
 end

@@ -4,10 +4,10 @@ defmodule EdgeAdmin.SelfUpdates.Workers.TriggerSelfUpdateWorker do
 
   use Oban.Worker, queue: :self_updates, max_attempts: 3
 
-  alias EdgeAdmin.SelfUpdates.Workflows.Processing
+  alias EdgeAdmin.SelfUpdates
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"request_id" => request_id}}) do
-    Processing.process_self_update_request(request_id)
+    SelfUpdates.process_self_update_request(request_id)
   end
 end

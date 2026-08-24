@@ -8,7 +8,6 @@ defmodule EdgeAdmin.Nodes.Resources.Diagnostics do
 
   alias EdgeAdmin.AdminClustering.Metadata
   alias EdgeAdmin.GatewayRegistry
-  alias EdgeAdmin.GatewayRegistry.VirtualGateway
   alias EdgeAdmin.Nodes.Resources.Nodes, as: NodeResource
   alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.Nodes.Schemas.NodeDiagnostic
@@ -44,7 +43,7 @@ defmodule EdgeAdmin.Nodes.Resources.Diagnostics do
     with {:ok, cluster_name, _owner} <- Metadata.find_node_cluster(node_name),
          {:ok, gateway} <- GatewayRegistry.resolve(cluster_name) do
       try do
-        VirtualGateway.get_diagnostics(gateway, node)
+        GatewayRegistry.get_diagnostics(gateway, node)
       catch
         :exit, {:timeout, _} -> {:error, :timeout}
         :exit, reason -> {:error, {:gateway_exit, reason}}

@@ -131,11 +131,6 @@ defmodule EdgeAdmin.Nodes do
   @spec list_clusters(map()) :: {:ok, {[Cluster.t()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
   defdelegate list_clusters(params \\ %{}), to: Clusters, as: :list
 
-  @doc "Lists active and retired clusters for maintenance reconciliation."
-  @spec list_clusters_for_reconciliation(map()) ::
-          {:ok, {[Cluster.t()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
-  defdelegate list_clusters_for_reconciliation(params), to: Clusters, as: :list_for_reconciliation
-
   @doc """
   Lists cluster-node mappings.
 
@@ -371,11 +366,6 @@ defmodule EdgeAdmin.Nodes do
     end
   end
 
-  @doc "Returns a recent cached diagnostic report for a node, if available."
-  @spec get_cached_node_diagnostic(String.t()) ::
-          NodeDiagnostic.t() | nil
-  defdelegate get_cached_node_diagnostic(node_id), to: Diagnostics
-
   @doc """
   Lists nodes with filtering, sorting, and pagination.
 
@@ -407,15 +397,6 @@ defmodule EdgeAdmin.Nodes do
   """
   @spec list_nodes_for_discovery(map()) :: {:ok, [Node.t()]} | {:error, Flop.Meta.t()}
   defdelegate list_nodes_for_discovery(params \\ %{}), to: NodeResource, as: :list_for_discovery
-
-  @doc """
-  Gets multiple nodes by their IDs.
-
-  Returns one `{:ok, node}` or `{:error, message}` tuple per input ID.
-  """
-
-  @spec get_nodes_by_ids([String.t()]) :: [{:ok, Node.t()} | {:error, String.t()}]
-  defdelegate get_nodes_by_ids(node_ids), to: NodeResource, as: :get_by_ids
 
   @doc """
   Lists all valid node identifiers (IDs and aliases) for a cluster.
@@ -505,12 +486,6 @@ defmodule EdgeAdmin.Nodes do
   @doc "Enqueues cluster reconciliation and retired-cluster deletion work."
   defdelegate enqueue_cluster_reconciliation(), to: Reconciliation
 
-  @doc "Cleans up aliases for a node and their Edge VPN DNS entries."
-  defdelegate cleanup_node_aliases(node), to: Aliases
-
-  @doc "Cleans up aliases belonging to orphaned nodes."
-  defdelegate cleanup_orphaned_aliases(nodes), to: Aliases
-
   @doc "Lists aliases with filtering and pagination."
   defdelegate list_aliases(params \\ %{}), to: Aliases, as: :list
 
@@ -523,7 +498,4 @@ defmodule EdgeAdmin.Nodes do
   defdelegate delete_alias(alias_record), to: Aliases, as: :delete
 
   defdelegate change_alias(alias_record, attrs \\ %{}), to: Aliases, as: :change
-
-  @doc "Reconciles alias DNS entries for active clusters."
-  defdelegate cleanup_ghost_aliases(clusters, acc), to: Aliases
 end

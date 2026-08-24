@@ -24,7 +24,7 @@ defmodule EdgeAdmin.Nodes.Targeting do
   2. **Resolution** (`nodes_for_all/2`, `nodes_for_ids/2`,
      `nodes_for_clusters/3`) — at runtime, turns a validated targeting spec
      into the concrete list of nodes the operation should run against. Pages
-     through `Nodes.list_nodes/1` and `Nodes.list_clusters/1` and intersects
+     through the cluster and node resources and intersects
      the results.
 
   ## Shape
@@ -58,8 +58,9 @@ defmodule EdgeAdmin.Nodes.Targeting do
   future standardization step.
   """
 
-  alias EdgeAdmin.Nodes
   alias EdgeAdmin.Nodes.Enums.NodeStatuses
+  alias EdgeAdmin.Nodes.Resources.Clusters
+  alias EdgeAdmin.Nodes.Resources.Nodes
   alias EdgeAdmin.Nodes.Schemas.Node
 
   require Logger
@@ -205,7 +206,7 @@ defmodule EdgeAdmin.Nodes.Targeting do
 
     nodes =
       unique_node_ids
-      |> Nodes.get_nodes_by_ids()
+      |> Nodes.get_by_ids()
       |> Enum.filter(&match?({:ok, _}, &1))
       |> Enum.map(fn {:ok, node} -> node end)
 
@@ -236,7 +237,7 @@ defmodule EdgeAdmin.Nodes.Targeting do
 
     clusters =
       unique_cluster_names
-      |> Enum.map(&Nodes.get_cluster/1)
+      |> Enum.map(&Clusters.get/1)
       |> Enum.filter(&match?({:ok, _}, &1))
       |> Enum.map(fn {:ok, cluster} -> cluster end)
 
@@ -274,7 +275,7 @@ defmodule EdgeAdmin.Nodes.Targeting do
     end
   end
 
-  # Pages through Nodes.list_clusters/1 to collect every cluster name matching
+  # Pages through Clusters.list/1 to collect every cluster name matching
   # the given cluster_filters.
   defp all_filtered_cluster_names(cluster_filters, page \\ 1, accumulated_names \\ []) do
     params =
@@ -282,7 +283,7 @@ defmodule EdgeAdmin.Nodes.Targeting do
       |> Map.put("page_size", "1000")
       |> Map.put("page", to_string(page))
 
-    case Nodes.list_clusters(params) do
+    case Clusters.list(params) do
       {:ok, {clusters, meta}} ->
         all_names = accumulated_names ++ Enum.map(clusters, & &1.name)
 
@@ -298,7 +299,7 @@ defmodule EdgeAdmin.Nodes.Targeting do
     end
   end
 
-  # Pages through Nodes.list_nodes/1 and intersects the result with the given
+  # Pages through Nodes.list/1 and intersects the result with the given
   # cluster names.
   defp nodes_from_cluster_list(cluster_names, node_filters, page \\ 1, accumulated_nodes \\ []) do
     cluster_name_set = MapSet.new(cluster_names)
@@ -308,7 +309,7 @@ defmodule EdgeAdmin.Nodes.Targeting do
       |> Map.put("page_size", "1000")
       |> Map.put("page", to_string(page))
 
-    case Nodes.list_nodes(params) do
+    case Nodes.list(params) do
       {:ok, {nodes, meta}} ->
         filtered_nodes =
           Enum.filter(nodes, fn node ->
@@ -329,7 +330,7 @@ defmodule EdgeAdmin.Nodes.Targeting do
     end
   end
 
-  # Pages through Nodes.list_nodes/1 to collect every node matching node_filters,
+  # Pages through Nodes.list/1 to collect every node matching node_filters,
   # optionally narrowed to clusters matching cluster_filters. The cluster name
   # set is computed once on the first page and threaded through the recursion.
   defp all_filtered_nodes(node_filters, cluster_filters, page \\ 1, accumulated_nodes \\ [], cluster_names \\ nil) do
@@ -344,7 +345,7 @@ defmodule EdgeAdmin.Nodes.Targeting do
       |> Map.put("page_size", "100")
       |> Map.put("page", to_string(page))
 
-    case Nodes.list_nodes(params) do
+    case Nodes.list(params) do
       {:ok, {nodes, meta}} ->
         filtered_nodes =
           if cluster_names do

@@ -13,9 +13,9 @@ defmodule EdgeAdmin.Nodes.Workflows.Reconciliation do
   alias Ecto.Query.CastError
   alias EdgeAdmin.AdminClustering.Metadata
   alias EdgeAdmin.Commands
-  alias EdgeAdmin.Nodes
   alias EdgeAdmin.Nodes.Queries.ClusterQueries
   alias EdgeAdmin.Nodes.Resources.Aliases
+  alias EdgeAdmin.Nodes.Resources.Clusters
   alias EdgeAdmin.Nodes.Schemas.Cluster
   alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.Nodes.Workers.DeleteClusterWorker
@@ -59,7 +59,7 @@ defmodule EdgeAdmin.Nodes.Workflows.Reconciliation do
   """
   @spec reconcile_cluster(String.t()) :: {:ok, map()} | {:error, :not_found}
   def reconcile_cluster(cluster_name) do
-    case Nodes.get_cluster(cluster_name) do
+    case Clusters.get(cluster_name) do
       {:ok, cluster} -> {:ok, reconcile_active_cluster(cluster)}
       {:error, :not_found} = error -> error
     end
@@ -152,7 +152,7 @@ defmodule EdgeAdmin.Nodes.Workflows.Reconciliation do
 
   defp enqueue_cluster_reconciliation_page(page, total) do
     {:ok, {clusters, meta}} =
-      list_clusters_for_reconciliation(%{"page_size" => "500", "page" => to_string(page)})
+      Clusters.list_for_reconciliation(%{"page_size" => "500", "page" => to_string(page)})
 
     count =
       Enum.reduce(clusters, 0, fn cluster, acc ->
@@ -185,14 +185,8 @@ defmodule EdgeAdmin.Nodes.Workflows.Reconciliation do
     end
   end
 
-  # The maintenance scheduler includes retired rows so it can enqueue their deletion
-  # workers until their tombstones have been removed.
-  defp list_clusters_for_reconciliation(params) do
-    Nodes.list_clusters_for_reconciliation(params)
-  end
-
   defp reconcile_clusters_paginated(page, acc) do
-    {:ok, {clusters, meta}} = Nodes.list_clusters(%{"page_size" => "500", "page" => to_string(page)})
+    {:ok, {clusters, meta}} = Clusters.list(%{"page_size" => "500", "page" => to_string(page)})
 
     if Enum.empty?(clusters) do
       # No more clusters to process

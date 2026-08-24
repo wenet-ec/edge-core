@@ -19,7 +19,6 @@ defmodule EdgeAdmin.Commands.Workflows.Delivery do
   alias EdgeAdmin.Events
   alias EdgeAdmin.Events.Catalog
   alias EdgeAdmin.GatewayRegistry
-  alias EdgeAdmin.GatewayRegistry.VirtualGateway
   alias EdgeAdmin.Nodes.Targeting
   alias EdgeAdmin.Repo
 
@@ -376,7 +375,7 @@ defmodule EdgeAdmin.Commands.Workflows.Delivery do
 
   defp deliver_execution_via_gateway(node, execution_data) do
     with {:ok, gateway} <- GatewayRegistry.resolve_node(node) do
-      VirtualGateway.deliver_execution(gateway, node, execution_data)
+      GatewayRegistry.deliver_execution(gateway, node, execution_data)
     end
   end
 end

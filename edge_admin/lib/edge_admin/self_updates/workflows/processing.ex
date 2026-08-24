@@ -6,7 +6,6 @@ defmodule EdgeAdmin.SelfUpdates.Workflows.Processing do
   alias EdgeAdmin.Events
   alias EdgeAdmin.Events.Catalog
   alias EdgeAdmin.GatewayRegistry
-  alias EdgeAdmin.GatewayRegistry.VirtualGateway
   alias EdgeAdmin.Nodes.Schemas.Cluster
   alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.Nodes.Targeting
@@ -73,7 +72,7 @@ defmodule EdgeAdmin.SelfUpdates.Workflows.Processing do
 
     with {:ok, cluster_name, _} <- Metadata.find_node_cluster(name),
          {:ok, gateway} <- GatewayRegistry.resolve(cluster_name),
-         :ok <- VirtualGateway.trigger_self_update(gateway, node) do
+         :ok <- GatewayRegistry.trigger_self_update(gateway, node) do
       Events.publish(%Catalog.NodeUpdateTriggered{node: node, self_update_request_id: request_id})
       :ok
     else
@@ -101,7 +100,7 @@ defmodule EdgeAdmin.SelfUpdates.Workflows.Processing do
   end
 
   defp trigger_node_with_gateway(node, gateway, request_id) do
-    case VirtualGateway.trigger_self_update(gateway, node) do
+    case GatewayRegistry.trigger_self_update(gateway, node) do
       :ok ->
         Events.publish(%Catalog.NodeUpdateTriggered{node: node, self_update_request_id: request_id})
         :ok

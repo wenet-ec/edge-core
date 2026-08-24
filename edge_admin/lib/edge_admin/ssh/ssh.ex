@@ -18,14 +18,8 @@ defmodule EdgeAdmin.Ssh do
   @spec get_ssh_username(String.t()) :: {:ok, SshUsername.t()} | {:error, :not_found}
   defdelegate get_ssh_username(id), to: SshUsernames, as: :get
 
-  @spec create_ssh_username(map()) :: {:ok, SshUsername.t()} | {:error, Ecto.Changeset.t()}
-  defdelegate create_ssh_username(attrs \\ %{}), to: SshUsernames, as: :create
-
   @spec delete_ssh_username(SshUsername.t()) :: {:ok, SshUsername.t()} | {:error, Ecto.Changeset.t()}
   defdelegate delete_ssh_username(username), to: SshUsernames, as: :delete
-
-  @spec change_ssh_username(SshUsername.t(), map()) :: Ecto.Changeset.t()
-  defdelegate change_ssh_username(username, attrs \\ %{}), to: SshUsernames, as: :change
 
   @doc "Lists SSH usernames with filtering, sorting, and pagination."
   @spec list_ssh_usernames(map()) :: {:ok, {[SshUsername.t()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
@@ -38,14 +32,8 @@ defmodule EdgeAdmin.Ssh do
   @spec get_ssh_public_key(String.t()) :: {:ok, SshPublicKey.t()} | {:error, :not_found}
   defdelegate get_ssh_public_key(id), to: SshPublicKeys, as: :get
 
-  @spec update_ssh_public_key(SshPublicKey.t(), map()) :: {:ok, SshPublicKey.t()} | {:error, Ecto.Changeset.t()}
-  defdelegate update_ssh_public_key(key, attrs), to: SshPublicKeys, as: :update
-
   @spec delete_ssh_public_key(SshPublicKey.t()) :: {:ok, SshPublicKey.t()} | {:error, Ecto.Changeset.t()}
   defdelegate delete_ssh_public_key(key), to: SshPublicKeys, as: :delete
-
-  @spec change_ssh_public_key(SshPublicKey.t(), map()) :: Ecto.Changeset.t()
-  defdelegate change_ssh_public_key(key, attrs \\ %{}), to: SshPublicKeys, as: :change
 
   @doc "Lists SSH public keys with filtering, sorting, and pagination."
   @spec list_ssh_public_keys(map()) :: {:ok, {[SshPublicKey.t()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}

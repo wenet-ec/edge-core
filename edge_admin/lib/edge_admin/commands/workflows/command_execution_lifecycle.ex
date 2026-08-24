@@ -19,7 +19,6 @@ defmodule EdgeAdmin.Commands.Workflows.CommandExecutionLifecycle do
   alias EdgeAdmin.Events
   alias EdgeAdmin.Events.Catalog
   alias EdgeAdmin.GatewayRegistry
-  alias EdgeAdmin.GatewayRegistry.VirtualGateway
   alias EdgeAdmin.Nodes
   alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.Repo
@@ -383,7 +382,7 @@ defmodule EdgeAdmin.Commands.Workflows.CommandExecutionLifecycle do
          node_name = Node.node_name(node),
          {:ok, cluster_name, _admin_name} <- Metadata.find_node_cluster(node_name),
          {:ok, gateway} <- GatewayRegistry.resolve(cluster_name),
-         :ok <- VirtualGateway.cancel_execution(gateway, node, execution.id) do
+         :ok <- GatewayRegistry.cancel_execution(gateway, node, execution.id) do
       Logger.info("Successfully sent cancellation request to agent for execution #{execution.id}")
 
       :ok

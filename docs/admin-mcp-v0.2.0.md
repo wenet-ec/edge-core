@@ -6,7 +6,7 @@ Tool catalog for every operation the Edge Admin MCP server exposes at `POST /mcp
 
 Unlike OpenAPI (REST) and AsyncAPI (events), the [Model Context Protocol](https://modelcontextprotocol.io) does not yet have a standardised static spec format or off-the-shelf renderer. Discovery happens at runtime via the `tools/list` JSON-RPC method — any connected MCP client (Claude Desktop, Cursor, mcp-inspector) sees the live list. Operators who don't run a client also deserve visibility into what's there, so we maintain this catalog by hand.
 
-For interactive browsing of the authenticated management surface, run [`@modelcontextprotocol/inspector`](https://github.com/modelcontextprotocol/inspector) against `/mcp` with your `MCP_KEY`. The transport also accepts requests without a bearer token so explicitly public tools can be added without creating a second MCP endpoint. Tool scope and degraded-mode behavior are registered in `EdgeAdminMcp.ToolRegistry`; the current catalog places all currently registered management tools in the authenticated scope, while the public scope is reserved for future anonymous tools.
+For interactive browsing of the authenticated management surface, run [`@modelcontextprotocol/inspector`](https://github.com/modelcontextprotocol/inspector) against `/mcp` with your `MCP_KEY`. The transport also accepts requests without a bearer token so explicitly public tools can be exposed without creating a second MCP endpoint. Tool scope and degraded-mode behavior are registered in `EdgeAdminMcp.ToolRegistry`; the management tools are authenticated, while `create_public_enrollment_key` is available in the public scope when public enrollment is enabled.
 
 ## Reading this catalog
 
@@ -107,6 +107,7 @@ Tokens agents use to join a cluster's VPN mesh.
 | `get_enrollment_key` | Get Enrollment Key | 🔍 | Required: `enrollment_key_id`. |
 | `create_enrollment_key` | Create Enrollment Key | | Required: `cluster_name`. Optional: `name` (label), `uses_remaining` (default 1), `expires_at` (ISO8601). |
 | `create_default_enrollment_key` | Create Default Enrollment Key | | Uses the configured `DEFAULT_CLUSTER_NAME`. Optional: `name` (label), `uses_remaining` (default 1), `expires_at` (ISO8601). Blocked while the Admin cluster is degraded. |
+| `create_public_enrollment_key` | Create Public Enrollment Key | | Anonymous tool. Creates a single-use enrollment key for the configured default cluster when `PUBLIC_ENROLLMENT_KEY_ENABLED=true` and `DEFAULT_CLUSTER_NAME` is configured. Blocked while the Admin cluster is degraded. |
 | `update_enrollment_key` | Update Enrollment Key | ♻️ | Required: `enrollment_key_id`. Optional: `name`, `uses_remaining`, `expires_at`. Pass `null` on any field to clear it (unlimited / no expiry / no label). |
 | `delete_enrollment_key` | Delete Enrollment Key | ⚠️ | Required: `enrollment_key_id`. |
 
@@ -234,7 +235,7 @@ When the admin is in degraded mode (total nodes exceed total edge-capacity acros
 create_cluster              update_cluster              delete_cluster
 change_node_cluster         delete_node                 create_node_recovery_key       delete_node_recovery_key
 create_enrollment_key       create_default_enrollment_key update_enrollment_key       delete_enrollment_key
-create_self_update_request
+create_public_enrollment_key create_self_update_request
 ```
 
 The MCP middleware applies the same degraded-mode decision as the corresponding domain operation; the list above is documentation of the current registry metadata, not a second runtime blocklist.

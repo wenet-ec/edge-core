@@ -113,7 +113,7 @@ defmodule EdgeAdminMcp.Server do
        Map.put(
          payload,
          "tools",
-         Enum.filter(tools, &(EdgeAdminMcp.ToolRegistry.scope_for_tool(&1["name"]) == :public))
+         Enum.filter(tools, &(EdgeAdminMcp.ToolRegistry.scope_for_tool(&1.name) == :public))
        ), frame}
     end
   end

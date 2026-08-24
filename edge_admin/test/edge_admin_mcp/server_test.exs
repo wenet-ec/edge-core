@@ -15,8 +15,8 @@ defmodule EdgeAdminMcp.ServerTest do
   @blocked_tools ~w(
     create_cluster update_cluster delete_cluster change_node_cluster delete_node
     create_node_recovery_key delete_node_recovery_key create_enrollment_key
-    create_default_enrollment_key update_enrollment_key delete_enrollment_key
-    create_self_update_request
+    create_default_enrollment_key create_public_enrollment_key
+    update_enrollment_key delete_enrollment_key create_self_update_request
   )
 
   setup :verify_on_exit!
@@ -51,17 +51,24 @@ defmodule EdgeAdminMcp.ServerTest do
   end
 
   describe "anonymous MCP access" do
-    test "does not expose anonymous tools until explicitly registered" do
+    test "exposes only the explicitly registered public tool" do
       # DegradedMode.call/2 — three branches:
       #   1. blocked tool + cluster degraded → :degraded
       #   2. blocked tool + cluster healthy  → :ok
       #   3. anything else (read tool, unknown method) → :ok (no Metadata call)
-      assert Enum.filter(ToolRegistry.scope_tools(), fn {scope, _name} -> scope == :public end) == []
+      assert Enum.filter(ToolRegistry.scope_tools(), fn {scope, _name} -> scope == :public end) == [
+               {:public, "create_public_enrollment_key"}
+             ]
     end
 
     test "requires authentication for tool calls" do
       request = request("list_nodes")
       assert {:error, _response, _frame} = McpAuth.call(request, Frame.new())
+    end
+
+    test "allows the public enrollment-key tool without authentication" do
+      request = request("create_public_enrollment_key")
+      assert McpAuth.call(request, Frame.new()) == :ok
     end
 
     test "allows authenticated tool calls" do

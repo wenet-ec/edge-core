@@ -105,9 +105,10 @@ defmodule EdgeAdminMcp.ToolRegistry do
     component(EdgeAdminMcp.Tools.Events.PublishTestEvent)
   end
 
-  # Public tools are intentionally empty until a tool is reviewed for
-  # unauthenticated use.
+  # Public tools must be safe to invoke without an MCP bearer token. The tool
+  # still applies its domain-level feature policy before creating a key.
   scope :public do
+    component(EdgeAdminMcp.Tools.Nodes.CreatePublicEnrollmentKey, degraded: :block)
   end
 
   @doc false

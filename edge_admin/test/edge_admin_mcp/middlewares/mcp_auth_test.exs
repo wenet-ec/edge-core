@@ -1,4 +1,4 @@
-# edge_admin/test/edge_admin_mcp/mcp_auth_test.exs
+# edge_admin/test/edge_admin_mcp/middlewares/mcp_auth_test.exs
 defmodule EdgeAdminMcp.Middlewares.McpAuthTest do
   use ExUnit.Case, async: false
 

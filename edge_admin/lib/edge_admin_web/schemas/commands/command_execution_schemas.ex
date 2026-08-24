@@ -1,8 +1,6 @@
 # edge_admin/lib/edge_admin_web/schemas/commands/command_execution_schemas.ex
 defmodule EdgeAdminWeb.Schemas.Commands.CommandExecutionSchemas do
-  @moduledoc """
-  OpenAPI schemas for Command Execution resources
-  """
+  @moduledoc false
 
   use EdgeAdminWeb.Schema
 

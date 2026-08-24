@@ -1,8 +1,6 @@
 # edge_admin/lib/edge_admin_web/schemas/nodes/cluster_schemas.ex
 defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
-  @moduledoc """
-  OpenAPI schemas for Cluster resources
-  """
+  @moduledoc false
 
   use EdgeAdminWeb.Schema
 

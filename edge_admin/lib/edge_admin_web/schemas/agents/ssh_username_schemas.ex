@@ -1,8 +1,6 @@
 # edge_admin/lib/edge_admin_web/schemas/agents/ssh_username_schemas.ex
 defmodule EdgeAdminWeb.Schemas.Agents.SshUsernameSchemas do
-  @moduledoc """
-  OpenAPI schemas for agent SSH credential verification endpoints.
-  """
+  @moduledoc false
 
   use EdgeAdminWeb.Schema
 

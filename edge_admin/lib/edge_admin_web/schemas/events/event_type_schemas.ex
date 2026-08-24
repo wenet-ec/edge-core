@@ -1,8 +1,6 @@
 # edge_admin/lib/edge_admin_web/schemas/events/event_type_schemas.ex
 defmodule EdgeAdminWeb.Schemas.Events.EventTypeSchemas do
-  @moduledoc """
-  OpenAPI schemas for the event-type catalog endpoint.
-  """
+  @moduledoc false
 
   use EdgeAdminWeb.Schema
 

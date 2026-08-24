@@ -1,8 +1,6 @@
 # edge_admin/lib/edge_admin_web/schemas/metrics/discovery_schemas.ex
 defmodule EdgeAdminWeb.Schemas.Metrics.DiscoverySchemas do
-  @moduledoc """
-  OpenAPI schemas for Prometheus HTTP service discovery endpoints.
-  """
+  @moduledoc false
 
   use EdgeAdminWeb.Schema
 

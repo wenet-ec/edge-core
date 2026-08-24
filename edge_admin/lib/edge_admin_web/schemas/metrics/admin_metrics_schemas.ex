@@ -1,14 +1,12 @@
 # edge_admin/lib/edge_admin_web/schemas/metrics/admin_metrics_schemas.ex
 defmodule EdgeAdminWeb.Schemas.Metrics.AdminMetricsSchemas do
-  @moduledoc """
-  OpenAPI schemas for admin metrics endpoints
-  """
+  @moduledoc false
   use EdgeAdminWeb.Schema
 
   alias OpenApiSpex.Schema
 
   defmodule AdminMetricsResponse do
-    @moduledoc "Admin application metrics response"
+    @moduledoc false
 
     schema(%{
       title: "AdminMetricsResponse",

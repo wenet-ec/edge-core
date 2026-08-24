@@ -1,8 +1,6 @@
 # edge_admin/lib/edge_admin_web/schemas/ssh/ssh_username_schemas.ex
 defmodule EdgeAdminWeb.Schemas.Ssh.SshUsernameSchemas do
-  @moduledoc """
-  OpenAPI schemas for SSH Username resources
-  """
+  @moduledoc false
 
   use EdgeAdminWeb.Schema
 

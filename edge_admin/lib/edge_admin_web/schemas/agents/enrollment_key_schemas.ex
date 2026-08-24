@@ -1,8 +1,6 @@
 # edge_admin/lib/edge_admin_web/schemas/agents/enrollment_key_schemas.ex
 defmodule EdgeAdminWeb.Schemas.Agents.EnrollmentKeySchemas do
-  @moduledoc """
-  OpenAPI schemas for agent enrollment key verification endpoints.
-  """
+  @moduledoc false
 
   use EdgeAdminWeb.Schema
 

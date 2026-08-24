@@ -1,8 +1,6 @@
 # edge_admin/lib/edge_admin_web/schemas/events/webhook_schemas.ex
 defmodule EdgeAdminWeb.Schemas.Events.WebhookSchemas do
-  @moduledoc """
-  OpenAPI schemas for Webhook resources
-  """
+  @moduledoc false
 
   use EdgeAdminWeb.Schema
 

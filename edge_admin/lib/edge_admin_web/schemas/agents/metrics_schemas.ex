@@ -1,8 +1,6 @@
 # edge_admin/lib/edge_admin_web/schemas/agents/metrics_schemas.ex
 defmodule EdgeAdminWeb.Schemas.Agents.MetricsSchemas do
-  @moduledoc """
-  OpenAPI schemas for agent metrics push endpoints.
-  """
+  @moduledoc false
 
   use EdgeAdminWeb.Schema
 

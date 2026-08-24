@@ -1,14 +1,12 @@
 # edge_admin/lib/edge_admin_web/schemas/metrics/node_metrics_schemas.ex
 defmodule EdgeAdminWeb.Schemas.Metrics.NodeMetricsSchemas do
-  @moduledoc """
-  OpenAPI schemas for node metrics endpoints
-  """
+  @moduledoc false
   use EdgeAdminWeb.Schema
 
   alias OpenApiSpex.Schema
 
   defmodule HostMetricsResponse do
-    @moduledoc "Host-level metrics response"
+    @moduledoc false
 
     schema(%{
       title: "HostMetricsResponse",
@@ -195,7 +193,7 @@ defmodule EdgeAdminWeb.Schemas.Metrics.NodeMetricsSchemas do
   end
 
   defmodule AgentMetricsResponse do
-    @moduledoc "Agent application metrics response"
+    @moduledoc false
 
     schema(%{
       title: "AgentMetricsResponse",
@@ -691,7 +689,7 @@ defmodule EdgeAdminWeb.Schemas.Metrics.NodeMetricsSchemas do
   end
 
   defmodule UnifiedMetricsResponse do
-    @moduledoc "Unified metrics from all sources"
+    @moduledoc false
 
     schema(%{
       title: "UnifiedMetricsResponse",

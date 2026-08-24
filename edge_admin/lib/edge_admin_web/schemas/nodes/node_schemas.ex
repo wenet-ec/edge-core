@@ -1,8 +1,6 @@
 # edge_admin/lib/edge_admin_web/schemas/nodes/node_schemas.ex
 defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
-  @moduledoc """
-  OpenAPI schemas for Node resources
-  """
+  @moduledoc false
 
   use EdgeAdminWeb.Schema
 

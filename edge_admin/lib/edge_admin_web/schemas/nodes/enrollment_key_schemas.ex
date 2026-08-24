@@ -1,8 +1,6 @@
 # edge_admin/lib/edge_admin_web/schemas/nodes/enrollment_key_schemas.ex
 defmodule EdgeAdminWeb.Schemas.Nodes.EnrollmentKeySchemas do
-  @moduledoc """
-  OpenAPI schemas for EnrollmentKey resources
-  """
+  @moduledoc false
 
   use EdgeAdminWeb.Schema
 

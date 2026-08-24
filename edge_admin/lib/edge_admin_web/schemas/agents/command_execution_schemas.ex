@@ -1,8 +1,6 @@
 # edge_admin/lib/edge_admin_web/schemas/agents/command_execution_schemas.ex
 defmodule EdgeAdminWeb.Schemas.Agents.CommandExecutionSchemas do
-  @moduledoc """
-  OpenAPI schemas for agent command execution endpoints.
-  """
+  @moduledoc false
 
   use EdgeAdminWeb.Schema
 

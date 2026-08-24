@@ -1,8 +1,6 @@
 # edge_admin/lib/edge_admin_web/schemas/agents/node_schemas.ex
 defmodule EdgeAdminWeb.Schemas.Agents.NodeSchemas do
-  @moduledoc """
-  OpenAPI schemas for agent node registration endpoints.
-  """
+  @moduledoc false
 
   use EdgeAdminWeb.Schema
 

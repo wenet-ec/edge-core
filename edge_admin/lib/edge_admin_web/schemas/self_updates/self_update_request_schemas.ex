@@ -1,8 +1,6 @@
 # edge_admin/lib/edge_admin_web/schemas/self_updates/self_update_request_schemas.ex
 defmodule EdgeAdminWeb.Schemas.SelfUpdates.SelfUpdateRequestSchemas do
-  @moduledoc """
-  OpenAPI schemas for SelfUpdateRequest resources
-  """
+  @moduledoc false
 
   use EdgeAdminWeb.Schema
 

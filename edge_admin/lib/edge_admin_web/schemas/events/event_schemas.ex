@@ -1,8 +1,6 @@
 # edge_admin/lib/edge_admin_web/schemas/events/event_schemas.ex
 defmodule EdgeAdminWeb.Schemas.Events.EventSchemas do
-  @moduledoc """
-  OpenAPI schemas for event publish actions.
-  """
+  @moduledoc false
 
   use EdgeAdminWeb.Schema
 

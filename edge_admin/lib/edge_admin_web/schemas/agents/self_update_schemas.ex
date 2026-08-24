@@ -1,8 +1,6 @@
 # edge_admin/lib/edge_admin_web/schemas/agents/self_update_schemas.ex
 defmodule EdgeAdminWeb.Schemas.Agents.SelfUpdateSchemas do
-  @moduledoc """
-  OpenAPI schemas for agent self-update check endpoints.
-  """
+  @moduledoc false
 
   use EdgeAdminWeb.Schema
 

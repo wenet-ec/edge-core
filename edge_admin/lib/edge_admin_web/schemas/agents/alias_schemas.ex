@@ -1,8 +1,6 @@
 # edge_admin/lib/edge_admin_web/schemas/agents/alias_schemas.ex
 defmodule EdgeAdminWeb.Schemas.Agents.AliasSchemas do
-  @moduledoc """
-  OpenAPI schemas for agent alias registration endpoints.
-  """
+  @moduledoc false
 
   use EdgeAdminWeb.Schema
 

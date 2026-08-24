@@ -1,8 +1,6 @@
 # edge_admin/lib/edge_admin_web/schemas/admins/admin_schemas.ex
 defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
-  @moduledoc """
-  OpenAPI schemas for admin metadata endpoints.
-  """
+  @moduledoc false
 
   use EdgeAdminWeb.Schema
 

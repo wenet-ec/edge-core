@@ -1,8 +1,6 @@
 # edge_admin/lib/edge_admin_web/schemas/ssh/ssh_public_key_schemas.ex
 defmodule EdgeAdminWeb.Schemas.Ssh.SshPublicKeySchemas do
-  @moduledoc """
-  OpenAPI schemas for SSH Public Key resources
-  """
+  @moduledoc false
 
   use EdgeAdminWeb.Schema
 

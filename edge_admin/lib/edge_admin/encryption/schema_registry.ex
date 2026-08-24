@@ -8,7 +8,6 @@ defmodule EdgeAdmin.Encryption.SchemaRegistry do
   fields.
   """
 
-  @doc "Returns schemas that have at least one encrypted column."
   @spec schemas() :: [module()]
   def schemas do
     [

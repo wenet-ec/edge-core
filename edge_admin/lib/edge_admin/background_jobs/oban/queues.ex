@@ -48,7 +48,6 @@ defmodule EdgeAdmin.BackgroundJobs.Oban.Queues do
     TriggerSelfUpdateWorker
   ]
 
-  @doc "Every worker module, in registry order."
   @spec workers() :: [module()]
   def workers, do: @workers
 

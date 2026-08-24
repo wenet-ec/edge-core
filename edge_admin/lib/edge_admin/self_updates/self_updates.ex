@@ -13,7 +13,6 @@ defmodule EdgeAdmin.SelfUpdates do
   alias EdgeAdmin.SelfUpdates.Schemas.SelfUpdateRequest
   alias EdgeAdmin.SelfUpdates.Workflows.Processing
 
-  @doc "Gets a self-update request by ID."
   @spec get_self_update_request(String.t()) :: {:ok, SelfUpdateRequest.t()} | {:error, :not_found}
   defdelegate get_self_update_request(id), to: Requests, as: :get
 
@@ -21,7 +20,6 @@ defmodule EdgeAdmin.SelfUpdates do
   @spec create_self_update_request(map()) :: {:ok, SelfUpdateRequest.t()} | {:error, Ecto.Changeset.t()}
   defdelegate create_self_update_request(attrs \\ %{}), to: Requests, as: :create
 
-  @doc "Updates a self-update request."
   @spec update_self_update_request(SelfUpdateRequest.t(), map()) ::
           {:ok, SelfUpdateRequest.t()} | {:error, Ecto.Changeset.t()}
   defdelegate update_self_update_request(request, attrs), to: Requests, as: :update

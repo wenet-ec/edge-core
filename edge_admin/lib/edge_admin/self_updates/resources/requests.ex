@@ -1,6 +1,6 @@
 # edge_admin/lib/edge_admin/self_updates/resources/requests.ex
 defmodule EdgeAdmin.SelfUpdates.Resources.Requests do
-  @moduledoc "Persistence and queries for self-update requests."
+  @moduledoc false
 
   import Ecto.Query, warn: false
 

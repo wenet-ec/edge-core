@@ -1,10 +1,6 @@
 # edge_admin/lib/edge_admin/self_updates/workers/trigger_self_update_worker.ex
 defmodule EdgeAdmin.SelfUpdates.Workers.TriggerSelfUpdateWorker do
-  @moduledoc """
-  Worker that processes self-update requests.
-
-  Delegates to SelfUpdates.Workflows.Processing for all business logic.
-  """
+  @moduledoc false
 
   use Oban.Worker, queue: :self_updates, max_attempts: 3
 

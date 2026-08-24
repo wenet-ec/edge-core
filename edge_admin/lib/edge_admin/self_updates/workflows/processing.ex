@@ -1,6 +1,6 @@
 # edge_admin/lib/edge_admin/self_updates/workflows/processing.ex
 defmodule EdgeAdmin.SelfUpdates.Workflows.Processing do
-  @moduledoc "Processes self-update requests and delivers update triggers."
+  @moduledoc false
 
   alias EdgeAdmin.AdminClustering.Metadata
   alias EdgeAdmin.Events

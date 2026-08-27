@@ -11,7 +11,6 @@ defmodule EdgeAgentWeb.ConnCase do
     quote do
       use EdgeAgentWeb, :verified_routes
 
-      import EdgeAgent.Factory
       import EdgeAgentWeb.ConnCase
       import Phoenix.ConnTest
       import Plug.Conn

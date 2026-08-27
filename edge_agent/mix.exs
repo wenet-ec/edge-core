@@ -128,12 +128,7 @@ defmodule EdgeAgent.Mixfile do
       {:sobelow, "~> 0.15", only: [:dev, :test], runtime: true},
       {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false},
 
-      # Test factories
-      {:ex_machina, "~> 2.8", only: :test},
-      {:faker, "~> 0.19", only: :test},
-      {:mox, "~> 1.3", only: :test},
-
-      # Test coverage
+      # Testing
       {:excoveralls, "~> 0.18", only: :test},
 
       # Dialyzer

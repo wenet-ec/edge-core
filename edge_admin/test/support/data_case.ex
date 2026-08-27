@@ -29,12 +29,6 @@ defmodule EdgeAdmin.DataCase do
       import Ecto.Query
       import EdgeAdmin.DataCase
 
-      # Add factory support
-      import EdgeAdmin.Factory
-
-      # Add Mox support for mocking
-      import Mox
-
       alias EdgeAdmin.Repo
     end
   end

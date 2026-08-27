@@ -14,7 +14,6 @@ defmodule EdgeAgent.DataCase do
       import Ecto.Changeset
       import Ecto.Query
       import EdgeAgent.DataCase
-      import EdgeAgent.Factory
 
       alias EdgeAgent.Repo
     end

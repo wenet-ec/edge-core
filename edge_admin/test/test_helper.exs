@@ -1,7 +1,4 @@
 # edge_admin/test/test_helper.exs
-# Ensure ExMachina is started
-{:ok, _} = Application.ensure_all_started(:ex_machina)
-
 # Start ExUnit with better configuration
 ExUnit.start(
   # Capture log output during tests to avoid noise

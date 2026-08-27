@@ -19,7 +19,7 @@
 # At runtime, only the configured impl's pool is started — the other module
 # is dormant code. One compiled artifact serves both modes.
 #
-# Test infrastructure (Sandbox, ExMachina), release tasks (Migrator), and Oban
+# Test infrastructure (Sandbox), release tasks (Migrator), and Oban
 # take a real Ecto.Repo module — for those, we read :repo_impl (or pass the
 # implementation explicitly) and bypass the dispatcher. LiveDashboard discovers
 # the running implementation through Ecto.Repo.all_running/0 and supports both

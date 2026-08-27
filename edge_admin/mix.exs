@@ -149,12 +149,8 @@ defmodule EdgeAdmin.Mixfile do
       # Health
       {:plug_checkup, git: "https://github.com/voughtdq/plug_checkup.git", tag: "v1.0.0"},
 
-      # Test factories
-      {:ex_machina, "~> 2.8", only: :test},
-      {:faker, "~> 0.19", only: :test},
+      # Testing
       {:mox, "~> 1.3", only: :test},
-
-      # Test coverage
       {:excoveralls, "~> 0.18", only: :test},
 
       # Dialyzer

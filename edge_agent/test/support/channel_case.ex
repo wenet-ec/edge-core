@@ -8,7 +8,6 @@ defmodule EdgeAgentWeb.ChannelCase do
 
   using do
     quote do
-      import EdgeAgent.Factory
       import Phoenix.ChannelTest
 
       @endpoint EdgeAgentWeb.Endpoint

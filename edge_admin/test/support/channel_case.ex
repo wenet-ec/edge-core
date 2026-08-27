@@ -18,7 +18,6 @@ defmodule EdgeAdminWeb.ChannelCase do
 
   using do
     quote do
-      import EdgeAdmin.Factory
       # Import conveniences for testing with channels
       import Phoenix.ChannelTest
 

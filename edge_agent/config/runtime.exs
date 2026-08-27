@@ -94,17 +94,16 @@ config :edge_agent, Oban,
     execute_command: [limit: command_execution_concurrency],
     report_executions: 1
   ],
-  plugins: [
-    {Oban.Plugins.Cron,
-     crontab: [
-       # Enqueue pending command executions
-       {enqueue_executions_schedule, EdgeAgent.Commands.Workers.EnqueueExecutionWorker},
-       # Report completed executions to admin (safety net)
-       {report_executions_schedule, EdgeAgent.Commands.Workers.ReportExecutionWorker}
-     ]},
-    Oban.Plugins.Lifeline,
-    {Oban.Plugins.Pruner, max_age: 3_600}
-  ]
+  cron: [
+    crontab: [
+      # Enqueue pending command executions
+      {enqueue_executions_schedule, EdgeAgent.Commands.Workers.EnqueueExecutionWorker},
+      # Report completed executions to admin (safety net)
+      {report_executions_schedule, EdgeAgent.Commands.Workers.ReportExecutionWorker}
+    ]
+  ],
+  lifeline: Oban.Lifeline,
+  pruner: [max_age: {1, :hour}]
 
 # Proxy server per-operation timeouts (in milliseconds)
 config :edge_agent, :proxy_timeouts,

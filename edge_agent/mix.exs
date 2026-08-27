@@ -109,7 +109,7 @@ defmodule EdgeAgent.Mixfile do
       {:excellent_migrations, "~> 0.1", only: [:dev, :test], runtime: false},
 
       # Background jobs
-      {:oban, "~> 2.23"},
+      {:oban, "~> 2.24"},
       {:quantum, "~> 3.5"},
 
       # SSH server
@@ -131,7 +131,7 @@ defmodule EdgeAgent.Mixfile do
       # Test factories
       {:ex_machina, "~> 2.8", only: :test},
       {:faker, "~> 0.19", only: :test},
-      {:mox, "~> 1.2", only: :test},
+      {:mox, "~> 1.3", only: :test},
 
       # Test coverage
       {:excoveralls, "~> 0.18", only: :test},

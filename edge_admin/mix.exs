@@ -119,7 +119,7 @@ defmodule EdgeAdmin.Mixfile do
       {:postgrex, "~> 0.22"},
       {:ecto_sqlite3, "~> 0.24"},
       {:uniq, "~> 0.6"},
-      {:flop, "~> 0.27"},
+      {:flop, "~> 0.28"},
       {:cloak, "~> 1.1"},
       {:cloak_ecto, "~> 1.3"},
 
@@ -152,7 +152,7 @@ defmodule EdgeAdmin.Mixfile do
       # Test factories
       {:ex_machina, "~> 2.8", only: :test},
       {:faker, "~> 0.19", only: :test},
-      {:mox, "~> 1.2", only: :test},
+      {:mox, "~> 1.3", only: :test},
 
       # Test coverage
       {:excoveralls, "~> 0.18", only: :test},
@@ -161,7 +161,7 @@ defmodule EdgeAdmin.Mixfile do
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
 
       # Background Jobs
-      {:oban, "~> 2.23"},
+      {:oban, "~> 2.24"},
       {:quantum, "~> 3.5"},
 
       # Erlang Distribution

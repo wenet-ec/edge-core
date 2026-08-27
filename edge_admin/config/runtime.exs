@@ -458,17 +458,16 @@ config :edge_admin, Oban,
   # Notifier and peer are adapter-dependent — see oban_notifier / oban_peer above.
   notifier: oban_notifier,
   peer: oban_peer,
-  plugins: [
-    {Oban.Plugins.Cron,
-     crontab: [
-       # Fan out active-cluster reconciliation and retired-cluster deletion work
-       {cluster_reconciliation_schedule, EdgeAdmin.Nodes.Workers.ScheduleClusterReconciliationWorker},
-       # Delete finalised command executions older than retention
-       {execution_pruning_schedule, EdgeAdmin.Commands.Workers.PruneCommandExecutionsWorker}
-     ]},
-    Oban.Plugins.Lifeline,
-    {Oban.Plugins.Pruner, max_age: 86_400}
-  ]
+  cron: [
+    crontab: [
+      # Fan out active-cluster reconciliation and retired-cluster deletion work
+      {cluster_reconciliation_schedule, EdgeAdmin.Nodes.Workers.ScheduleClusterReconciliationWorker},
+      # Delete finalised command executions older than retention
+      {execution_pruning_schedule, EdgeAdmin.Commands.Workers.PruneCommandExecutionsWorker}
+    ]
+  ],
+  lifeline: Oban.Lifeline,
+  pruner: [max_age: {1, :day}]
 
 # Proxy server per-operation timeouts (in milliseconds)
 config :edge_admin, :proxy_timeouts,

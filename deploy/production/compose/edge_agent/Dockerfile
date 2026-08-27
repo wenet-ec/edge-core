@@ -56,7 +56,7 @@ COPY deploy/production/compose/edge_agent/host_pty_spawn.c /tmp/host_pty_spawn.c
 RUN gcc -O2 -Wall -Wextra -o /usr/local/bin/host_pty_spawn /tmp/host_pty_spawn.c -lutil && \
     rm /tmp/host_pty_spawn.c
 
-FROM debian:stable-20260803-slim
+FROM debian:stable-20260824-slim
 
 # Install runtime dependencies in single layer. The agent is a gateway:
 # every operator command runs on the host via nsenter, so this image only

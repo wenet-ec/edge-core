@@ -99,7 +99,7 @@ config:
 #   # EVENT_BROKER_KAFKA_URLS: "broker-1:9092,broker-2:9092"  # Kafka — comma-separated cluster
 #   # EVENT_BROKER_RABBITMQ_URL: "amqp://user:pass@host:5672" # RabbitMQ — single URL
 #   # EVENT_BROKER_REDIS_URL: "redis://host:6379"             # Redis — single URL
-#   # EVENT_BROKER_MQTT_URL: "host:1883"                      # MQTT — single host:port (no scheme)
+#   # EVENT_BROKER_MQTT_URLS: "host-a:1883,host-b:1883"      # MQTT failover endpoints
 #   # AWS SNS — managed service, no broker URL; provision topics out-of-band:
 #   # EVENT_BROKER_AWS_SNS_REGION: "us-east-1"
 #   # EVENT_BROKER_AWS_SNS_TOPIC_ARN_PREFIX: "arn:aws:sns:us-east-1:123456789012:"

@@ -132,7 +132,7 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
           "Works against any MQTT broker (EMQX, Mosquitto, HiveMQ, AWS IoT Core, etc.). " <>
             "The publisher CONNECT uses MQTT 3.1.1 (`proto_ver: :v4`) as the lowest common denominator; " <>
             "v5 brokers downgrade our session to 3.1.1 transparently while operators run v5 freely on their subscribers. " <>
-            "Configure via EVENT_BROKER_MQTT_URL (single host:port). " <>
+            "Configure via EVENT_BROKER_MQTT_URLS (comma-separated host:port endpoints). " <>
             "Topic = event type with `.` rewritten to `/` (e.g. `edge/node/registered`). " <>
             "Subscribers use MQTT wildcards: `edge/#`, `edge/node/+`, etc. " <>
             "Default publish QoS is 1; configurable via EVENT_BROKER_MQTT_QOS=0|1|2.",

@@ -295,6 +295,7 @@ WEBHOOK_ALLOW_PRIVATE_IPS=true
 # EVENT_BROKER_ADAPTER=nats
 # EVENT_BROKER_NATS_URLS=nats://edge_event_broker_nats:4222  # Comma-separated for cluster
 # EVENT_BROKER_NATS_JETSTREAM=true                           # Durable JetStream log (default: false)
+# EVENT_BROKER_NATS_NAME=                                   # Optional override; defaults to CORE_NAME
 # EVENT_BROKER_NATS_TOKEN=                                   # Shared token
 # EVENT_BROKER_NATS_USERNAME=                                # Username + password
 # EVENT_BROKER_NATS_PASSWORD=
@@ -308,6 +309,7 @@ WEBHOOK_ALLOW_PRIVATE_IPS=true
 # EVENT_BROKER_KAFKA_PASSWORD=
 # EVENT_BROKER_KAFKA_SASL_MECHANISM=plain                    # plain | scram_sha_256 | scram_sha_512
 # EVENT_BROKER_KAFKA_SSL=true                                # TLS, required for public/external brokers
+# EVENT_BROKER_KAFKA_CACERT_FILE=                            # Optional CA bundle for TLS verification
 
 # AMQP 0-9-1 (RabbitMQ / LavinMQ / AmazonMQ for RabbitMQ / CloudAMQP):
 # Alias `rabbitmq` also accepted.
@@ -315,6 +317,7 @@ WEBHOOK_ALLOW_PRIVATE_IPS=true
 # Embed credentials: amqp://user:pass@host:port
 # EVENT_BROKER_RABBITMQ_URL=amqp://edge_event_broker_rabbitmq:5672
 # EVENT_BROKER_RABBITMQ_SSL=true                             # TLS, required for public/external brokers
+# EVENT_BROKER_RABBITMQ_NAME=                                # Optional override; defaults to CORE_NAME
 
 # Redis:
 # EVENT_BROKER_ADAPTER=redis
@@ -324,7 +327,8 @@ WEBHOOK_ALLOW_PRIVATE_IPS=true
 
 # MQTT (EMQX, Mosquitto, HiveMQ, AWS IoT, etc.):
 # EVENT_BROKER_ADAPTER=mqtt
-# EVENT_BROKER_MQTT_URL=edge_event_broker_mqtt:1883          # Single host:port (no scheme)
+# EVENT_BROKER_MQTT_URLS=edge_event_broker_mqtt:1883         # Comma-separated host:port endpoints
+# EVENT_BROKER_MQTT_SHUFFLE_HOSTS=false                      # Randomize MQTT hosts per connect attempt
 # EVENT_BROKER_MQTT_QOS=1                                    # 0|1|2, default 1
 # EVENT_BROKER_MQTT_JWT=                                     # JWT bearer (CONNECT password slot)
 # EVENT_BROKER_MQTT_USERNAME=

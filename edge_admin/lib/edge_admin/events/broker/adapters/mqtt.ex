@@ -53,8 +53,8 @@ defmodule EdgeAdmin.Events.Broker.Adapters.Mqtt do
   ## Configuration (set in runtime.exs from env vars)
 
       config :edge_admin, :event_broker_mqtt,
-        host: "edge_event_broker_mqtt",
-        port: 1883,
+        hosts: [{"edge_event_broker_mqtt", 1883}],
+        shuffle_hosts: false,
         qos: 1,
         username: nil,
         password: nil,
@@ -176,7 +176,7 @@ defmodule EdgeAdmin.Events.Broker.Adapters.Mqtt do
     with {:ok, client} <- :emqtt.start_link(opts),
          {:ok, _props} <- :emqtt.connect(client) do
       Process.monitor(client)
-      Logger.info("[EventBroker.Mqtt] Connected to #{config[:host]}:#{config[:port]}")
+      Logger.info("[EventBroker.Mqtt] Connected to #{inspect(config[:hosts])}")
       {:noreply, %{client: client}}
     else
       {:error, reason} ->
@@ -193,13 +193,16 @@ defmodule EdgeAdmin.Events.Broker.Adapters.Mqtt do
 
   defp build_emqtt_opts(config) do
     base = [
-      host: to_charlist(Keyword.fetch!(config, :host)),
-      port: Keyword.fetch!(config, :port),
+      hosts:
+        Enum.map(Keyword.fetch!(config, :hosts), fn {host, port} ->
+          {to_charlist(host), port}
+        end),
       clientid: client_id(config),
       clean_start: true,
       proto_ver: :v4,
       keepalive: 60,
-      reconnect: 0
+      reconnect: :infinity,
+      shuffle_hosts: Keyword.fetch!(config, :shuffle_hosts)
     ]
 
     base

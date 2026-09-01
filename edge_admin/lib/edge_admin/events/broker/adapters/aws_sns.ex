@@ -142,9 +142,11 @@ defmodule EdgeAdmin.Events.Broker.Adapters.AwsSns do
   # both work end-to-end.
   @impl GenServer
   def handle_call(:healthy?, _from, state) do
-    case ExAws.request(ExAws.SNS.list_topics()) do
+    topic_arn = state.topic_arn_prefix <> "edge-nodes-events"
+
+    case ExAws.request(ExAws.SNS.get_topic_attributes(topic_arn)) do
       {:ok, _} -> {:reply, :ok, state}
-      {:error, reason} -> {:reply, {:error, "SNS unreachable: #{inspect(reason)}"}, state}
+      {:error, reason} -> {:reply, {:error, "SNS topic unavailable: #{inspect(reason)}"}, state}
     end
   end
 

@@ -106,7 +106,7 @@ Channel = event type. Use `SUBSCRIBE edge.node.registered` for exact match, `PSU
 
 ```bash
 EVENT_BROKER_ADAPTER=mqtt
-EVENT_BROKER_MQTT_URL=host:1883                         # single host:port; no scheme
+EVENT_BROKER_MQTT_URLS=host-a:1883,host-b:1883           # ordered failover endpoints
 EVENT_BROKER_MQTT_QOS=1                                 # 0|1|2 (default 1, at-least-once with broker ACK)
 
 # Auth — pick one mode (mutually exclusive, JWT precedence over username/password):

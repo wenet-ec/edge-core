@@ -80,6 +80,7 @@ defmodule EdgeAdmin.Events.Broker.Adapters.Nats do
       Enum.map(urls, fn url ->
         uri = URI.parse(url)
         base = %{host: to_charlist(uri.host), port: uri.port || 4222}
+        base = Map.put(base, :name, Keyword.fetch!(config, :name))
         Map.merge(base, auth)
       end)
 

@@ -564,8 +564,10 @@ config :edge_admin,
 # retrying a single event. WEBHOOK_MAX_ATTEMPTS sets the per-event retry
 # budget. WEBHOOK_ALLOW_PRIVATE_IPS opts out of SSRF protection for homelab
 # / dev where webhook receivers legitimately live on RFC1918 ranges.
+core_name = get_env("CORE_NAME", :string, "default")
+
 config :edge_admin,
-  core_name: get_env("CORE_NAME", :string, "default"),
+  core_name: core_name,
   event_delivery_max_age_seconds: get_env("EVENT_DELIVERY_MAX_AGE_SECONDS", :integer, 3600),
   webhook_max_attempts: get_env("WEBHOOK_MAX_ATTEMPTS", :integer, 3),
   webhook_allow_private_ips: get_env("WEBHOOK_ALLOW_PRIVATE_IPS", :boolean, false)
@@ -599,6 +601,7 @@ config :sentry,
 # endpoint var — auth + region/project envs locate the service.
 if get_env("EVENT_BROKER_ENABLED", :boolean, false) do
   alias EdgeAdmin.Events.Broker.AdapterRegistry
+  alias EdgeAdmin.Events.Broker.Endpoint
 
   raw_event_broker_adapter = get_env!("EVENT_BROKER_ADAPTER")
 
@@ -628,7 +631,8 @@ if get_env("EVENT_BROKER_ENABLED", :boolean, false) do
         username: get_env("EVENT_BROKER_NATS_USERNAME"),
         password: get_env("EVENT_BROKER_NATS_PASSWORD"),
         nkey_seed: get_env("EVENT_BROKER_NATS_NKEY_SEED"),
-        jwt: get_env("EVENT_BROKER_NATS_JWT")
+        jwt: get_env("EVENT_BROKER_NATS_JWT"),
+        name: get_env("EVENT_BROKER_NATS_NAME", :string, core_name)
 
     :rabbitmq ->
       # RabbitMQ — amqp lib accepts a single URI string. Cluster failover is
@@ -636,19 +640,17 @@ if get_env("EVENT_BROKER_ENABLED", :boolean, false) do
       # Embed credentials directly: amqp://user:pass@host:port.
       config :edge_admin, :event_broker_rabbitmq,
         url: "EVENT_BROKER_RABBITMQ_URL" |> get_env!() |> String.trim(),
-        ssl: get_env("EVENT_BROKER_RABBITMQ_SSL", :boolean, false)
+        ssl: get_env("EVENT_BROKER_RABBITMQ_SSL", :boolean, false),
+        name: get_env("EVENT_BROKER_RABBITMQ_NAME", :string, core_name)
 
     :kafka ->
       # Kafka — brod takes [endpoint()] for cluster discovery via metadata.
       # EVENT_BROKER_KAFKA_URLS: comma-separated "host:port" list (no scheme).
       brokers =
-        "EVENT_BROKER_KAFKA_URLS"
-        |> get_env!()
-        |> String.split(",")
-        |> Enum.map(fn endpoint ->
-          [host, port_str] = String.split(String.trim(endpoint), ":")
-          {host, String.to_integer(port_str)}
-        end)
+        case Endpoint.parse_list(get_env!("EVENT_BROKER_KAFKA_URLS"), 9092) do
+          {:ok, endpoints} -> endpoints
+          {:error, reason} -> raise "Invalid EVENT_BROKER_KAFKA_URLS: #{reason}"
+        end
 
       kafka_username = get_env("EVENT_BROKER_KAFKA_USERNAME")
       kafka_password = get_env("EVENT_BROKER_KAFKA_PASSWORD")
@@ -677,7 +679,15 @@ if get_env("EVENT_BROKER_ENABLED", :boolean, false) do
 
       ssl_opts =
         if get_env("EVENT_BROKER_KAFKA_SSL", :boolean, false) do
-          [ssl: true]
+          kafka_ssl_opts = [verify: :verify_peer]
+
+          kafka_ssl_opts =
+            case get_env("EVENT_BROKER_KAFKA_CACERT_FILE") do
+              nil -> kafka_ssl_opts
+              path -> Keyword.put(kafka_ssl_opts, :cacertfile, String.to_charlist(path))
+            end
+
+          [ssl: kafka_ssl_opts]
         else
           []
         end
@@ -697,14 +707,13 @@ if get_env("EVENT_BROKER_ENABLED", :boolean, false) do
         ssl: get_env("EVENT_BROKER_REDIS_SSL", :boolean, false)
 
     :mqtt ->
-      # MQTT — single host:port endpoint. emqtt accepts a fallback list, but
-      # this adapter uses a single endpoint to match the typical operator
-      # mental model (one broker hostname behind any clustering).
-      [host, port_str] =
-        "EVENT_BROKER_MQTT_URL"
-        |> get_env!()
-        |> String.trim()
-        |> String.split(":")
+      # MQTT — ordered host:port endpoints. EMQTT handles failover and optional
+      # shuffling across the configured hosts.
+      mqtt_hosts =
+        case Endpoint.parse_list(get_env!("EVENT_BROKER_MQTT_URLS"), 1883) do
+          {:ok, endpoints} -> endpoints
+          {:error, reason} -> raise "Invalid EVENT_BROKER_MQTT_URLS: #{reason}"
+        end
 
       mqtt_qos =
         case get_env("EVENT_BROKER_MQTT_QOS", :string, "1") do
@@ -715,8 +724,8 @@ if get_env("EVENT_BROKER_ENABLED", :boolean, false) do
         end
 
       config :edge_admin, :event_broker_mqtt,
-        host: host,
-        port: String.to_integer(port_str),
+        hosts: mqtt_hosts,
+        shuffle_hosts: get_env("EVENT_BROKER_MQTT_SHUFFLE_HOSTS", :boolean, false),
         qos: mqtt_qos,
         # Auth — mutually exclusive (JWT precedence over username/password):
         jwt: get_env("EVENT_BROKER_MQTT_JWT"),

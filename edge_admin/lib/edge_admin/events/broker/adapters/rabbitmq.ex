@@ -31,6 +31,7 @@ defmodule EdgeAdmin.Events.Broker.Adapters.Rabbitmq do
   - `EVENT_BROKER_RABBITMQ_URL` — AMQP URL, e.g. `amqp://host:5672` or `amqp://user:pass@host:5672/vhost`.
                                  Single endpoint — RabbitMQ clustering is handled broker-side.
   - `EVENT_BROKER_RABBITMQ_SSL=true` — enable TLS (default: false)
+  - `EVENT_BROKER_RABBITMQ_NAME` — connection name shown in RabbitMQ management
   """
 
   @behaviour EdgeAdmin.Events.Broker.Adapter
@@ -132,7 +133,12 @@ defmodule EdgeAdmin.Events.Broker.Adapters.Rabbitmq do
     url = Keyword.fetch!(config, :url)
     ssl = Keyword.get(config, :ssl, false)
 
-    conn_opts = if ssl, do: [ssl_options: [verify: :verify_peer, customize_hostname_check: []]], else: []
+    conn_opts =
+      if ssl,
+        do: [ssl_options: [verify: :verify_peer, customize_hostname_check: []]],
+        else: []
+
+    conn_opts = Keyword.put(conn_opts, :name, Keyword.fetch!(config, :name))
 
     case AMQP.Connection.open(url, conn_opts) do
       {:ok, conn} ->

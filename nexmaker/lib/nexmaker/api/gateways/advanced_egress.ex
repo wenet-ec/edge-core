@@ -1,5 +1,5 @@
 # nexmaker/lib/nexmaker/api/advanced_egress.ex
-defmodule Nexmaker.Api.AdvancedEgress do
+defmodule Nexmaker.Api.Gateways.AdvancedEgress do
   @moduledoc """
   Advanced egress gateway management for Netmaker API.
 
@@ -21,7 +21,7 @@ defmodule Nexmaker.Api.AdvancedEgress do
   ## Examples
 
       # Create advanced egress route
-      {:ok, egress} = Nexmaker.Api.AdvancedEgress.create(%{
+      {:ok, egress} = Nexmaker.Api.Gateways.AdvancedEgress.create(%{
         network: "cluster-abc",
         ranges: ["192.168.1.0/24"],
         node_id: "node-123",
@@ -29,15 +29,15 @@ defmodule Nexmaker.Api.AdvancedEgress do
       })
 
       # List all advanced egress routes
-      {:ok, routes} = Nexmaker.Api.AdvancedEgress.list()
+      {:ok, routes} = Nexmaker.Api.Gateways.AdvancedEgress.list()
 
       # Update egress route
-      {:ok, egress} = Nexmaker.Api.AdvancedEgress.update(egress_id, %{
+      {:ok, egress} = Nexmaker.Api.Gateways.AdvancedEgress.update(egress_id, %{
         ranges: ["192.168.0.0/16"]
       })
 
       # Delete egress route
-      {:ok, _} = Nexmaker.Api.AdvancedEgress.delete(egress_id)
+      {:ok, _} = Nexmaker.Api.Gateways.AdvancedEgress.delete(egress_id)
   """
 
   alias Nexmaker.Api
@@ -62,7 +62,7 @@ defmodule Nexmaker.Api.AdvancedEgress do
 
   ## Examples
 
-      {:ok, egress} = Nexmaker.Api.AdvancedEgress.create(%{
+      {:ok, egress} = Nexmaker.Api.Gateways.AdvancedEgress.create(%{
         network: "cluster-abc",
         ranges: ["192.168.1.0/24", "*.internal.example.com"],
         node_id: "node-123",
@@ -91,7 +91,7 @@ defmodule Nexmaker.Api.AdvancedEgress do
 
   ## Examples
 
-      {:ok, routes} = Nexmaker.Api.AdvancedEgress.list("cluster-abc")
+      {:ok, routes} = Nexmaker.Api.Gateways.AdvancedEgress.list("cluster-abc")
   """
   @spec list(String.t(), keyword()) :: {:ok, [map()]} | {:error, any()}
   def list(network_name, opts \\ []) do
@@ -119,7 +119,7 @@ defmodule Nexmaker.Api.AdvancedEgress do
 
   ## Examples
 
-      {:ok, egress} = Nexmaker.Api.AdvancedEgress.update("egress-id", %{
+      {:ok, egress} = Nexmaker.Api.Gateways.AdvancedEgress.update("egress-id", %{
         ranges: ["10.0.0.0/8"],
         metric: 200
       })
@@ -150,7 +150,7 @@ defmodule Nexmaker.Api.AdvancedEgress do
 
   ## Examples
 
-      {:ok, _} = Nexmaker.Api.AdvancedEgress.delete("egress-id")
+      {:ok, _} = Nexmaker.Api.Gateways.AdvancedEgress.delete("egress-id")
   """
   @spec delete(String.t(), keyword()) :: {:ok, any()} | {:error, any()}
   def delete(egress_id, opts \\ []) do

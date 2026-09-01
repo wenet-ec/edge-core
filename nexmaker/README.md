@@ -40,7 +40,7 @@ config :nexmaker,
 :ok = Nexmaker.Api.Nodes.delete("cluster-abc", node_id)
 ```
 
-Available modules: `Networks`, `EnrollmentKeys`, `Hosts`, `Nodes`, `DNS`, `Superadmin`, `Gateways.Ingress`, `Gateways.Egress`, `Gateways.Relay`, `AdvancedEgress`, `InternetGateway`, `ExternalClients`, `EMQX`.
+Available modules: `Networks`, `EnrollmentKeys`, `Hosts`, `Nodes`, `DNS`, `Superadmin`, `Gateways.Ingress`, `Gateways.Egress`, `Gateways.Relay`, `Gateways.AdvancedEgress`, `Gateways.Internet`, `ExternalClients`, `EMQX`.
 
 ### netclient CLI (`Nexmaker.Cli`)
 

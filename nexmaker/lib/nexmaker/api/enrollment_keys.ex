@@ -48,6 +48,32 @@ defmodule Nexmaker.Api.EnrollmentKeys do
   end
 
   @doc """
+  Lists enrollment keys using Netmaker's paginated v2 endpoint.
+
+  ## Query options
+    - `:page` - Page number (default: 1)
+    - `:per_page` - Items per page, up to 100 (default: 10)
+    - `:q` - Search across key name, networks, and tags
+    - `:base_url` - Netmaker API base URL
+    - `:master_key` - Netmaker master key
+
+  ## Returns
+    - `{:ok, pagination}` - Map containing `data`, `page`, `per_page`,
+      `total`, and `total_pages`
+    - `{:error, reason}` - Error occurred
+  """
+  @spec list_paginated(keyword()) :: {:ok, map()} | {:error, any()}
+  def list_paginated(opts \\ []) do
+    {query_keys, api_opts} = Keyword.split(opts, [:page, :per_page, :q])
+    req_opts = if query_keys == [], do: api_opts, else: Keyword.put(api_opts, :query, query_keys)
+
+    case Api.request(:get, "/api/v2/enrollment-keys", req_opts) do
+      {:ok, %{"Response" => pagination}} -> {:ok, pagination}
+      other -> other
+    end
+  end
+
+  @doc """
   Creates an enrollment key for a network.
 
   ## Parameters

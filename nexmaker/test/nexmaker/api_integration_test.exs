@@ -268,6 +268,25 @@ defmodule Nexmaker.ApiIntegrationTest do
       on_exit(fn -> Nexmaker.Api.EnrollmentKeys.delete(key["value"], api_opts()) end)
     end
 
+    test "list_paginated/1 returns the v2 pagination envelope", %{network_name: net} do
+      tag = "tag-#{unique_id()}"
+      {:ok, key} = Nexmaker.Api.EnrollmentKeys.create(net, %{tags: [tag]}, api_opts())
+
+      assert {:ok, result} =
+               Nexmaker.Api.EnrollmentKeys.list_paginated(
+                 [page: 1, per_page: 10, q: tag] ++ api_opts()
+               )
+
+      assert is_list(result["data"])
+      assert is_integer(result["page"])
+      assert is_integer(result["per_page"])
+      assert is_integer(result["total"])
+      assert is_integer(result["total_pages"])
+      assert Enum.any?(result["data"], &(&1["value"] == key["value"]))
+
+      on_exit(fn -> Nexmaker.Api.EnrollmentKeys.delete(key["value"], api_opts()) end)
+    end
+
     test "delete/2 removes key from list", %{network_name: net} do
       tag = "tag-#{unique_id()}"
       {:ok, key} = Nexmaker.Api.EnrollmentKeys.create(net, %{tags: [tag]}, api_opts())
@@ -674,7 +693,7 @@ defmodule Nexmaker.ApiIntegrationTest do
     test "AdvancedEgress.list/2 reaches Netmaker correctly and returns list", %{
       network_name: net
     } do
-      assert {:ok, egresses} = Nexmaker.Api.AdvancedEgress.list(net, api_opts())
+      assert {:ok, egresses} = Nexmaker.Api.Gateways.AdvancedEgress.list(net, api_opts())
       assert is_list(egresses)
     end
 
@@ -692,9 +711,12 @@ defmodule Nexmaker.ApiIntegrationTest do
       assert {:error, {:bad_request, _}} = result
     end
 
-    test "AdvancedEgress.delete/2 returns {:error, {:bad_request, _}} for nonexistent ID" do
+    test "Gateways.AdvancedEgress.delete/2 returns {:error, {:bad_request, _}} for nonexistent ID" do
       result =
-        Nexmaker.Api.AdvancedEgress.delete("00000000-0000-0000-0000-000000000000", api_opts())
+        Nexmaker.Api.Gateways.AdvancedEgress.delete(
+          "00000000-0000-0000-0000-000000000000",
+          api_opts()
+        )
 
       assert {:error, {:bad_request, _}} = result
     end

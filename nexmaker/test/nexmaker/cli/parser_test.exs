@@ -90,6 +90,22 @@ defmodule Nexmaker.Cli.ParserTest do
       assert {:ok, []} = CliParser.parse_list_output(output)
     end
 
+    test "strips timestamp-prefixed [netclient] logs before JSON" do
+      output = """
+      2026-02-02T03:00:00Z [netclient] Checking networks...
+      [{"network":"test","node_id":"123","connected":true,"ipv4_addr":"10.1.0.1/24","ipv6_addr":""}]
+      """
+
+      assert {:ok, [net]} = CliParser.parse_list_output(output)
+      assert net["network"] == "test"
+    end
+
+    test "skips bracketed netclient diagnostics before JSON" do
+      output = "[listen-port-debug] Close: deleting netlink iface\n[{}]"
+
+      assert {:ok, [%{}]} = CliParser.parse_list_output(output)
+    end
+
     test "preserves connected: false" do
       output = ~s([{"network":"x","node_id":"1","connected":false,"ipv4_addr":"","ipv6_addr":""}])
       assert {:ok, [net]} = CliParser.parse_list_output(output)

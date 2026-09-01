@@ -224,13 +224,16 @@ defmodule Nexmaker.Cli.Parser do
   defp clean_netclient_logs(output) do
     output
     |> String.split("\n")
-    |> Enum.reject(&String.starts_with?(&1, "[netclient]"))
+    # Logger prefixes may be added before the [netclient] marker (for example
+    # timestamps or ANSI colour sequences). Remove the complete line whenever
+    # the marker is present so its brackets cannot be mistaken for JSON.
+    |> Enum.reject(&String.contains?(&1, "[netclient]"))
     |> Enum.join("\n")
   end
 
-  # Extract JSON by scanning for the first balanced bracket/brace structure.
-  # Uses a character-by-character scan so it handles arbitrary nesting depth,
-  # unlike regex which only handles a fixed number of levels.
+  # Extract JSON by scanning balanced bracket/brace candidates. CLI diagnostics
+  # can contain brackets too (for example [listen-port-debug]), so keep
+  # searching when a candidate is not valid JSON of the expected root type.
   defp extract_json_by_regex(output, type) do
     {open, close, not_found_error} =
       case type do
@@ -238,32 +241,51 @@ defmodule Nexmaker.Cli.Parser do
         :object -> {?{, ?}, :no_object_found}
       end
 
-    case find_balanced(output, open, close) do
+    case find_valid_json(output, open, close, type, 0) do
       {:ok, json} ->
-        case Jason.decode(json) do
-          {:ok, _} -> {:ok, json}
-          {:error, _} -> {:error, :no_valid_json_found}
-        end
+        {:ok, json}
 
       :not_found ->
-        {:error, not_found_error}
+        if String.contains?(output, <<open>>) do
+          {:error, :no_valid_json_found}
+        else
+          {:error, not_found_error}
+        end
     end
   end
 
-  # Scans `str` for the first occurrence of `open` then finds its matching
-  # `close`, correctly handling nested structures and string literals.
-  defp find_balanced(str, open, close) do
-    chars = String.to_charlist(str)
+  defp find_valid_json(str, open, close, type, offset) do
+    case find_balanced(str, open, close, offset) do
+      {:ok, json, start_idx} ->
+        case Jason.decode(json) do
+          {:ok, data} when (type == :array and is_list(data)) or (type == :object and is_map(data)) ->
+            {:ok, json}
 
-    case Enum.find_index(chars, &(&1 == open)) do
+          _ ->
+            find_valid_json(str, open, close, type, start_idx + 1)
+        end
+
+      :not_found ->
+        :not_found
+    end
+  end
+
+  # Scans `str` from `offset` for an opening delimiter then finds its matching
+  # close, correctly handling nested structures and string literals.
+  defp find_balanced(str, open, close, offset) do
+    chars = String.to_charlist(str)
+    remaining_chars = Enum.drop(chars, offset)
+
+    case Enum.find_index(remaining_chars, &(&1 == open)) do
       nil ->
         :not_found
 
-      start_idx ->
+      relative_start_idx ->
+        start_idx = offset + relative_start_idx
         chars_from_start = Enum.drop(chars, start_idx)
 
         case scan_balanced(chars_from_start, open, close, 0, []) do
-          {:ok, json_chars} -> {:ok, List.to_string(json_chars)}
+          {:ok, json_chars} -> {:ok, List.to_string(json_chars), start_idx}
           :not_found -> :not_found
         end
     end

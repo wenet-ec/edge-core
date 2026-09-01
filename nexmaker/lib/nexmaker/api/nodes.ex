@@ -199,6 +199,51 @@ defmodule Nexmaker.Api.Nodes do
   end
 
   @doc """
+  Lists active Internet Gateway exit nodes available to a node.
+
+  Uses `GET /api/v1/nodes/{network}/{node_id}/exit_nodes`.
+  """
+  @spec list_exit_nodes(String.t(), String.t(), keyword()) :: {:ok, [map()]} | {:error, any()}
+  def list_exit_nodes(network_name, node_id, opts \\ []) do
+    case Api.request(:get, "/api/v1/nodes/#{network_name}/#{node_id}/exit_nodes", opts) do
+      {:ok, %{"Response" => exit_nodes}} -> {:ok, exit_nodes}
+      other -> other
+    end
+  end
+
+  @doc """
+  Gets the Internet Gateway exit node currently selected for a node.
+
+  Returns `{:ok, nil}` when the node has no selected exit node.
+  """
+  @spec get_exit_node(String.t(), String.t(), keyword()) :: {:ok, map() | nil} | {:error, any()}
+  def get_exit_node(network_name, node_id, opts \\ []) do
+    case Api.request(:get, "/api/v1/nodes/#{network_name}/#{node_id}/exit_node", opts) do
+      {:ok, %{"Response" => exit_node}} -> {:ok, exit_node}
+      other -> other
+    end
+  end
+
+  @doc """
+  Selects or clears an Internet Gateway exit node for a node.
+
+  Pass an empty `:egress_id` to clear the selection. Set `:use_tcp_uplink`
+  to `true` to use TCP uplink when the selected gateway supports it.
+  """
+  @spec select_exit_node(String.t(), String.t(), map(), keyword()) ::
+          {:ok, map() | nil} | {:error, any()}
+  def select_exit_node(network_name, node_id, attrs, opts \\ []) do
+    case Api.request(
+           :put,
+           "/api/v1/nodes/#{network_name}/#{node_id}/exit_node",
+           Keyword.put(opts, :body, attrs)
+         ) do
+      {:ok, %{"Response" => exit_node}} -> {:ok, exit_node}
+      other -> other
+    end
+  end
+
+  @doc """
   Lists nodes in a network via the paginated v1 route `GET /api/v1/nodes/{network}`.
 
   Supports filtering and pagination. Prefer this over `list/2` for large networks.

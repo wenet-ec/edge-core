@@ -1,5 +1,5 @@
-# nexmaker/lib/nexmaker/api/internet_gateway.ex
-defmodule Nexmaker.Api.InternetGateway do
+# nexmaker/lib/nexmaker/api/gateways/internet.ex
+defmodule Nexmaker.Api.Gateways.Internet do
   @moduledoc """
   Internet gateway management for Netmaker API.
 
@@ -21,15 +21,15 @@ defmodule Nexmaker.Api.InternetGateway do
   ## Examples
 
       # Create internet gateway
-      {:ok, node} = Nexmaker.Api.InternetGateway.create("cluster-abc", "node-id")
+      {:ok, node} = Nexmaker.Api.Gateways.Internet.create("cluster-abc", "node-id")
 
       # Update internet gateway configuration
-      {:ok, node} = Nexmaker.Api.InternetGateway.update("cluster-abc", "node-id", %{
+      {:ok, node} = Nexmaker.Api.Gateways.Internet.update("cluster-abc", "node-id", %{
         enabled: true
       })
 
       # Delete internet gateway
-      {:ok, _} = Nexmaker.Api.InternetGateway.delete("cluster-abc", "node-id")
+      {:ok, _} = Nexmaker.Api.Gateways.Internet.delete("cluster-abc", "node-id")
   """
 
   alias Nexmaker.Api
@@ -53,7 +53,7 @@ defmodule Nexmaker.Api.InternetGateway do
 
   ## Examples
 
-      {:ok, node} = Nexmaker.Api.InternetGateway.create("cluster-abc", "node-123")
+      {:ok, node} = Nexmaker.Api.Gateways.Internet.create("cluster-abc", "node-123")
   """
   @spec create(String.t(), String.t(), keyword()) :: {:ok, map()} | {:error, any()}
   def create(network_name, node_id, opts \\ []) do
@@ -77,7 +77,7 @@ defmodule Nexmaker.Api.InternetGateway do
 
   ## Examples
 
-      {:ok, node} = Nexmaker.Api.InternetGateway.update("cluster-abc", "node-123", %{
+      {:ok, node} = Nexmaker.Api.Gateways.Internet.update("cluster-abc", "node-123", %{
         enabled: true
       })
   """
@@ -106,7 +106,7 @@ defmodule Nexmaker.Api.InternetGateway do
 
   ## Examples
 
-      {:ok, _} = Nexmaker.Api.InternetGateway.delete("cluster-abc", "node-123")
+      {:ok, _} = Nexmaker.Api.Gateways.Internet.delete("cluster-abc", "node-123")
   """
   @spec delete(String.t(), String.t(), keyword()) :: {:ok, any()} | {:error, any()}
   def delete(network_name, node_id, opts \\ []) do

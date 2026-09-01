@@ -62,6 +62,21 @@ defmodule Nexmaker.Api.Hosts do
   end
 
   @doc """
+  Gets the host's last-evaluated posture status.
+
+  Uses `GET /api/v1/host/{host_id}/posture_status`. Community Netmaker
+  responses contain network posture; MDM and EDR fields are present only
+  when those integrations are configured by the server.
+  """
+  @spec posture_status(String.t(), keyword()) :: {:ok, map()} | {:error, any()}
+  def posture_status(host_id, opts \\ []) do
+    case Api.request(:get, "/api/v1/host/#{host_id}/posture_status", opts) do
+      {:ok, %{"Response" => posture}} -> {:ok, posture}
+      other -> other
+    end
+  end
+
+  @doc """
   Updates a host.
 
   ## Parameters

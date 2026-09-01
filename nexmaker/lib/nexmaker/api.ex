@@ -31,8 +31,8 @@ defmodule Nexmaker.Api do
 
   ### Core VPN
   - `Nexmaker.Api.Networks` - Network management (6 endpoints)
-  - `Nexmaker.Api.EnrollmentKeys` - Enrollment key management (4 endpoints)
-  - `Nexmaker.Api.Hosts` - Host management (11 endpoints)
+  - `Nexmaker.Api.EnrollmentKeys` - Enrollment key management (including paginated listing)
+  - `Nexmaker.Api.Hosts` - Host management and posture status
   - `Nexmaker.Api.Nodes` - Node management (6 endpoints)
   - `Nexmaker.Api.Server` - Server info and health (4 endpoints)
   - `Nexmaker.Api.Superadmin` - Superadmin bootstrap (3 endpoints)
@@ -45,8 +45,8 @@ defmodule Nexmaker.Api do
   - `Nexmaker.Api.Gateways.Relay` - Relay nodes (2 endpoints)
 
   ### Advanced Features
-  - `Nexmaker.Api.AdvancedEgress` - Advanced egress routes (4 endpoints)
-  - `Nexmaker.Api.InternetGateway` - Internet gateways (3 endpoints)
+  - `Nexmaker.Api.Gateways.AdvancedEgress` - Advanced egress routes (4 endpoints)
+  - `Nexmaker.Api.Gateways.Internet` - Internet gateways (3 endpoints)
   - `Nexmaker.Api.ExternalClients` - Remote access clients (8 endpoints)
 
   ### Integration

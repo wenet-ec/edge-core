@@ -5,7 +5,7 @@ defmodule EdgeAdminMcp.Tools.Admins.ListAdminClusters do
 
   Includes admins this instance is not a member of (cross-cluster visibility) and
   may include stale entries — useful for spotting zombie admins by checking the
-  `last_checked_in` and `status` fields.
+  `last_checked_in_at` and `status` fields.
   """
   use EdgeAdminMcp, :tool
 

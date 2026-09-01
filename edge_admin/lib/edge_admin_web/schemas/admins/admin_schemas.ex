@@ -356,12 +356,17 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
           description: "IPv6 address assigned within the admin cluster ULA /64 (without prefix length)",
           nullable: true
         },
-        wireguard_ip_address: %Schema{
+        wireguard_ipv4_address: %Schema{
           type: :string,
-          description: "IP address WireGuard peers send tunnel packets to (public or LAN-reachable)",
+          description: "IPv4 address WireGuard peers send tunnel packets to (public or LAN-reachable)",
           nullable: true
         },
-        wireguard_port: %Schema{
+        wireguard_ipv6_address: %Schema{
+          type: :string,
+          description: "IPv6 address WireGuard peers send tunnel packets to (public or LAN-reachable)",
+          nullable: true
+        },
+        wireguard_listen_port: %Schema{
           type: :integer,
           description: "WireGuard listen port",
           nullable: true
@@ -377,10 +382,16 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
             "Edge VPN-derived status: online (recent checkin), offline (stale checkin), disconnected (admin disabled)",
           nullable: true
         },
-        last_checked_in: %Schema{
+        last_checked_in_at: %Schema{
           type: :string,
           format: :"date-time",
           description: "Last time this admin's Edge VPN CLI reported to the Edge VPN server (ISO 8601)",
+          nullable: true
+        },
+        last_peer_update_at: %Schema{
+          type: :string,
+          format: :"date-time",
+          description: "Last time Netmaker updated this admin's peer configuration (ISO 8601)",
           nullable: true
         }
       },
@@ -390,11 +401,13 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
         vpn_hostname: "admin-7k3m9p2n.admin-cluster-main.nm.internal",
         vpn_host_id: "f272e703-b48f-4b61-b4c1-bfe4fffde62b",
         ipv4_address: "100.64.0.1",
-        wireguard_ip_address: "10.0.0.7",
-        wireguard_port: 51_820,
+        wireguard_ipv4_address: "10.0.0.7",
+        wireguard_ipv6_address: "2001:db8::7",
+        wireguard_listen_port: 51_820,
         use_static_port: true,
         status: "online",
-        last_checked_in: "2026-04-28T12:34:56Z"
+        last_checked_in_at: "2026-04-28T12:34:56Z",
+        last_peer_update_at: "2026-04-28T12:34:50Z"
       }
     })
   end
@@ -430,11 +443,13 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
             vpn_host_id: "f272e703-b48f-4b61-b4c1-bfe4fffde62b",
             ipv4_address: "100.64.0.1",
             ipv6_address: "fd7a:91c2:4e8c:1::1",
-            wireguard_ip_address: "10.0.0.7",
-            wireguard_port: 51_820,
+            wireguard_ipv4_address: "10.0.0.7",
+            wireguard_ipv6_address: "2001:db8::7",
+            wireguard_listen_port: 51_820,
             use_static_port: true,
             status: "online",
-            last_checked_in: "2026-04-28T12:34:56Z"
+            last_checked_in_at: "2026-04-28T12:34:56Z",
+            last_peer_update_at: "2026-04-28T12:34:50Z"
           }
         ]
       }

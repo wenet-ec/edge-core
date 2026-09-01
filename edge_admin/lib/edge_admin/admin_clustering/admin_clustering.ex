@@ -37,11 +37,13 @@ defmodule EdgeAdmin.AdminClustering do
               vpn_host_id: "f272e703-...",
               ipv4_address: "100.64.0.1",
               ipv6_address: "fd7a:91c2:4e8c:1::1",
-              wireguard_ip_address: "10.0.0.7",
-              wireguard_port: 51820,
+              wireguard_ipv4_address: "10.0.0.7",
+              wireguard_ipv6_address: "2001:db8::7",
+              wireguard_listen_port: 51820,
               use_static_port: true,
               status: "online",
-              last_checked_in: "2026-04-28T12:34:56Z"
+              last_checked_in_at: "2026-04-28T12:34:56Z",
+              last_peer_update_at: "2026-04-28T12:34:50Z"
             },
             ...
           ]
@@ -93,11 +95,13 @@ defmodule EdgeAdmin.AdminClustering do
       vpn_host_id: host["id"],
       ipv4_address: strip_cidr(node["address"]),
       ipv6_address: strip_cidr(node["address6"]),
-      wireguard_ip_address: host["endpointip"],
-      wireguard_port: host["listenport"],
+      wireguard_ipv4_address: host["endpointip"],
+      wireguard_ipv6_address: host["endpointipv6"],
+      wireguard_listen_port: host["listenport"],
       use_static_port: host["isstaticport"] == true,
       status: node["status"],
-      last_checked_in: format_checkin(node["lastcheckin"])
+      last_checked_in_at: format_checkin(node["lastcheckin"]),
+      last_peer_update_at: format_checkin(node["lastpeerupdate"])
     }
   end
 

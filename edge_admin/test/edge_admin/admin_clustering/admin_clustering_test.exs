@@ -14,13 +14,15 @@ defmodule EdgeAdmin.AdminClusteringTest do
       "address" => Keyword.get(opts, :address, "100.64.0.1/24"),
       "address6" => Keyword.get(opts, :address6, "fd7a:91c2:4e8c:1::1/64"),
       "status" => Keyword.get(opts, :status, "online"),
-      "lastcheckin" => Keyword.get(opts, :lastcheckin, 1_700_000_000)
+      "lastcheckin" => Keyword.get(opts, :lastcheckin, 1_700_000_000),
+      "lastpeerupdate" => Keyword.get(opts, :lastpeerupdate, 1_699_999_950)
     }
 
     host = %{
       "id" => Keyword.get(opts, :host_id, "host-id-1"),
       "name" => Keyword.fetch!(opts, :name),
       "endpointip" => Keyword.get(opts, :endpointip, "10.0.0.1"),
+      "endpointipv6" => Keyword.get(opts, :endpointipv6, "2001:db8::1"),
       "listenport" => Keyword.get(opts, :listenport, 51_820),
       "isstaticport" => Keyword.get(opts, :isstaticport, true)
     }
@@ -109,21 +111,24 @@ defmodule EdgeAdmin.AdminClusteringTest do
   # normalise_member field-by-field (exercised through normalise_cluster)
 
   describe "normalise_cluster/1 — per-admin fields" do
-    test "passes through name, vpn_host_id, endpoint, port, status" do
+    test "passes through name, host endpoints, port, and status" do
       admin =
         single_admin(
           name: "admin-foo",
           host_id: "f272e703-aaaa-bbbb-cccc-1234",
           endpointip: "10.0.0.7",
+          endpointipv6: "2001:db8::7",
           listenport: 51_820,
           status: "online"
         )
 
       assert admin.name == "admin-foo"
       assert admin.vpn_host_id == "f272e703-aaaa-bbbb-cccc-1234"
-      assert admin.wireguard_ip_address == "10.0.0.7"
-      assert admin.wireguard_port == 51_820
+      assert admin.wireguard_ipv4_address == "10.0.0.7"
+      assert admin.wireguard_ipv6_address == "2001:db8::7"
+      assert admin.wireguard_listen_port == 51_820
       assert admin.status == "online"
+      assert admin.last_peer_update_at == "2023-11-14T22:12:30Z"
     end
 
     test "strip_cidr removes /prefix from address" do
@@ -151,14 +156,14 @@ defmodule EdgeAdmin.AdminClusteringTest do
 
     test "format_checkin renders a positive Unix epoch as ISO 8601" do
       admin = single_admin(name: "admin-1", lastcheckin: 1_700_000_000)
-      assert admin.last_checked_in == "2023-11-14T22:13:20Z"
+      assert admin.last_checked_in_at == "2023-11-14T22:13:20Z"
     end
 
     test "format_checkin returns nil for 0, negatives, and non-integers" do
-      assert single_admin(name: "admin-1", lastcheckin: 0).last_checked_in == nil
-      assert single_admin(name: "admin-1", lastcheckin: -1).last_checked_in == nil
-      assert single_admin(name: "admin-1", lastcheckin: nil).last_checked_in == nil
-      assert single_admin(name: "admin-1", lastcheckin: "1700000000").last_checked_in == nil
+      assert single_admin(name: "admin-1", lastcheckin: 0).last_checked_in_at == nil
+      assert single_admin(name: "admin-1", lastcheckin: -1).last_checked_in_at == nil
+      assert single_admin(name: "admin-1", lastcheckin: nil).last_checked_in_at == nil
+      assert single_admin(name: "admin-1", lastcheckin: "1700000000").last_checked_in_at == nil
     end
   end
 end

@@ -1,6 +1,6 @@
 # edge_admin/lib/edge_admin/events/broker/endpoint.ex
 defmodule EdgeAdmin.Events.Broker.Endpoint do
-  @moduledoc """Pure parsing helpers for broker endpoint environment variables."""
+  @moduledoc "Pure parsing helpers for broker endpoint environment variables."
 
   @doc """
   Parses a comma-separated list of `host:port` endpoints.

@@ -22,19 +22,19 @@ For full architecture detail see `docs/architecture.md`.
 
 ```bash
 # Netmaker server (upstream, read-only reference)
-git clone --branch v1.6.0 https://github.com/gravitl/netmaker edge_vpn/netmaker
+git clone --branch v1.7.0 https://github.com/gravitl/netmaker edge_vpn/netmaker
 
 # Netclient (our fork — includes DERP relay integration)
-git clone --branch v1.6.0-derp https://github.com/wenet-ec/netclient edge_vpn/netclient
+git clone --branch v1.7.0-derp https://github.com/wenet-ec/netclient edge_vpn/netclient
 ```
 
-When working on anything related to the Netmaker API, netclient enrollment, DERP relay, or WireGuard mesh behavior, read the source directly from `edge_vpn/`. The Netmaker OpenAPI spec is also available at `docs/netmaker-openapi-v1.6.0.yml`.
+When working on anything related to the Netmaker API, netclient enrollment, DERP relay, or WireGuard mesh behavior, read the source directly from `edge_vpn/`. The Netmaker OpenAPI spec is also available at `docs/netmaker-openapi-v1.7.0.yml`.
 
 ### DERP and dynamic Settings Config contract
 
 - `CORE_DERP_MAP_URLS` is Edge Admin deployment configuration: an ordered comma-separated list of mirror or hostname-migration URLs for **one complete canonical Core DERP map**. It is not stored in the Admin database.
 - Admin's `/start` script bridges `CORE_DERP_MAP_URLS` into netclient's existing `DERP_MAP_URLS` contract before the daemon starts. Do not reuse `DERP_MAP_URLS` as an application configuration name.
-- In the `v1.6.0-derp` netclient fork, the first usable `DERP_MAP_URLS` source wins; Core maps are never merged. Every migration URL must serve the same complete map. If no Core source is usable, netclient falls back to Tailscale's public map.
+- In the `v1.7.0-derp` netclient fork, the first usable `DERP_MAP_URLS` source wins; Core maps are never merged. Every migration URL must serve the same complete map. If no Core source is usable, netclient falls back to Tailscale's public map.
 - `ADMIN_URLS` remains a list of independently useful Admin API endpoints; agents use it for transport failover. Do not apply canonical-map semantics to Admin URLs.
 - The authenticated agent refresh endpoint is `GET /api/v1/agents/settings/config`. It returns only non-secret Settings Config (`admin_urls`, `core_derp_map_urls`), follows the normal controller/JSON/OpenAPI schema convention, and remains available in degraded mode so agents can recover routes.
 - Agent netclient receives a fixed localhost DERP reflection URL at process startup. Dynamic Core map sources are fetched by the Agent application and reflected there; never attempt to change a running netclient's environment.

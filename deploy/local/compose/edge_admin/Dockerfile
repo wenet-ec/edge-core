@@ -1,6 +1,6 @@
 # deploy/local/compose/edge_admin/Dockerfile
 
-ARG NETCLIENT_VERSION=v1.6.0-derp
+ARG NETCLIENT_VERSION=v1.7.0-derp
 FROM ghcr.io/wenet-ec/netclient:${NETCLIENT_VERSION} AS netclient-builder
 
 FROM elixir:1.20.3-otp-29-slim AS elixir-dev-stage

@@ -396,6 +396,9 @@ oban_queues =
 admin_tcp_tunnel_secret =
   get_env("ADMIN_TCP_TUNNEL_SECRET", :string, "edge_admin_default_tcp_tunnel_secret")
 
+# Event delivery applies to both broker and webhook channels.
+core_name = get_env("CORE_NAME", :string, "default")
+
 config :edge_admin, EdgeAdmin.BackgroundJobs.Quantum,
   jobs: [
     admin_discovery: [
@@ -558,18 +561,16 @@ config :edge_admin,
   admin_mcp_port: admin_mcp_port,
   admin_mcp_dedicated: is_integer(admin_mcp_port)
 
-# Event delivery — applies to both broker and webhook channels
-# CORE_NAME stamps every envelope with the publishing instance's identity.
-# EVENT_DELIVERY_MAX_AGE_SECONDS caps how long a delivery worker will keep
-# retrying a single event. WEBHOOK_MAX_ATTEMPTS sets the per-event retry
-# budget. WEBHOOK_ALLOW_PRIVATE_IPS opts out of SSRF protection for homelab
-# / dev where webhook receivers legitimately live on RFC1918 ranges.
-core_name = get_env("CORE_NAME", :string, "default")
-
 config :edge_admin,
+  # CORE_NAME stamps every envelope with the publishing instance's identity.
   core_name: core_name,
+  # EVENT_DELIVERY_MAX_AGE_SECONDS caps how long a delivery worker will keep
+  # retrying a single event.
   event_delivery_max_age_seconds: get_env("EVENT_DELIVERY_MAX_AGE_SECONDS", :integer, 3600),
+  # WEBHOOK_MAX_ATTEMPTS sets the per-event retry budget.
   webhook_max_attempts: get_env("WEBHOOK_MAX_ATTEMPTS", :integer, 3),
+  # WEBHOOK_ALLOW_PRIVATE_IPS opts out of SSRF protection for homelab/dev
+  # receivers that legitimately live on RFC1918 ranges.
   webhook_allow_private_ips: get_env("WEBHOOK_ALLOW_PRIVATE_IPS", :boolean, false)
 
 config :edge_admin,

@@ -258,7 +258,8 @@ defmodule Nexmaker.Cli.Parser do
     case find_balanced(str, open, close, offset) do
       {:ok, json, start_idx} ->
         case Jason.decode(json) do
-          {:ok, data} when (type == :array and is_list(data)) or (type == :object and is_map(data)) ->
+          {:ok, data}
+          when (type == :array and is_list(data)) or (type == :object and is_map(data)) ->
             {:ok, json}
 
           _ ->

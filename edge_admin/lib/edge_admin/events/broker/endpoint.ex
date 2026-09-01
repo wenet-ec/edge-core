@@ -10,12 +10,13 @@ defmodule EdgeAdmin.Events.Broker.Endpoint do
   """
   @spec parse_list(String.t(), pos_integer()) :: {:ok, [{String.t(), pos_integer()}]} | {:error, String.t()}
   def parse_list(value, default_port) when is_binary(value) and is_integer(default_port) do
-    endpoints = String.split(value, ",", trim: true) |> Enum.map(&String.trim/1)
+    endpoints = value |> String.split(",", trim: true) |> Enum.map(&String.trim/1)
 
     if endpoints == [] do
       {:error, "endpoint list must not be empty"}
     else
-      Enum.reduce_while(endpoints, {:ok, []}, fn endpoint, {:ok, acc} ->
+      endpoints
+      |> Enum.reduce_while({:ok, []}, fn endpoint, {:ok, acc} ->
         case parse(endpoint, default_port) do
           {:ok, parsed} -> {:cont, {:ok, [parsed | acc]}}
           {:error, reason} -> {:halt, {:error, "invalid endpoint #{inspect(endpoint)}: #{reason}"}}
@@ -33,15 +34,37 @@ defmodule EdgeAdmin.Events.Broker.Endpoint do
   def parse(endpoint, default_port) do
     uri = URI.parse(if String.contains?(endpoint, "://"), do: endpoint, else: "tcp://" <> endpoint)
     host = uri.host
-    port = uri.port || default_port
+    authority = endpoint |> String.split("://", parts: 2) |> List.last() |> String.split("/", parts: 2) |> hd()
 
     cond do
       is_nil(host) or host == "" -> {:error, "host is missing"}
-      not is_integer(port) or port < 1 or port > 65_535 -> {:error, "port must be between 1 and 65535"}
       uri.path not in [nil, "", "/"] -> {:error, "paths are not supported"}
-      true -> {:ok, {host, port}}
+      true -> parse_port(authority, host, uri.port || default_port)
     end
   rescue
     ArgumentError -> {:error, "malformed endpoint"}
+  end
+
+  defp parse_port(<<"[", _::binary>> = authority, host, default_port) do
+    case Regex.run(~r/\A\[[^\]]+\](?::([^:]+))?\z/, authority) do
+      [_, ""] -> {:error, "port must be between 1 and 65535"}
+      [_, port] -> validate_port(port, host)
+      [_] -> {:ok, {host, default_port}}
+      nil -> {:error, "malformed endpoint"}
+    end
+  end
+
+  defp parse_port(authority, host, default_port) do
+    case String.split(authority, ":", parts: 2) do
+      [_host] -> {:ok, {host, default_port}}
+      [_host, port] -> validate_port(port, host)
+    end
+  end
+
+  defp validate_port(port, host) do
+    case Integer.parse(port) do
+      {value, ""} when value in 1..65_535 -> {:ok, {host, value}}
+      _ -> {:error, "port must be between 1 and 65535"}
+    end
   end
 end

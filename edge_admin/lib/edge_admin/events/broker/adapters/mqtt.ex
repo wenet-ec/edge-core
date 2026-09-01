@@ -267,7 +267,7 @@ defmodule EdgeAdmin.Events.Broker.Adapters.Mqtt do
       ssl_opts = build_ssl_opts(config)
 
       if Keyword.fetch!(config, :websocket) do
-        Keyword.put(opts, :ws_transport_options, [transport: :tls, tls_opts: ssl_opts])
+        Keyword.put(opts, :ws_transport_options, transport: :tls, tls_opts: ssl_opts)
       else
         opts |> Keyword.put(:ssl, true) |> Keyword.put(:ssl_opts, ssl_opts)
       end

@@ -49,11 +49,10 @@ defmodule Nexmaker.Cli do
     - `:token` (required) - Base64-encoded enrollment token from API response's "token" field
     - `:name` - Host name to register with (defaults to machine hostname)
     - `:endpoint` - Endpoint IP address
+    - `:endpoint_ipv6` - IPv6 endpoint IP address
     - `:port` - WireGuard listen port
-    - `:mtu` - MTU value for the interface
     - `:interface` - Netmaker interface to use
-    - `:static` - Flag to set host as static endpoint
-    - `:static_port` - Flag to set host as static port
+    - `:firewall` - Firewall implementation (`iptables` or `nftables`)
 
   ## Returns
     - `{:ok, %{}}` - Successfully joined
@@ -100,13 +99,10 @@ defmodule Nexmaker.Cli do
       {:token, value} -> ["--token", value]
       {:name, value} -> ["--name", to_string(value)]
       {:endpoint, value} -> ["--endpoint-ip", to_string(value)]
+      {:endpoint_ipv6, value} -> ["--endpoint-ip6", to_string(value)]
       {:port, value} -> ["--port", to_string(value)]
-      {:mtu, value} -> ["--mtu", to_string(value)]
       {:interface, value} -> ["--interface", to_string(value)]
-      {:static, true} -> ["--static-endpoint"]
-      {:static, false} -> []
-      {:static_port, true} -> ["--static-port"]
-      {:static_port, false} -> []
+      {:firewall, value} -> ["--firewall", to_string(value)]
       _ -> []
     end)
   end

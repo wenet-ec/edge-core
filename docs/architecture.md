@@ -1,6 +1,6 @@
 # Edge Core — Architecture
 
-**Last Updated: 2026-08-19**
+**Last Updated: 2026-09-01**
 
 Edge Core is an infrastructure management platform for fleets of Linux machines you don't physically touch — cloud VMs, on-premises servers, factory-floor equipment, Raspberry Pis, homelab boxes, IoT devices. Anywhere you have N machines and want a single HTTP API to operate them, the same primitives apply: a secure WireGuard mesh, remote command execution, SSH without exposing port 22, HTTP/SOCKS5 forward proxying through any node, Prometheus metrics aggregation.
 
@@ -141,7 +141,7 @@ HTTP client built on `Req`. All requests use MASTER_KEY bearer token auth. Cover
 | `Nexmaker.Api.Gateways.*`      | Ingress, egress, relay gateway management              |
 | `Nexmaker.Api.Acls`            | ACL policy management                                  |
 | `Nexmaker.Api.Gateways.AdvancedEgress`  | Advanced egress gateway configuration                  |
-| `Nexmaker.Api.Gateways.InternetGateway` | Internet gateway management                            |
+| `Nexmaker.Api.Gateways.Internet` | Internet gateway management                            |
 | `Nexmaker.Api.ExternalClients` | External (non-netclient) WireGuard client management   |
 | `Nexmaker.Api.EMQX`            | EMQX broker provisioning (Netmaker-internal use)       |
 

@@ -285,7 +285,7 @@ defmodule EdgeAdmin.AdminClustering.Membership.Bootstrap do
 
       port when is_integer(port) ->
         Logger.info("Using static WireGuard port: #{port}")
-        base_opts ++ [port: port, static_port: true]
+        base_opts ++ [port: port]
     end
   end
 

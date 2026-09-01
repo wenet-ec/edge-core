@@ -634,14 +634,16 @@
             {
               "ipv4_address": "100.64.0.1",
               "ipv6_address": "fd7a:91c2:4e8c:1::1",
-              "last_checked_in": "2026-04-28T12:34:56Z",
+              "last_checked_in_at": "2026-04-28T12:34:56Z",
+              "last_peer_update_at": "2026-04-28T12:34:50Z",
               "name": "admin-7k3m9p2n",
               "status": "online",
               "use_static_port": true,
               "vpn_host_id": "f272e703-b48f-4b61-b4c1-bfe4fffde62b",
               "vpn_hostname": "admin-7k3m9p2n.admin-cluster-main.nm.internal",
-              "wireguard_ip_address": "10.0.0.7",
-              "wireguard_port": 51820
+              "wireguard_ipv4_address": "10.0.0.7",
+              "wireguard_ipv6_address": "2001:db8::7",
+              "wireguard_listen_port": 51820
             }
           ],
           "ipv4_range": "100.64.0.0/24",
@@ -3648,14 +3650,16 @@
         "description": "An admin instance present in an Edge VPN admin-cluster network. May include stale/disconnected entries.",
         "example": {
           "ipv4_address": "100.64.0.1",
-          "last_checked_in": "2026-04-28T12:34:56Z",
+          "last_checked_in_at": "2026-04-28T12:34:56Z",
+          "last_peer_update_at": "2026-04-28T12:34:50Z",
           "name": "admin-7k3m9p2n",
           "status": "online",
           "use_static_port": true,
           "vpn_host_id": "f272e703-b48f-4b61-b4c1-bfe4fffde62b",
           "vpn_hostname": "admin-7k3m9p2n.admin-cluster-main.nm.internal",
-          "wireguard_ip_address": "10.0.0.7",
-          "wireguard_port": 51820
+          "wireguard_ipv4_address": "10.0.0.7",
+          "wireguard_ipv6_address": "2001:db8::7",
+          "wireguard_listen_port": 51820
         },
         "properties": {
           "ipv4_address": {
@@ -3668,8 +3672,14 @@
             "nullable": true,
             "type": "string"
           },
-          "last_checked_in": {
+          "last_checked_in_at": {
             "description": "Last time this admin's Edge VPN CLI reported to the Edge VPN server (ISO 8601)",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "last_peer_update_at": {
+            "description": "Last time Netmaker updated this admin's peer configuration (ISO 8601)",
             "format": "date-time",
             "nullable": true,
             "type": "string"
@@ -3696,12 +3706,17 @@
             "description": "DNS hostname inside the admin cluster network",
             "type": "string"
           },
-          "wireguard_ip_address": {
-            "description": "IP address WireGuard peers send tunnel packets to (public or LAN-reachable)",
+          "wireguard_ipv4_address": {
+            "description": "IPv4 address WireGuard peers send tunnel packets to (public or LAN-reachable)",
             "nullable": true,
             "type": "string"
           },
-          "wireguard_port": {
+          "wireguard_ipv6_address": {
+            "description": "IPv6 address WireGuard peers send tunnel packets to (public or LAN-reachable)",
+            "nullable": true,
+            "type": "string"
+          },
+          "wireguard_listen_port": {
             "description": "WireGuard listen port",
             "nullable": true,
             "type": "integer"

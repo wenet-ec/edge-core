@@ -166,7 +166,7 @@ defmodule EdgeAdmin.Mixfile do
       # Event Streaming
       {:gnat, "~> 1.16"},
       {:brod, "~> 4.6"},
-      {:amqp, "~> 4.1"},
+      {:amqp, "~> 4.2"},
       {:redix, "~> 1.8"},
       # Source build instead of Hex so emqtt's rebar.config.script runs on our
       # compile and honors BUILD_WITHOUT_QUIC=1 (set in the Dockerfiles). Hex

@@ -75,6 +75,7 @@ defmodule EdgeAdminWeb.Router do
 
     get("/swaggerui", OpenApiSpex.Plug.SwaggerUI,
       path: "/api/openapi",
+      title: "Edge Admin API",
       swagger_ui_css_url: "/assets/swagger-edge-core.css"
     )
 

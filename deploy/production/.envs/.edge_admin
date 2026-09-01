@@ -334,11 +334,13 @@ ADMIN_TCP_TUNNEL_SECRET=prod-secret
 # EVENT_BROKER_ADAPTER=mqtt
 # EVENT_BROKER_MQTT_URLS=edge_event_broker_mqtt:1883         # Comma-separated host:port endpoints
 # EVENT_BROKER_MQTT_SHUFFLE_HOSTS=false                      # Randomize MQTT hosts per connect attempt
+# EVENT_BROKER_MQTT_WEBSOCKET=false                          # MQTT over WebSocket instead of TCP/TLS
+# EVENT_BROKER_MQTT_WEBSOCKET_PATH=/mqtt                    # WebSocket path, default /mqtt
 # EVENT_BROKER_MQTT_QOS=1                                    # 0|1|2, default 1
 # EVENT_BROKER_MQTT_JWT=                                     # JWT bearer (CONNECT password slot)
 # EVENT_BROKER_MQTT_USERNAME=
 # EVENT_BROKER_MQTT_PASSWORD=
-# EVENT_BROKER_MQTT_SSL=true                                 # TLS, required for public/external brokers
+# EVENT_BROKER_MQTT_SSL=true                                 # TLS for TCP, WSS for WebSocket
 # EVENT_BROKER_MQTT_CACERT_FILE=                             # Custom CA bundle / pinning
 # EVENT_BROKER_MQTT_CLIENT_CERT_FILE=                        # mTLS, requires SSL=true
 # EVENT_BROKER_MQTT_CLIENT_KEY_FILE=                         # mTLS, requires SSL=true

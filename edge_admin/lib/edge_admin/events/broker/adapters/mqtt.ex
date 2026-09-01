@@ -50,11 +50,20 @@ defmodule EdgeAdmin.Events.Broker.Adapters.Mqtt do
   - `EVENT_BROKER_MQTT_CLIENT_CERT_FILE` + `EVENT_BROKER_MQTT_CLIENT_KEY_FILE`
     — mTLS (client auth via certificate). Requires SSL=true.
 
+  ## WebSocket
+
+  - `EVENT_BROKER_MQTT_WEBSOCKET=true` — connect using MQTT over WebSocket
+    instead of direct TCP/TLS.
+  - `EVENT_BROKER_MQTT_WEBSOCKET_PATH` — WebSocket path, default `/mqtt`.
+    SSL=true enables secure WebSocket transport (WSS).
+
   ## Configuration (set in runtime.exs from env vars)
 
       config :edge_admin, :event_broker_mqtt,
         hosts: [{"edge_event_broker_mqtt", 1883}],
         shuffle_hosts: false,
+        websocket: false,
+        websocket_path: "/mqtt",
         qos: 1,
         username: nil,
         password: nil,
@@ -174,7 +183,7 @@ defmodule EdgeAdmin.Events.Broker.Adapters.Mqtt do
     opts = build_emqtt_opts(config)
 
     with {:ok, client} <- :emqtt.start_link(opts),
-         {:ok, _props} <- :emqtt.connect(client) do
+         {:ok, _props} <- connect(client, config) do
       Process.monitor(client)
       Logger.info("[EventBroker.Mqtt] Connected to #{inspect(config[:hosts])}")
       {:noreply, %{client: client}}
@@ -183,6 +192,14 @@ defmodule EdgeAdmin.Events.Broker.Adapters.Mqtt do
         Logger.warning("[EventBroker.Mqtt] Connection failed: #{inspect(reason)} — will retry in 10s")
         Process.send_after(self(), :connect, 10_000)
         {:noreply, %{client: nil}}
+    end
+  end
+
+  defp connect(client, config) do
+    if Keyword.fetch!(config, :websocket) do
+      :emqtt.ws_connect(client)
+    else
+      :emqtt.connect(client)
     end
   end
 
@@ -206,8 +223,19 @@ defmodule EdgeAdmin.Events.Broker.Adapters.Mqtt do
     ]
 
     base
+    |> add_websocket(config)
     |> add_auth(config)
     |> add_tls(config)
+  end
+
+  defp add_websocket(opts, config) do
+    if Keyword.fetch!(config, :websocket) do
+      opts
+      |> Keyword.put(:ws_path, Keyword.fetch!(config, :websocket_path))
+      |> Keyword.put(:ws_transport_options, [])
+    else
+      opts
+    end
   end
 
   # JWT > username/password > anonymous. JWT is sent in the CONNECT password
@@ -237,7 +265,12 @@ defmodule EdgeAdmin.Events.Broker.Adapters.Mqtt do
   defp add_tls(opts, config) do
     if Keyword.get(config, :ssl, false) do
       ssl_opts = build_ssl_opts(config)
-      opts |> Keyword.put(:ssl, true) |> Keyword.put(:ssl_opts, ssl_opts)
+
+      if Keyword.fetch!(config, :websocket) do
+        Keyword.put(opts, :ws_transport_options, [transport: :tls, tls_opts: ssl_opts])
+      else
+        opts |> Keyword.put(:ssl, true) |> Keyword.put(:ssl_opts, ssl_opts)
+      end
     else
       opts
     end

@@ -726,6 +726,8 @@ if get_env("EVENT_BROKER_ENABLED", :boolean, false) do
       config :edge_admin, :event_broker_mqtt,
         hosts: mqtt_hosts,
         shuffle_hosts: get_env("EVENT_BROKER_MQTT_SHUFFLE_HOSTS", :boolean, false),
+        websocket: get_env("EVENT_BROKER_MQTT_WEBSOCKET", :boolean, false),
+        websocket_path: get_env("EVENT_BROKER_MQTT_WEBSOCKET_PATH", :string, "/mqtt"),
         qos: mqtt_qos,
         # Auth — mutually exclusive (JWT precedence over username/password):
         jwt: get_env("EVENT_BROKER_MQTT_JWT"),

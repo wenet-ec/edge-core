@@ -107,6 +107,8 @@ Channel = event type. Use `SUBSCRIBE edge.node.registered` for exact match, `PSU
 ```bash
 EVENT_BROKER_ADAPTER=mqtt
 EVENT_BROKER_MQTT_URLS=host-a:1883,host-b:1883           # ordered failover endpoints
+EVENT_BROKER_MQTT_WEBSOCKET=false                       # MQTT over WebSocket instead of TCP/TLS
+EVENT_BROKER_MQTT_WEBSOCKET_PATH=/mqtt                 # WebSocket path (default /mqtt)
 EVENT_BROKER_MQTT_QOS=1                                 # 0|1|2 (default 1, at-least-once with broker ACK)
 
 # Auth — pick one mode (mutually exclusive, JWT precedence over username/password):
@@ -115,7 +117,7 @@ EVENT_BROKER_MQTT_USERNAME=
 EVENT_BROKER_MQTT_PASSWORD=
 
 # TLS:
-EVENT_BROKER_MQTT_SSL=true                              # required for external brokers
+EVENT_BROKER_MQTT_SSL=true                              # TLS for TCP, WSS for WebSocket
 EVENT_BROKER_MQTT_CACERT_FILE=                          # custom CA bundle / pinning
 EVENT_BROKER_MQTT_CLIENT_CERT_FILE=                     # mTLS — requires SSL=true
 EVENT_BROKER_MQTT_CLIENT_KEY_FILE=                      # mTLS — requires SSL=true

@@ -111,7 +111,9 @@ config:
 #   # EVENT_BROKER_GOOGLE_PUBSUB_TOPIC_ID_PREFIX: ""           # optional, e.g. "edge-prod-"
 #   # GOOGLE_APPLICATION_CREDENTIALS: "/etc/gcp/sa.json"       # path the chart mounts the SA JSON at
 #   EVENT_BROKER_MQTT_QOS: "1"              # MQTT only — 0|1|2 (default 1)
-#   EVENT_BROKER_MQTT_SSL: "true"           # MQTT only — TLS toggle
+#   EVENT_BROKER_MQTT_WEBSOCKET: "true"     # MQTT over WebSocket instead of TCP/TLS
+#   EVENT_BROKER_MQTT_WEBSOCKET_PATH: "/mqtt" # WebSocket path
+#   EVENT_BROKER_MQTT_SSL: "true"           # TLS for TCP, WSS for WebSocket
 #   EVENT_BROKER_MQTT_CACERT_FILE: "/etc/mqtt/tls/ca.crt"
 #   EVENT_BROKER_MQTT_CLIENT_CERT_FILE: "/etc/mqtt/tls/client.crt"
 #   EVENT_BROKER_MQTT_CLIENT_KEY_FILE: "/etc/mqtt/tls/client.key"

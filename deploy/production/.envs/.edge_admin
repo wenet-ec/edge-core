@@ -327,8 +327,14 @@ ADMIN_TCP_TUNNEL_SECRET=prod-secret
 # Redis:
 # EVENT_BROKER_ADAPTER=redis
 # Embed credentials: redis://:pass@host:port
+# EVENT_BROKER_REDIS_MODE=standalone                           # standalone (default) or sentinel
 # EVENT_BROKER_REDIS_URL=redis://edge_event_broker_redis:6379
 # EVENT_BROKER_REDIS_SSL=true                                # TLS, required for public/external brokers
+# EVENT_BROKER_REDIS_SENTINELS=redis-sentinel-a:26379,redis-sentinel-b:26379
+# EVENT_BROKER_REDIS_SENTINEL_GROUP=mymaster
+# EVENT_BROKER_REDIS_USERNAME=                              # Redis primary username (Sentinel mode)
+# EVENT_BROKER_REDIS_PASSWORD=                              # Redis primary password (Sentinel mode)
+# EVENT_BROKER_REDIS_SENTINEL_PASSWORD=                     # Optional Sentinel password
 
 # MQTT (EMQX, Mosquitto, HiveMQ, AWS IoT, etc.):
 # EVENT_BROKER_ADAPTER=mqtt

@@ -17,8 +17,10 @@ defmodule EdgeAdmin.Events.Broker.Adapters.Redis do
   ## Auth
 
   Embed credentials in the URL: `redis://:password@host:port` or
-  `redis://username:password@host:port` (Redis 6+ ACL). No separate env vars
-  are needed — Redix parses the URL directly.
+  `redis://username:password@host:port` (Redis 6+ ACL) in standalone mode.
+  Sentinel mode uses `EVENT_BROKER_REDIS_USERNAME` and
+  `EVENT_BROKER_REDIS_PASSWORD` for the resolved primary, with the optional
+  `EVENT_BROKER_REDIS_SENTINEL_PASSWORD` for Sentinel authentication.
 
   ## TLS
 
@@ -28,12 +30,28 @@ defmodule EdgeAdmin.Events.Broker.Adapters.Redis do
   ## Configuration (set in runtime.exs from env vars)
 
       config :edge_admin, :event_broker_redis,
+        mode: :standalone,
         url: "redis://host:6379",
         ssl: false
 
+      # Sentinel mode:
+      config :edge_admin, :event_broker_redis,
+        mode: :sentinel,
+        sentinel: [
+          sentinels: ["redis://sentinel-a:26379", "redis://sentinel-b:26379"],
+          group: "mymaster"
+        ],
+        ssl: false,
+        username: nil,
+        password: nil
+
   Controlled by env vars:
-  - `EVENT_BROKER_REDIS_URL` — Redis URL, e.g. `redis://host:6379` or `rediss://host:6380`.
-                              Single endpoint — Redis Pub/Sub is single-node.
+  - `EVENT_BROKER_REDIS_MODE` — `standalone` (default) or `sentinel`.
+  - `EVENT_BROKER_REDIS_URL` — standalone Redis URL, e.g. `redis://host:6379` or `rediss://host:6380`.
+  - `EVENT_BROKER_REDIS_SENTINELS` — comma-separated Sentinel host:port endpoints.
+  - `EVENT_BROKER_REDIS_SENTINEL_GROUP` — Sentinel primary group name.
+  - `EVENT_BROKER_REDIS_USERNAME` / `EVENT_BROKER_REDIS_PASSWORD` — primary credentials in Sentinel mode.
+  - `EVENT_BROKER_REDIS_SENTINEL_PASSWORD` — optional Sentinel authentication password.
   - `EVENT_BROKER_REDIS_SSL=true` — enable TLS (default: false)
   """
 
@@ -121,15 +139,26 @@ defmodule EdgeAdmin.Events.Broker.Adapters.Redis do
 
   defp do_connect(_state) do
     config = Application.get_env(:edge_admin, :event_broker_redis, [])
-    url = Keyword.fetch!(config, :url)
+    mode = Keyword.fetch!(config, :mode)
     ssl = Keyword.get(config, :ssl, false)
 
-    opts = if ssl, do: [ssl: true], else: []
+    result =
+      case mode do
+        :standalone ->
+          opts = if ssl, do: [ssl: true], else: []
+          Redix.start_link(Keyword.fetch!(config, :url), opts)
 
-    case Redix.start_link(url, opts) do
+        :sentinel ->
+          opts = [sentinel: Keyword.fetch!(config, :sentinel), ssl: ssl]
+          opts = Keyword.put(opts, :username, Keyword.get(config, :username))
+          opts = Keyword.put(opts, :password, Keyword.get(config, :password))
+          Redix.start_link(opts)
+      end
+
+    case result do
       {:ok, conn} ->
         Process.monitor(conn)
-        Logger.info("[EventBroker.Redis] Connected to #{url}")
+        Logger.info("[EventBroker.Redis] Connected (mode=#{mode})")
         {:noreply, %{conn: conn}}
 
       {:error, reason} ->

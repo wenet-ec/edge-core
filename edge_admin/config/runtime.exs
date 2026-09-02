@@ -698,14 +698,46 @@ if get_env("EVENT_BROKER_ENABLED", :boolean, false) do
         client_config: sasl_opts ++ ssl_opts
 
     :redis ->
-      # Redis — redix takes a single URI string. Sentinel cluster mode exists
-      # but uses a different keyword API (not the URI form), so we expose only
-      # the single-URL path here. Credentials can be embedded:
-      # redis://:password@host:port (Redis auth) or
-      # redis://username:password@host:port (Redis 6+ ACL).
-      config :edge_admin, :event_broker_redis,
-        url: "EVENT_BROKER_REDIS_URL" |> get_env!() |> String.trim(),
-        ssl: get_env("EVENT_BROKER_REDIS_SSL", :boolean, false)
+      # Redis — standalone uses one URI. Sentinel uses a list of Sentinel
+      # endpoints to resolve the current primary in the named group.
+      redis_ssl = get_env("EVENT_BROKER_REDIS_SSL", :boolean, false)
+
+      case "EVENT_BROKER_REDIS_MODE" |> get_env(:string, "standalone") |> String.downcase() do
+        "standalone" ->
+          config :edge_admin, :event_broker_redis,
+            mode: :standalone,
+            url: "EVENT_BROKER_REDIS_URL" |> get_env!() |> String.trim(),
+            ssl: redis_ssl
+
+        "sentinel" ->
+          sentinel_urls =
+            case Endpoint.parse_list(get_env!("EVENT_BROKER_REDIS_SENTINELS"), 26_379) do
+              {:ok, endpoints} ->
+                Enum.map(endpoints, fn {host, port} -> "redis://#{host}:#{port}" end)
+
+              {:error, reason} ->
+                raise "Invalid EVENT_BROKER_REDIS_SENTINELS: #{reason}"
+            end
+
+          sentinel_opts =
+            [sentinels: sentinel_urls, group: get_env!("EVENT_BROKER_REDIS_SENTINEL_GROUP"), ssl: redis_ssl]
+
+          sentinel_opts =
+            case get_env("EVENT_BROKER_REDIS_SENTINEL_PASSWORD") do
+              nil -> sentinel_opts
+              password -> Keyword.put(sentinel_opts, :password, password)
+            end
+
+          config :edge_admin, :event_broker_redis,
+            mode: :sentinel,
+            sentinel: sentinel_opts,
+            ssl: redis_ssl,
+            username: get_env("EVENT_BROKER_REDIS_USERNAME"),
+            password: get_env("EVENT_BROKER_REDIS_PASSWORD")
+
+        other ->
+          raise "Invalid EVENT_BROKER_REDIS_MODE=#{other} — valid values: standalone, sentinel"
+      end
 
     :mqtt ->
       # MQTT — ordered host:port endpoints. EMQTT handles failover and optional

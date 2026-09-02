@@ -117,7 +117,9 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
           "Compatible with Redis 2.0+ (Aug 2010, when Pub/Sub was introduced) and any wire-compatible server (Valkey, KeyDB, Dragonfly, etc.) — " <>
             "the adapter uses only `PING` and `PUBLISH` over RESP2. " <>
             "ACL usernames in URLs (`redis://user:pass@host`) and native TLS require Redis 6.0+ (Apr 2020); password-only URLs work against any version. " <>
-            "Configure via EVENT_BROKER_REDIS_URL (single redis:// or rediss:// URL). " <>
+            "Configure standalone mode via EVENT_BROKER_REDIS_URL (redis:// or rediss:// URL), " <>
+            "or Sentinel mode via EVENT_BROKER_REDIS_SENTINELS and " <>
+            "EVENT_BROKER_REDIS_SENTINEL_GROUP. Redis Cluster is not supported. " <>
             "Events are published via Redis Pub/Sub (`PUBLISH`). Channel = event type " <>
             "(e.g. `edge.node.registered`). Use `SUBSCRIBE` or `PSUBSCRIBE edge.*` to consume. " <>
             "No durability or replay. Credentials embedded in URL.",
@@ -705,7 +707,7 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
       "redisAuth" => %{
         "type" => "userPassword",
         "description" =>
-          "Redis auth. Embed credentials in EVENT_BROKER_REDIS_URL: " <>
+          "Redis standalone auth. Embed credentials in EVENT_BROKER_REDIS_URL: " <>
             "`redis://:password@host:port` (password-only) or " <>
             "`redis://username:password@host:port` (Redis 6+ ACL). " <>
             "Enable TLS with EVENT_BROKER_REDIS_SSL=true (use rediss:// URL for external brokers)."

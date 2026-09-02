@@ -45,21 +45,37 @@ defmodule EdgeAgent.Commands.CommandExecutionResultsTest do
   # build_report_params/1 — wire payload sent back to admin
 
   describe "build_report_params/1" do
-    test "produces the documented field set" do
+    test "produces the complete execution row" do
       execution = %CommandExecution{
+        id: "execution-id",
+        command_id: "command-id",
+        node_id: "node-id",
+        command_text: "echo hello",
+        timeout: 30_000,
+        expires_at: ~U[2026-04-13 10:05:00Z],
         status: :completed,
         output: "Linux 6.1.0",
         exit_code: 0,
-        completed_at: ~U[2026-04-13 10:00:00Z]
+        completed_at: ~U[2026-04-13 10:00:00Z],
+        inserted_at: ~U[2026-04-13 09:59:00Z],
+        updated_at: ~U[2026-04-13 10:00:00Z]
       }
 
       result = CommandExecutionResults.build_report_params(execution)
 
       assert result == %{
+               id: "execution-id",
+               command_id: "command-id",
+               node_id: "node-id",
+               command_text: "echo hello",
+               timeout: 30_000,
+               expires_at: "2026-04-13T10:05:00Z",
                status: "completed",
                output: "Linux 6.1.0",
                exit_code: 0,
-               completed_at: "2026-04-13T10:00:00Z"
+               completed_at: "2026-04-13T10:00:00Z",
+               inserted_at: "2026-04-13T09:59:00Z",
+               updated_at: "2026-04-13T10:00:00Z"
              }
     end
 
@@ -89,12 +105,25 @@ defmodule EdgeAgent.Commands.CommandExecutionResultsTest do
       assert result.status == "pending"
     end
 
-    test "rendered map contains exactly the documented top-level keys" do
+    test "rendered map contains the complete row keys" do
       execution = %CommandExecution{status: :completed}
       result = CommandExecutionResults.build_report_params(execution)
 
       assert result |> Map.keys() |> Enum.sort() ==
-               [:completed_at, :exit_code, :output, :status]
+               [
+                 :command_id,
+                 :command_text,
+                 :completed_at,
+                 :expires_at,
+                 :exit_code,
+                 :id,
+                 :inserted_at,
+                 :node_id,
+                 :output,
+                 :status,
+                 :timeout,
+                 :updated_at
+               ]
     end
 
     test "truncates oversized output stored in DB before reporting" do

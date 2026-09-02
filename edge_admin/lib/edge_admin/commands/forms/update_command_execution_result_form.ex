@@ -8,8 +8,6 @@ defmodule EdgeAdmin.Commands.Forms.UpdateCommandExecutionResultForm do
   """
   use EdgeAdmin.Form
 
-  alias EdgeAdmin.Commands.Validators.CommandExecutionValidators
-
   # Agent-reported terminal statuses. `commands.ex` may further override
   # `:completed` to `:cancelled` based on exit_code 143 (SIGTERM).
   @agent_reported_statuses [:completed, :expired]
@@ -18,15 +16,13 @@ defmodule EdgeAdmin.Commands.Forms.UpdateCommandExecutionResultForm do
     field(:status, Ecto.Enum, values: @agent_reported_statuses)
     field(:output, :string)
     field(:exit_code, :integer)
-    field(:completed_at, :utc_datetime)
   end
 
   @doc "Validates and normalizes command execution result parameters."
   def changeset(attrs) when is_map(attrs) do
     %__MODULE__{}
-    |> cast(attrs, [:status, :output, :exit_code, :completed_at])
+    |> cast(attrs, [:status, :output, :exit_code])
     |> validate_required([:status])
-    |> validate_completed_at()
     |> apply_action(:insert)
     |> case do
       {:ok, form} -> {:ok, to_map(form)}
@@ -43,29 +39,10 @@ defmodule EdgeAdmin.Commands.Forms.UpdateCommandExecutionResultForm do
     {:error, %{changeset | action: :insert}}
   end
 
-  defp validate_completed_at(changeset) do
-    validate_change(changeset, :completed_at, fn :completed_at, value ->
-      if CommandExecutionValidators.valid_completed_at?(value),
-        do: [],
-        else: [completed_at: "must be a valid ISO8601 datetime string or DateTime"]
-    end)
-  end
-
   defp to_map(%__MODULE__{} = form) do
-    completed_at =
-      case form.completed_at do
-        nil ->
-          DateTime.truncate(DateTime.utc_now(), :second)
-
-        timestamp when is_binary(timestamp) ->
-          case DateTime.from_iso8601(timestamp) do
-            {:ok, dt, _offset} -> DateTime.truncate(dt, :second)
-            _ -> DateTime.truncate(DateTime.utc_now(), :second)
-          end
-
-        %DateTime{} = dt ->
-          DateTime.truncate(dt, :second)
-      end
+    # Admin owns the authoritative completion timestamp. The Agent's wall
+    # clock may be skewed, so never persist its reported `completed_at` value.
+    completed_at = DateTime.truncate(DateTime.utc_now(), :second)
 
     %{
       "status" => form.status,

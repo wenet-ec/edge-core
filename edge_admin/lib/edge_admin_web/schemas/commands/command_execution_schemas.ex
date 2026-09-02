@@ -83,7 +83,7 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandExecutionSchemas do
           type: :string,
           format: :"date-time",
           nullable: true,
-          description: "When the command execution was completed"
+          description: "When Admin finalized the command execution result"
         },
         cancelled_at: %Schema{
           type: :string,

@@ -87,20 +87,19 @@ defmodule EdgeAdmin.Commands.Workflows.CommandExecutionLifecycleTest do
       node = insert_node(cluster)
       command = insert_command()
       execution = insert_execution(command, node, :pending)
-      completed_at = DateTime.truncate(DateTime.utc_now(), :second)
 
       assert {:ok, updated} =
                CommandExecutionLifecycle.update_command_execution_result(execution, %{
                  "status" => "completed",
                  "output" => "hello\n",
                  "exit_code" => 0,
-                 "completed_at" => DateTime.to_iso8601(completed_at)
+                 "completed_at" => "2010-01-01T00:00:00Z"
                })
 
       assert updated.status == :completed
       assert updated.output == "hello\n"
       assert updated.exit_code == 0
-      assert updated.completed_at == completed_at
+      assert DateTime.diff(DateTime.utc_now(), updated.completed_at, :second) in 0..2
       assert updated.sent_at == nil
 
       persisted = Repo.get!(CommandExecution, execution.id)

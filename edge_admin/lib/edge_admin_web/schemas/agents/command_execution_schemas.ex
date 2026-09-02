@@ -17,10 +17,16 @@ defmodule EdgeAdminWeb.Schemas.Agents.CommandExecutionSchemas do
 
     schema(%{
       title: "Internal.UpdateCommandExecutionResultRequest",
-      description: "Command execution result reported by the agent.",
+      description: "Complete command execution row reported by the agent; Admin decides which fields to persist.",
       type: :object,
       additionalProperties: true,
       properties: %{
+        id: %Schema{type: :string, format: :uuid, nullable: true},
+        command_id: %Schema{type: :string, format: :uuid, nullable: true},
+        node_id: %Schema{type: :string, format: :uuid, nullable: true},
+        command_text: %Schema{type: :string, nullable: true},
+        timeout: %Schema{type: :integer, nullable: true},
+        expires_at: %Schema{type: :string, format: :"date-time", nullable: true},
         status: %Schema{
           type: :string,
           enum: @agent_terminal_enum,
@@ -32,8 +38,10 @@ defmodule EdgeAdminWeb.Schemas.Agents.CommandExecutionSchemas do
           type: :string,
           format: :"date-time",
           nullable: true,
-          description: "When the command completed (defaults to now if omitted)"
-        }
+          description: "Agent-reported value is ignored; Admin sets the authoritative completion time"
+        },
+        inserted_at: %Schema{type: :string, format: :"date-time", nullable: true},
+        updated_at: %Schema{type: :string, format: :"date-time", nullable: true}
       },
       required: [:status]
     })

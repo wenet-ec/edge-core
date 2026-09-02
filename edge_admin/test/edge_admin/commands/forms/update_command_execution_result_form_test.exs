@@ -55,21 +55,21 @@ defmodule EdgeAdmin.Commands.Forms.UpdateCommandExecutionResultFormTest do
       assert %DateTime{} = result["completed_at"]
     end
 
-    test "accepts a valid ISO8601 datetime string" do
+    test "ignores the Agent-provided datetime" do
       attrs = %{"status" => "completed", "completed_at" => "2024-01-15T10:30:00Z"}
       {:ok, result} = UpdateCommandExecutionResultForm.changeset(attrs)
-      assert %DateTime{year: 2024, month: 1, day: 15} = result["completed_at"]
+      refute result["completed_at"] == ~U[2024-01-15 10:30:00Z]
     end
 
-    test "accepts a DateTime struct directly" do
+    test "ignores an Agent-provided DateTime struct" do
       dt = ~U[2024-06-01 12:00:00Z]
       attrs = %{"status" => "completed", "completed_at" => dt}
       {:ok, result} = UpdateCommandExecutionResultForm.changeset(attrs)
-      assert result["completed_at"] == dt
+      refute result["completed_at"] == dt
     end
 
-    test "completed_at is truncated to second precision" do
-      attrs = %{"status" => "completed", "completed_at" => "2024-01-15T10:30:00.123456Z"}
+    test "Admin-generated completed_at is truncated to second precision" do
+      attrs = %{"status" => "completed", "completed_at" => "2010-01-01T00:00:00.123456Z"}
       {:ok, result} = UpdateCommandExecutionResultForm.changeset(attrs)
       assert result["completed_at"].microsecond == {0, 0}
     end

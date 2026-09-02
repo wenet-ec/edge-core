@@ -1832,7 +1832,7 @@
             "type": "string"
           },
           "completed_at": {
-            "description": "When the command execution was completed",
+            "description": "When Admin finalized the command execution result",
             "format": "date-time",
             "nullable": true,
             "type": "string"

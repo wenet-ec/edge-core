@@ -3,7 +3,7 @@
 ARG NETCLIENT_VERSION=v1.7.0-derp
 FROM ghcr.io/wenet-ec/netclient:${NETCLIENT_VERSION} AS netclient-builder
 
-FROM elixir:1.20.3-otp-29-slim AS elixir-dev-stage
+FROM elixir:1.20.4-otp-29-slim AS elixir-dev-stage
 
 ARG APP_HOME=/app
 ENV MIX_ENV=dev

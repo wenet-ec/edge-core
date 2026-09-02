@@ -3,7 +3,7 @@
 ARG NETCLIENT_VERSION=v1.7.0-derp
 FROM ghcr.io/wenet-ec/netclient:${NETCLIENT_VERSION} AS netclient-builder
 
-FROM elixir:1.20.3-otp-29-slim AS builder
+FROM elixir:1.20.4-otp-29-slim AS builder
 
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \

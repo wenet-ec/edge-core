@@ -83,8 +83,7 @@ ENV LANG=en_US.UTF-8
 ENV LANGUAGE=en_US:en
 ENV LC_ALL=en_US.UTF-8
 
-COPY --from=node-exporter-builder /bin/node_exporter /usr/local/bin/node_exporter
-RUN chmod +x /usr/local/bin/node_exporter
+COPY --from=node-exporter-builder --chmod=0755 /bin/node_exporter /usr/local/bin/node_exporter
 
 # Use HTTP for Edge VPN API (local dev — no TLS certs)
 ENV EDGE_VPN_API_SCHEME=http
@@ -102,11 +101,9 @@ ENV RELEASE_DISTRIBUTION=none
 ENV USER=root
 ENV SHELL=/bin/bash
 
-COPY --from=netclient-builder /netclient /usr/local/bin/netclient
-RUN chmod +x /usr/local/bin/netclient
+COPY --from=netclient-builder --chmod=0755 /netclient /usr/local/bin/netclient
 
-COPY --from=mindflavor/prometheus-wireguard-exporter:3.6.6 /usr/local/bin/prometheus_wireguard_exporter /usr/local/bin/prometheus_wireguard_exporter
-RUN chmod +x /usr/local/bin/prometheus_wireguard_exporter
+COPY --from=mindflavor/prometheus-wireguard-exporter:3.6.6 --chmod=0755 /usr/local/bin/prometheus_wireguard_exporter /usr/local/bin/prometheus_wireguard_exporter
 
 RUN groupadd --gid 1000 app && \
     useradd --uid 1000 --gid app --shell /bin/bash --create-home app && \

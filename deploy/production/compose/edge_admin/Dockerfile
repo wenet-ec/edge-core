@@ -95,9 +95,8 @@ ENV WG_QUICK_USERSPACE_IMPLEMENTATION=wireguard-go
 # Admins always use dynamic clustering (started after VPN join)
 ENV RELEASE_DISTRIBUTION=none
 
-COPY --from=netclient-builder /netclient /usr/local/bin/netclient
-RUN chmod +x /usr/local/bin/netclient && \
-    mkdir -p /etc/netclient && \
+COPY --from=netclient-builder --chmod=0755 /netclient /usr/local/bin/netclient
+RUN mkdir -p /etc/netclient && \
     chmod 0775 /etc/netclient
 
 RUN groupadd --gid 1000 app && \
@@ -111,9 +110,8 @@ COPY ./deploy/production/compose/edge_admin/console /console
 RUN sed -i 's/\r$//g' /entrypoint /start /migrate /rotate_encryption_key /console && \
     chmod +x /entrypoint /start /migrate /rotate_encryption_key /console
 
-COPY --from=builder /app/_build/prod/rel/edge_admin /app
-RUN chmod +x /app/bin/console /app/bin/migrate /app/bin/rotate_encryption_key /app/bin/server /app/bin/bootstrap_edge_vpn_admin /app/bin/create_default_cluster && \
-    chown -R app:app /app
+COPY --from=builder --chown=app:app /app/_build/prod/rel/edge_admin /app
+RUN chmod +x /app/bin/console /app/bin/migrate /app/bin/rotate_encryption_key /app/bin/server /app/bin/bootstrap_edge_vpn_admin /app/bin/create_default_cluster
 
 # License text for the embedded Edge Admin release. ELv2 — see /usr/share/doc/edge_admin/LICENSE.
 COPY edge_admin/LICENSE /usr/share/doc/edge_admin/LICENSE

@@ -117,8 +117,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     # Netclient checks init type for service installation, which containers do not use.
     mkdir -p /sbin /bin && ln -s /bin/true /sbin/init && ln -s /bin/true /bin/busybox
 
-COPY --from=netclient-builder /netclient /usr/local/bin/netclient
-RUN chmod +x /usr/local/bin/netclient
+COPY --from=netclient-builder --chmod=0755 /netclient /usr/local/bin/netclient
 ENV WG_QUICK_USERSPACE_IMPLEMENTATION=wireguard-go
 
 ENV LANG=C.UTF-8
@@ -134,17 +133,14 @@ ENV RELEASE_DISTRIBUTION=none
 ENV USER=root
 ENV SHELL=/bin/bash
 
-COPY --from=node-exporter-builder /bin/node_exporter /usr/local/bin/node_exporter
-RUN chmod +x /usr/local/bin/node_exporter
+COPY --from=node-exporter-builder --chmod=0755 /bin/node_exporter /usr/local/bin/node_exporter
 
-COPY --from=mindflavor/prometheus-wireguard-exporter:3.6.6 /usr/local/bin/prometheus_wireguard_exporter /usr/local/bin/prometheus_wireguard_exporter
-RUN chmod +x /usr/local/bin/prometheus_wireguard_exporter
+COPY --from=mindflavor/prometheus-wireguard-exporter:3.6.6 --chmod=0755 /usr/local/bin/prometheus_wireguard_exporter /usr/local/bin/prometheus_wireguard_exporter
 
 COPY --from=builder /app/_build/prod/rel/edge_agent /app
 RUN chmod +x /app/bin/migrate /app/bin/server
 
-COPY --from=builder /usr/local/bin/host_pty_spawn /usr/local/bin/host_pty_spawn
-RUN chmod +x /usr/local/bin/host_pty_spawn
+COPY --from=builder --chmod=0755 /usr/local/bin/host_pty_spawn /usr/local/bin/host_pty_spawn
 
 # License text for the embedded Edge Agent + Nexmaker code. Apache 2.0 — see
 # /usr/share/doc/edge_agent/LICENSE and /usr/share/doc/nexmaker/LICENSE.

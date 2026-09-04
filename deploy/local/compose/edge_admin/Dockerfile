@@ -69,9 +69,8 @@ ENV RELEASE_DISTRIBUTION=none
 # `quicer` build (compiles Microsoft's msquic from source) is pure overhead.
 ENV BUILD_WITHOUT_QUIC=1
 
-COPY --from=netclient-builder /netclient /usr/local/bin/netclient
-RUN chmod +x /usr/local/bin/netclient && \
-    mkdir -p /etc/netclient && \
+COPY --from=netclient-builder --chmod=0755 /netclient /usr/local/bin/netclient
+RUN mkdir -p /etc/netclient && \
     chmod 0775 /etc/netclient
 
 RUN groupadd --gid 1000 dev-user \

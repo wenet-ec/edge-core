@@ -2,7 +2,6 @@
 defmodule EdgeAdmin.Ssh.Schemas.SshPublicKey do
   @moduledoc "Ecto schema for an authorized SSH public key."
   use EdgeAdmin.Schema
-  use Flop.Schema
 
   alias Ecto.Association.NotLoaded
   alias EdgeAdmin.Ssh.Schemas.SshUsername

@@ -13,7 +13,6 @@ defmodule EdgeAdmin.SelfUpdates.Schemas.SelfUpdateRequest do
   - `summary` - JSON summary of results: %{total, triggered, failed}
   """
   use EdgeAdmin.Schema
-  use Flop.Schema
 
   alias EdgeAdmin.Nodes.Validators.TargetingValidators
   alias EdgeAdmin.SelfUpdates.Enums.SelfUpdateRequestStatuses

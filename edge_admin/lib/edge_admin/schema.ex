@@ -4,6 +4,7 @@ defmodule EdgeAdmin.Schema do
   defmacro __using__(_) do
     quote do
       use Ecto.Schema
+      use Flop.Schema
 
       import Ecto.Changeset
 
@@ -12,6 +13,7 @@ defmodule EdgeAdmin.Schema do
       @primary_key {:id, Uniq.UUID, version: 7, autogenerate: true, dump: :raw, type: :uuid}
       @foreign_key_type :binary_id
       @timestamps_opts [type: :utc_datetime]
+      @flop_options [filterable: [], sortable: []]
     end
   end
 end

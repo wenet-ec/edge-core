@@ -15,7 +15,6 @@ defmodule EdgeAdmin.Nodes.Schemas.EnrollmentKey do
   blob to the verify endpoint. Admin looks up by the blob directly.
   """
   use EdgeAdmin.Schema
-  use Flop.Schema
 
   alias Ecto.Association.NotLoaded
   alias EdgeAdmin.Nodes.Schemas.Cluster

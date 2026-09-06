@@ -22,7 +22,6 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
   - `self_update_enabled` - Whether auto-updates are enabled
   """
   use EdgeAdmin.Schema
-  use Flop.Schema
 
   alias Ecto.Association.NotLoaded
   alias EdgeAdmin.Commands.Schemas.CommandExecution

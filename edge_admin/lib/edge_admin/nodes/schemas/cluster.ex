@@ -18,7 +18,6 @@ defmodule EdgeAdmin.Nodes.Schemas.Cluster do
   - `node_count` - Virtual field: Number of nodes in this cluster
   """
   use EdgeAdmin.Schema
-  use Flop.Schema
 
   alias Ecto.Association.NotLoaded
   alias EdgeAdmin.Commands.Schemas.CommandExecution

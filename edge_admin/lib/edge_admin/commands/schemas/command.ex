@@ -2,7 +2,6 @@
 defmodule EdgeAdmin.Commands.Schemas.Command do
   @moduledoc "Ecto schema for a command submitted for execution on edge nodes."
   use EdgeAdmin.Schema
-  use Flop.Schema
 
   alias Ecto.Association.NotLoaded
   alias EdgeAdmin.Commands.Schemas.CommandExecution

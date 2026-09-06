@@ -2,7 +2,6 @@
 defmodule EdgeAdmin.Ssh.Schemas.SshUsername do
   @moduledoc "Ecto schema for an SSH username assigned to an edge node."
   use EdgeAdmin.Schema
-  use Flop.Schema
 
   alias Ecto.Association.NotLoaded
   alias EdgeAdmin.Nodes.Schemas.Node

@@ -2,7 +2,6 @@
 defmodule EdgeAdmin.Events.Webhooks.Schemas.Webhook do
   @moduledoc "Ecto schema for a configured webhook delivery destination."
   use EdgeAdmin.Schema
-  use Flop.Schema
 
   alias EdgeAdmin.Encryption.EncryptedBinary
   alias EdgeAdmin.Encryption.EncryptedMap

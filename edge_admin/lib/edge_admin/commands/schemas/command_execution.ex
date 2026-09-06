@@ -2,7 +2,6 @@
 defmodule EdgeAdmin.Commands.Schemas.CommandExecution do
   @moduledoc "Ecto schema for one node's execution of a command."
   use EdgeAdmin.Schema
-  use Flop.Schema
 
   alias Ecto.Association.NotLoaded
   alias EdgeAdmin.Commands.Enums.CommandExecutionStatuses

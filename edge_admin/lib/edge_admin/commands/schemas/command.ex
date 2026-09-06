@@ -2,6 +2,7 @@
 defmodule EdgeAdmin.Commands.Schemas.Command do
   @moduledoc "Ecto schema for a command submitted for execution on edge nodes."
   use EdgeAdmin.Schema
+  use Flop.Schema
 
   alias Ecto.Association.NotLoaded
   alias EdgeAdmin.Commands.Schemas.CommandExecution
@@ -21,15 +22,14 @@ defmodule EdgeAdmin.Commands.Schemas.Command do
           updated_at: DateTime.t() | nil
         }
 
-  @derive {
-    Flop.Schema,
+  @flop_options [
     filterable: [:command_text, :timeout, :expires_at, :inserted_at, :updated_at],
     sortable: [:timeout, :expires_at, :inserted_at, :updated_at],
     default_order: %{
       order_by: [:inserted_at],
       order_directions: [:desc]
     }
-  }
+  ]
 
   schema "commands" do
     field(:command_text, :string)

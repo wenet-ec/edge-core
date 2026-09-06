@@ -119,7 +119,7 @@ defmodule EdgeAdmin.Mixfile do
       {:postgrex, "~> 0.22"},
       {:ecto_sqlite3, "~> 0.24"},
       {:uniq, "~> 0.6"},
-      {:flop, "~> 0.28"},
+      {:flop, "~> 0.29"},
       {:cloak, "~> 1.1"},
       {:cloak_ecto, "~> 1.3"},
 

@@ -13,6 +13,7 @@ defmodule EdgeAdmin.SelfUpdates.Schemas.SelfUpdateRequest do
   - `summary` - JSON summary of results: %{total, triggered, failed}
   """
   use EdgeAdmin.Schema
+  use Flop.Schema
 
   alias EdgeAdmin.Nodes.Validators.TargetingValidators
   alias EdgeAdmin.SelfUpdates.Enums.SelfUpdateRequestStatuses
@@ -30,15 +31,14 @@ defmodule EdgeAdmin.SelfUpdates.Schemas.SelfUpdateRequest do
           updated_at: DateTime.t()
         }
 
-  @derive {
-    Flop.Schema,
+  @flop_options [
     filterable: [:status, :inserted_at, :updated_at],
     sortable: [:inserted_at, :updated_at],
     default_order: %{
       order_by: [:inserted_at],
       order_directions: [:desc]
     }
-  }
+  ]
 
   schema "self_update_requests" do
     field(:targeting, :map)

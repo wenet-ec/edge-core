@@ -2,6 +2,7 @@
 defmodule EdgeAdmin.Events.Webhooks.Schemas.Webhook do
   @moduledoc "Ecto schema for a configured webhook delivery destination."
   use EdgeAdmin.Schema
+  use Flop.Schema
 
   alias EdgeAdmin.Encryption.EncryptedBinary
   alias EdgeAdmin.Encryption.EncryptedMap
@@ -17,15 +18,14 @@ defmodule EdgeAdmin.Events.Webhooks.Schemas.Webhook do
           updated_at: DateTime.t() | nil
         }
 
-  @derive {
-    Flop.Schema,
+  @flop_options [
     filterable: [:url, :inserted_at, :updated_at],
     sortable: [:url, :inserted_at, :updated_at],
     default_order: %{
       order_by: [:inserted_at],
       order_directions: [:desc]
     }
-  }
+  ]
 
   schema "webhooks" do
     field(:url, :string)

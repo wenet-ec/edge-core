@@ -15,20 +15,20 @@ defmodule EdgeAdmin.Nodes.Schemas.EnrollmentKey do
   blob to the verify endpoint. Admin looks up by the blob directly.
   """
   use EdgeAdmin.Schema
+  use Flop.Schema
 
   alias Ecto.Association.NotLoaded
   alias EdgeAdmin.Nodes.Schemas.Cluster
   alias EdgeAdmin.Nodes.Validators.EnrollmentKeyValidators
 
-  @derive {
-    Flop.Schema,
+  @flop_options [
     filterable: [:name, :key, :uses_remaining, :expires_at, :last_used_at, :inserted_at, :updated_at],
     sortable: [:name, :uses_remaining, :expires_at, :last_used_at, :inserted_at, :updated_at],
     default_order: %{
       order_by: [:inserted_at],
       order_directions: [:desc]
     }
-  }
+  ]
 
   @type t :: %__MODULE__{
           id: String.t(),

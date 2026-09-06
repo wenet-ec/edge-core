@@ -18,6 +18,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Cluster do
   - `node_count` - Virtual field: Number of nodes in this cluster
   """
   use EdgeAdmin.Schema
+  use Flop.Schema
 
   alias Ecto.Association.NotLoaded
   alias EdgeAdmin.Commands.Schemas.CommandExecution
@@ -48,15 +49,14 @@ defmodule EdgeAdmin.Nodes.Schemas.Cluster do
           updated_at: DateTime.t()
         }
 
-  @derive {
-    Flop.Schema,
+  @flop_options [
     filterable: [:name, :ipv4_range, :ipv6_range, :node_limit, :inserted_at, :updated_at],
     sortable: [:name, :ipv4_range, :ipv6_range, :node_limit, :inserted_at, :updated_at],
     default_order: %{
       order_by: [:inserted_at],
       order_directions: [:desc]
     }
-  }
+  ]
 
   schema "clusters" do
     field(:name, :string)

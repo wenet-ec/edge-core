@@ -18,6 +18,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Alias do
   Aliases are unique per cluster (same name can exist in different clusters).
   """
   use EdgeAdmin.Schema
+  use Flop.Schema
 
   alias Ecto.Association.NotLoaded
   alias EdgeAdmin.Nodes.Schemas.Cluster
@@ -37,15 +38,14 @@ defmodule EdgeAdmin.Nodes.Schemas.Alias do
           updated_at: DateTime.t()
         }
 
-  @derive {
-    Flop.Schema,
+  @flop_options [
     filterable: [:name, :node_id, :inserted_at, :updated_at],
     sortable: [:name, :inserted_at, :updated_at],
     default_order: %{
       order_by: [:inserted_at],
       order_directions: [:desc]
     }
-  }
+  ]
 
   schema "aliases" do
     field(:name, :string)

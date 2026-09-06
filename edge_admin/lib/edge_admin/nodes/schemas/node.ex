@@ -22,6 +22,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
   - `self_update_enabled` - Whether auto-updates are enabled
   """
   use EdgeAdmin.Schema
+  use Flop.Schema
 
   alias Ecto.Association.NotLoaded
   alias EdgeAdmin.Commands.Schemas.CommandExecution
@@ -86,8 +87,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
           updated_at: DateTime.t()
         }
 
-  @derive {
-    Flop.Schema,
+  @flop_options [
     filterable: [:status, :version, :self_update_enabled, :last_seen_at, :inserted_at, :updated_at],
     sortable: [
       :status,
@@ -101,7 +101,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
       order_by: [:inserted_at],
       order_directions: [:desc]
     }
-  }
+  ]
 
   @primary_key {:id, Uniq.UUID, autogenerate: false, dump: :raw, type: :uuid}
 

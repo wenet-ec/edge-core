@@ -2,6 +2,7 @@
 defmodule EdgeAdmin.Ssh.Schemas.SshPublicKey do
   @moduledoc "Ecto schema for an authorized SSH public key."
   use EdgeAdmin.Schema
+  use Flop.Schema
 
   alias Ecto.Association.NotLoaded
   alias EdgeAdmin.Ssh.Schemas.SshUsername
@@ -17,15 +18,14 @@ defmodule EdgeAdmin.Ssh.Schemas.SshPublicKey do
           updated_at: DateTime.t() | nil
         }
 
-  @derive {
-    Flop.Schema,
+  @flop_options [
     filterable: [:key_name, :public_key, :ssh_username_id, :inserted_at, :updated_at],
     sortable: [:key_name, :inserted_at, :updated_at],
     default_order: %{
       order_by: [:inserted_at],
       order_directions: [:desc]
     }
-  }
+  ]
 
   schema "ssh_public_keys" do
     field(:public_key, :string)

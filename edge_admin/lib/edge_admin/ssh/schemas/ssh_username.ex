@@ -2,6 +2,7 @@
 defmodule EdgeAdmin.Ssh.Schemas.SshUsername do
   @moduledoc "Ecto schema for an SSH username assigned to an edge node."
   use EdgeAdmin.Schema
+  use Flop.Schema
 
   alias Ecto.Association.NotLoaded
   alias EdgeAdmin.Nodes.Schemas.Node
@@ -20,15 +21,14 @@ defmodule EdgeAdmin.Ssh.Schemas.SshUsername do
           updated_at: DateTime.t() | nil
         }
 
-  @derive {
-    Flop.Schema,
+  @flop_options [
     filterable: [:username, :node_id, :inserted_at, :updated_at],
     sortable: [:username, :inserted_at, :updated_at],
     default_order: %{
       order_by: [:inserted_at],
       order_directions: [:desc]
     }
-  }
+  ]
 
   schema "ssh_usernames" do
     field(:username, :string)

@@ -2,6 +2,7 @@
 defmodule EdgeAdmin.Commands.Schemas.CommandExecution do
   @moduledoc "Ecto schema for one node's execution of a command."
   use EdgeAdmin.Schema
+  use Flop.Schema
 
   alias Ecto.Association.NotLoaded
   alias EdgeAdmin.Commands.Enums.CommandExecutionStatuses
@@ -38,8 +39,7 @@ defmodule EdgeAdmin.Commands.Schemas.CommandExecution do
           updated_at: DateTime.t() | nil
         }
 
-  @derive {
-    Flop.Schema,
+  @flop_options [
     filterable: [
       :status,
       :target_all,
@@ -58,7 +58,7 @@ defmodule EdgeAdmin.Commands.Schemas.CommandExecution do
       order_by: [:inserted_at],
       order_directions: [:desc]
     }
-  }
+  ]
 
   schema "command_executions" do
     field(:output, :string)

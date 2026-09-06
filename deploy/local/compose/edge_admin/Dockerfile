@@ -23,25 +23,13 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
   build-essential \
   cmake \
   git \
-  # PostgreSQL dependencies
-  libpq-dev \
-  postgresql-client \
-  # Development utilities
-  sudo \
-  bash-completion \
-  nano \
-  ssh \
   # Essential tools (healthcheck, troubleshooting, capability checks)
   curl \
-  iputils-ping \
   libcap2-bin \
   # File system watching for live reload (dev only)
   inotify-tools \
   # Network debugging (comprehensive set for development)
   iproute2 \
-  dnsutils \
-  netcat-openbsd \
-  tcpdump \
   iptables \
   # PID 1 zombie reaper for the BEAM
   tini && \
@@ -72,11 +60,6 @@ ENV BUILD_WITHOUT_QUIC=1
 COPY --from=netclient-builder --chmod=0755 /netclient /usr/local/bin/netclient
 RUN mkdir -p /etc/netclient && \
     chmod 0775 /etc/netclient
-
-RUN groupadd --gid 1000 dev-user \
-  && useradd --uid 1000 --gid dev-user --shell /bin/bash --create-home dev-user \
-  && echo dev-user ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/dev-user \
-  && chmod 0440 /etc/sudoers.d/dev-user
 
 RUN mix local.hex --force && \
     mix local.rebar --force

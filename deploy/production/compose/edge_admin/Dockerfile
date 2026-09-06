@@ -9,7 +9,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
     rm -f /etc/apt/apt.conf.d/docker-clean && \
     apt-get update -y && \
-    apt-get install -y build-essential cmake git
+    apt-get install -y --no-install-recommends build-essential cmake git ca-certificates
 
 WORKDIR /app
 
@@ -20,12 +20,10 @@ ENV ELIXIR_MAKE_PARALLEL=true
 # `quicer` build (compiles Microsoft's msquic from source) is pure overhead.
 ENV BUILD_WITHOUT_QUIC=1
 
-# Relocate Mix's home to a normal image path so hex/rebar archives survive across
-# RUN steps. The default /root/.mix gets overlaid by the cache mount below,
-# which would otherwise hide a pre-install and make every subsequent mix step
-# prompt for hex.
-ENV MIX_HOME=/opt/mix
-RUN mix local.hex --force && mix local.rebar --force
+# Keep Hex/Rebar archives in the same cache locations used by the build steps.
+RUN --mount=type=cache,target=/root/.mix \
+    --mount=type=cache,target=/root/.hex \
+    mix local.hex --force && mix local.rebar --force
 
 COPY nexmaker /nexmaker
 
@@ -72,7 +70,6 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     # Essential tools (healthcheck, troubleshooting, netclient download, capability checks)
     curl \
     libcap2-bin \
-    procps \
     # Network debugging (minimal set for production troubleshooting)
     iproute2 \
     iptables \
@@ -99,9 +96,6 @@ COPY --from=netclient-builder --chmod=0755 /netclient /usr/local/bin/netclient
 RUN mkdir -p /etc/netclient && \
     chmod 0775 /etc/netclient
 
-RUN groupadd --gid 1000 app && \
-    useradd --uid 1000 --gid app --shell /bin/bash --create-home app
-
 COPY ./deploy/production/compose/edge_admin/entrypoint /entrypoint
 COPY ./deploy/production/compose/edge_admin/start /start
 COPY ./deploy/production/compose/edge_admin/migrate /migrate
@@ -110,14 +104,13 @@ COPY ./deploy/production/compose/edge_admin/console /console
 RUN sed -i 's/\r$//g' /entrypoint /start /migrate /rotate_encryption_key /console && \
     chmod +x /entrypoint /start /migrate /rotate_encryption_key /console
 
-COPY --from=builder --chown=app:app /app/_build/prod/rel/edge_admin /app
+COPY --from=builder /app/_build/prod/rel/edge_admin /app
 RUN chmod +x /app/bin/console /app/bin/migrate /app/bin/rotate_encryption_key /app/bin/server /app/bin/bootstrap_edge_vpn_admin /app/bin/create_default_cluster
 
 # License text for the embedded Edge Admin release. ELv2 — see /usr/share/doc/edge_admin/LICENSE.
 COPY edge_admin/LICENSE /usr/share/doc/edge_admin/LICENSE
 
-RUN mkdir -p /app/data /tmp/erl_crash && \
-    chown -R app:app /app/data /tmp/erl_crash
+RUN mkdir -p /app/data /tmp/erl_crash
 
 WORKDIR /app
 

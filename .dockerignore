@@ -5,7 +5,7 @@
 # Exclude everything by default
 *
 
-# Include only what's needed for edge_admin builds
+# Include source and deployment files needed by the Admin and Agent builds
 !deploy/local/compose/
 !deploy/production/compose/
 !edge_admin/mix.exs
@@ -17,8 +17,13 @@
 !edge_admin/rel/
 !edge_admin/LICENSE
 
-# Include nexmaker dependency
-!nexmaker/
+# Include only the Nexmaker dependency inputs used by the Admin and Agent
+# builds. Keep tests and standalone Nexmaker deployment files out of context.
+!nexmaker/mix.exs
+!nexmaker/mix.lock
+!nexmaker/lib/
+!nexmaker/LICENSE
+!nexmaker/NOTICE
 
 # For edge_agent builds (only include if needed)
 !edge_agent/mix.exs

@@ -53,16 +53,13 @@ export https_proxy=http://edge_agent:43128
 The agent needs these regardless of deployment mode:
 
 ```yaml
-cap_add:
-  - NET_ADMIN
-  - SYS_MODULE
+privileged: true
 sysctls:
   - net.ipv4.ip_forward=1
   - net.ipv4.conf.all.src_valid_mark=1
   - net.ipv6.conf.all.forwarding=1
 volumes:
   - /dev/net/tun:/dev/net/tun   # wireguard-go needs this to create a TUN interface
-privileged: true
 ```
 
 ## Files in this directory

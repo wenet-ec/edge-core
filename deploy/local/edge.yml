@@ -97,9 +97,6 @@ services:
       - /dev/net/tun:/dev/net/tun
     environment:
       - PUBLIC_ENROLLMENT_KEY_URLS=http://edge_admin_a1:44000/api/v1/clusters/default/enrollment_keys/public
-    cap_add:
-      - NET_ADMIN
-      - SYS_MODULE
     sysctls:
       - net.ipv4.ip_forward=1
       - net.ipv4.conf.all.src_valid_mark=1

@@ -11,7 +11,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
     rm -f /etc/apt/apt.conf.d/docker-clean && \
     apt-get update -y && \
-    apt-get install -y build-essential git sqlite3 libsqlite3-dev
+    apt-get install -y --no-install-recommends build-essential git sqlite3 libsqlite3-dev ca-certificates
 
 WORKDIR /app
 
@@ -19,12 +19,10 @@ ENV MIX_ENV=prod
 ENV ERL_MAX_PORTS=65536
 ENV ELIXIR_MAKE_PARALLEL=true
 
-# Relocate Mix's home to a normal image path so hex/rebar archives survive across
-# RUN steps. The default /root/.mix gets overlaid by the cache mount below,
-# which would otherwise hide a pre-install and make every subsequent mix step
-# prompt for hex.
-ENV MIX_HOME=/opt/mix
-RUN mix local.hex --force && mix local.rebar --force
+# Keep Hex/Rebar archives in the same cache locations used by the build steps.
+RUN --mount=type=cache,target=/root/.mix \
+    --mount=type=cache,target=/root/.hex \
+    mix local.hex --force && mix local.rebar --force
 
 COPY nexmaker /nexmaker
 
@@ -82,14 +80,13 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     procps \
     # libcap2-bin — getcap/setcap, agent inspects its own capabilities
     libcap2-bin \
-    # curl — kept for ad-hoc container-side HTTP probing; no runtime code
-    # path uses it directly today (the agent uses Req).
-    curl \
     # util-linux — nsenter for hostscript; setns(2) for host_pty_spawn via libc
     util-linux \
     # libnss-mdns — .local hostname resolution from inside the container
     libnss-mdns \
     # netclient runtime
+    # kmod — rmmod/modprobe used by /start for WireGuard/TUN setup
+    kmod \
     # wireguard-tools: wg + wg-quick (WG interface bring-up)
     wireguard-tools \
     # systemd-resolved: provides resolvectl + systemctl, used by netclient to
@@ -104,15 +101,12 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     # backend does need iptables binaries. netclient prefers iptables when
     # present, so install it to converge on a working backend.
     iptables \
-    # Ad-hoc container-side debug probes
-    # Operator-facing tools (less, vim, nano, bash-completion) are deliberately
-    # NOT installed — the SSH shell is the host's, not the container's. Only
-    # ad-hoc container-internal probes are kept here, for the rare case of
-    # `docker exec production_edge_agent <cmd>` to debug the agent itself.
+    # Ad-hoc container-side debug probes for docker exec troubleshooting.
     jq \
     iputils-ping \
     dnsutils \
-    netcat-openbsd && \
+    netcat-openbsd \
+    curl && \
     sed -i 's/^hosts:.*/hosts: files mdns4_minimal [NOTFOUND=return] dns/' /etc/nsswitch.conf && \
     # Netclient checks init type for service installation, which containers do not use.
     mkdir -p /sbin /bin && ln -s /bin/true /sbin/init && ln -s /bin/true /bin/busybox
@@ -149,7 +143,7 @@ COPY nexmaker/LICENSE /usr/share/doc/nexmaker/LICENSE
 
 RUN mkdir -p /app/data/edge /app/data/vpn /tmp/erl_crash && \
     ln -sfn /app/data/vpn /etc/netclient && \
-    chmod -R 755 /app/data /tmp/erl_crash
+    chmod -R 700 /app/data /tmp/erl_crash
 
 COPY ./deploy/production/compose/edge_agent/entrypoint /entrypoint
 RUN sed -i 's/\r$//g' /entrypoint && \

@@ -40,6 +40,8 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
   # libnss-mdns — .local hostname resolution from inside the container
   libnss-mdns \
   # netclient runtime
+  # kmod — rmmod/modprobe used by /start for WireGuard/TUN setup
+  kmod \
   # wireguard-tools: wg + wg-quick (WG interface bring-up)
   wireguard-tools \
   # systemd-resolved: provides resolvectl + systemctl, used by netclient to
@@ -105,11 +107,8 @@ COPY --from=netclient-builder --chmod=0755 /netclient /usr/local/bin/netclient
 
 COPY --from=mindflavor/prometheus-wireguard-exporter:3.6.6 --chmod=0755 /usr/local/bin/prometheus_wireguard_exporter /usr/local/bin/prometheus_wireguard_exporter
 
-RUN groupadd --gid 1000 app && \
-    useradd --uid 1000 --gid app --shell /bin/bash --create-home app && \
-    mkdir -p /app/data/edge /app/data/vpn && \
-    ln -sfn /app/data/vpn /etc/netclient && \
-    chown -R app:app /app
+RUN mkdir -p /app/data/edge /app/data/vpn && \
+    ln -sfn /app/data/vpn /etc/netclient
 
 RUN mix local.hex --force && \
     mix local.rebar --force

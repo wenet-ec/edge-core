@@ -698,29 +698,58 @@ if get_env("EVENT_BROKER_ENABLED", :boolean, false) do
         client_config: sasl_opts ++ ssl_opts
 
     :redis ->
-      # Redis — standalone uses one URI. Sentinel uses a list of Sentinel
-      # endpoints to resolve the current primary in the named group.
+      # Redis uses one endpoint list for every topology. Mode gives the list its
+      # meaning: one standalone endpoint, Sentinel endpoints, or Cluster seeds.
       redis_ssl = get_env("EVENT_BROKER_REDIS_SSL", :boolean, false)
 
-      case "EVENT_BROKER_REDIS_MODE" |> get_env(:string, "standalone") |> String.downcase() do
+      redis_mode =
+        "EVENT_BROKER_REDIS_MODE" |> get_env(:string, "standalone") |> String.downcase()
+
+      redis_default_port = if redis_mode == "sentinel", do: 26_379, else: 6379
+
+      redis_endpoints =
+        case Endpoint.parse_list(get_env!("EVENT_BROKER_REDIS_URLS"), redis_default_port) do
+          {:ok, endpoints} -> endpoints
+          {:error, reason} -> raise "Invalid EVENT_BROKER_REDIS_URLS: #{reason}"
+        end
+
+      redis_username = get_env("EVENT_BROKER_REDIS_USERNAME")
+      redis_password = get_env("EVENT_BROKER_REDIS_PASSWORD")
+      redis_primary_auth = [ssl: redis_ssl]
+
+      redis_primary_auth =
+        if redis_username,
+          do: Keyword.put(redis_primary_auth, :username, redis_username),
+          else: redis_primary_auth
+
+      redis_primary_auth =
+        if redis_password,
+          do: Keyword.put(redis_primary_auth, :password, redis_password),
+          else: redis_primary_auth
+
+      case redis_mode do
         "standalone" ->
-          config :edge_admin, :event_broker_redis,
-            mode: :standalone,
-            url: "EVENT_BROKER_REDIS_URL" |> get_env!() |> String.trim(),
-            ssl: redis_ssl
+          [endpoint] =
+            case redis_endpoints do
+              [endpoint] ->
+                [endpoint]
 
-        "sentinel" ->
-          sentinel_urls =
-            case Endpoint.parse_list(get_env!("EVENT_BROKER_REDIS_SENTINELS"), 26_379) do
-              {:ok, endpoints} ->
-                Enum.map(endpoints, fn {host, port} -> "redis://#{host}:#{port}" end)
-
-              {:error, reason} ->
-                raise "Invalid EVENT_BROKER_REDIS_SENTINELS: #{reason}"
+              _ ->
+                raise "EVENT_BROKER_REDIS_MODE=standalone requires exactly one EVENT_BROKER_REDIS_URLS endpoint"
             end
 
+          config :edge_admin, :event_broker_redis,
+            mode: :standalone,
+            endpoint: endpoint,
+            primary_auth: redis_primary_auth
+
+        "sentinel" ->
           sentinel_opts =
-            [sentinels: sentinel_urls, group: get_env!("EVENT_BROKER_REDIS_SENTINEL_GROUP"), ssl: redis_ssl]
+            [
+              sentinels: Enum.map(redis_endpoints, fn {host, port} -> [host: host, port: port] end),
+              group: get_env!("EVENT_BROKER_REDIS_SENTINEL_GROUP"),
+              ssl: redis_ssl
+            ]
 
           sentinel_opts =
             case get_env("EVENT_BROKER_REDIS_SENTINEL_PASSWORD") do
@@ -731,12 +760,16 @@ if get_env("EVENT_BROKER_ENABLED", :boolean, false) do
           config :edge_admin, :event_broker_redis,
             mode: :sentinel,
             sentinel: sentinel_opts,
-            ssl: redis_ssl,
-            username: get_env("EVENT_BROKER_REDIS_USERNAME"),
-            password: get_env("EVENT_BROKER_REDIS_PASSWORD")
+            primary_auth: redis_primary_auth
+
+        "cluster" ->
+          config :edge_admin, :event_broker_redis,
+            mode: :cluster,
+            nodes: Enum.map(redis_endpoints, fn {host, port} -> [host: host, port: port] end),
+            primary_auth: redis_primary_auth
 
         other ->
-          raise "Invalid EVENT_BROKER_REDIS_MODE=#{other} — valid values: standalone, sentinel"
+          raise "Invalid EVENT_BROKER_REDIS_MODE=#{other} — valid values: standalone, sentinel, cluster"
       end
 
     :mqtt ->

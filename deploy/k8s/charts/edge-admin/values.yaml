@@ -98,12 +98,11 @@ config:
 #   EVENT_BROKER_NATS_URLS: "nats://my-nats:4222"             # NATS — comma-separated cluster
 #   # EVENT_BROKER_KAFKA_URLS: "broker-1:9092,broker-2:9092"  # Kafka — comma-separated cluster
 #   # EVENT_BROKER_RABBITMQ_URL: "amqp://user:pass@host:5672" # RabbitMQ — single URL
-#   # EVENT_BROKER_REDIS_MODE: "standalone"                  # standalone (default) or sentinel
-#   # EVENT_BROKER_REDIS_URL: "redis://host:6379"             # standalone Redis URL
-#   # EVENT_BROKER_REDIS_SENTINELS: "sentinel-a:26379,sentinel-b:26379"
+#   # EVENT_BROKER_REDIS_MODE: "standalone"                  # standalone (default), sentinel, or cluster
+#   # EVENT_BROKER_REDIS_URLS: "redis-a:6379,redis-b:6379"   # standalone: exactly one; sentinel: Sentinel endpoints; cluster: seed endpoints
 #   # EVENT_BROKER_REDIS_SENTINEL_GROUP: "mymaster"
-#   # EVENT_BROKER_REDIS_USERNAME: ""                         # Sentinel mode primary username
-#   # EVENT_BROKER_REDIS_PASSWORD: ""                         # Sentinel mode primary password
+#   # EVENT_BROKER_REDIS_USERNAME: ""                         # Primary username (all modes)
+#   # EVENT_BROKER_REDIS_PASSWORD: ""                         # Primary password (all modes)
 #   # EVENT_BROKER_REDIS_SENTINEL_PASSWORD: ""                # Optional Sentinel password
 #   # EVENT_BROKER_MQTT_URLS: "host-a:1883,host-b:1883"      # MQTT failover endpoints
 #   # AWS SNS — managed service, no broker URL; provision topics out-of-band:
@@ -170,7 +169,7 @@ secrets:
   #   can leave this as-is.
   # ADMIN_CLUSTER_COOKIE is optional; leave it empty to use the built-in default.
   # Optional broker auth (only needed when EVENT_BROKER_ENABLED=true and broker requires auth).
-  # RabbitMQ and Redis embed credentials in EVENT_BROKER_RABBITMQ_URL / EVENT_BROKER_REDIS_URL — no separate fields needed.
+  # RabbitMQ embeds credentials in EVENT_BROKER_RABBITMQ_URL. Redis uses EVENT_BROKER_REDIS_USERNAME / EVENT_BROKER_REDIS_PASSWORD.
   # Leave fields empty to omit them from the Secret.
   existingSecret: ""
   secretKeyBase: "changeme"

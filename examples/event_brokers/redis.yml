@@ -10,8 +10,13 @@
 # Then set in your .env:
 #   EVENT_BROKER_ENABLED=true
 #   EVENT_BROKER_ADAPTER=redis
-#   EVENT_BROKER_REDIS_URL=redis://edge_event_broker:6379
-#   # EVENT_BROKER_REDIS_URL=redis://:password@edge_event_broker:6379  # if auth is enabled
+#   EVENT_BROKER_REDIS_URLS=edge_event_broker:6379
+#   EVENT_BROKER_REDIS_USERNAME=                                      # optional ACL username
+#   EVENT_BROKER_REDIS_PASSWORD=                                      # optional ACL password
+#
+# This compose example runs standalone Redis. For an external Redis Cluster:
+#   EVENT_BROKER_REDIS_MODE=cluster
+#   EVENT_BROKER_REDIS_URLS=redis-a:6379,redis-b:6379,redis-c:6379
 #
 # To verify events are flowing, subscribe before triggering an action:
 #   docker exec -it edge_event_broker redis-cli PSUBSCRIBE 'edge.*'

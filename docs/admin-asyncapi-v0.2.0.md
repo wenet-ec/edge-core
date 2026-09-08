@@ -115,7 +115,9 @@ PSUBSCRIBE edge.*                    ← everything
 
 **No persistence or replay** — messages are delivered to currently connected subscribers only. If no subscriber is connected when Core publishes, the message is gone. Pick Redis only when consumers are always-on and loss is acceptable.
 
-**Server version floor:** Redis 2.0+ (Aug 2010, when Pub/Sub was introduced) and any wire-compatible server (Valkey, KeyDB, Dragonfly). The adapter uses only `PING` and `PUBLISH` over RESP2 — no version-gated commands. ACL-style URL usernames (`redis://user:pass@host`) and native TLS require Redis 6.0+ (Apr 2020); password-only URLs work against any version.
+**Server version floor:** Redis 2.0+ (Aug 2010, when Pub/Sub was introduced) and any wire-compatible server (Valkey, KeyDB, Dragonfly). The adapter uses only `PING` and `PUBLISH` over RESP2 — no version-gated commands. ACL usernames and native TLS require Redis 6.0+ (Apr 2020).
+
+Redis supports three connection modes through one endpoint setting: `EVENT_BROKER_REDIS_URLS`, a comma-separated list of `host:port` endpoints. Standalone requires exactly one endpoint; Sentinel treats them as Sentinel discovery endpoints and also requires `EVENT_BROKER_REDIS_SENTINEL_GROUP`; Cluster treats them as topology-discovery seeds. `EVENT_BROKER_REDIS_USERNAME` and `EVENT_BROKER_REDIS_PASSWORD` authenticate primary connections in every mode; `EVENT_BROKER_REDIS_SENTINEL_PASSWORD` is optional Sentinel authentication. Cluster mode uses topology discovery for publishing only; consumers continue using ordinary `SUBSCRIBE` or `PSUBSCRIBE`.
 
 ### MQTT
 

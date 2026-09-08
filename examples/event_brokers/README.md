@@ -96,16 +96,20 @@ Events publish to a durable topic exchange `edge.events` with routing key = even
 
 ```bash
 EVENT_BROKER_ADAPTER=redis
-EVENT_BROKER_REDIS_URL=redis://:password@host:6379      # embed credentials in URL; rediss:// for TLS
+EVENT_BROKER_REDIS_URLS=host:6379                       # standalone: exactly one; sentinel: Sentinel endpoints; cluster: seed endpoints
+EVENT_BROKER_REDIS_USERNAME=                             # optional ACL username, all modes
+EVENT_BROKER_REDIS_PASSWORD=                             # optional ACL password, all modes
 EVENT_BROKER_REDIS_SSL=true                             # required for external brokers (Redis Cloud, Upstash, etc.)
 
 # Self-managed Redis Sentinel:
 EVENT_BROKER_REDIS_MODE=sentinel
-EVENT_BROKER_REDIS_SENTINELS=sentinel-a:26379,sentinel-b:26379
+EVENT_BROKER_REDIS_URLS=sentinel-a:26379,sentinel-b:26379
 EVENT_BROKER_REDIS_SENTINEL_GROUP=mymaster
-EVENT_BROKER_REDIS_USERNAME=                             # primary username, if configured
-EVENT_BROKER_REDIS_PASSWORD=                             # primary password
 EVENT_BROKER_REDIS_SENTINEL_PASSWORD=                    # optional Sentinel password
+
+# Redis Cluster publisher (consumers still use standard SUBSCRIBE / PSUBSCRIBE):
+EVENT_BROKER_REDIS_MODE=cluster
+EVENT_BROKER_REDIS_URLS=redis-a:6379,redis-b:6379,redis-c:6379
 ```
 
 Channel = event type. Use `SUBSCRIBE edge.node.registered` for exact match, `PSUBSCRIBE edge.*` for wildcards. No durability — if no subscriber is connected, the message is gone.

@@ -1,0 +1,4 @@
+#!/bin/sh
+# edge_admin/rel/overlays/bin/cleanup_previous_admin_vpn_identity
+cd -P -- "$(dirname -- "$0")"
+exec ./edge_admin eval EdgeAdmin.Release.cleanup_previous_admin_vpn_identity

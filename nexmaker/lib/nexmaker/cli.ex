@@ -225,7 +225,24 @@ defmodule Nexmaker.Cli do
       {:error, :netclient_not_found}
   end
 
+  @netclient_json_path "/etc/netclient/netclient.json"
   @nodes_json_path "/etc/netclient/nodes.json"
+
+  @doc "Reads the enrolled Netmaker host ID from netclient's local state."
+  @spec read_host_id() :: {:ok, String.t()} | {:error, :not_found | :invalid_host_id | term()}
+  def read_host_id do
+    path = Application.get_env(:nexmaker, :netclient_json_path, @netclient_json_path)
+
+    with {:ok, contents} <- File.read(path),
+         {:ok, %{"id" => host_id}} when is_binary(host_id) and host_id != "" <-
+           Jason.decode(contents) do
+      {:ok, host_id}
+    else
+      {:error, :enoent} -> {:error, :not_found}
+      {:ok, _} -> {:error, :invalid_host_id}
+      {:error, reason} -> {:error, reason}
+    end
+  end
 
   @doc """
   Reads the netclient node state directly from /etc/netclient/nodes.json.

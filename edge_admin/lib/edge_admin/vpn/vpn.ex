@@ -349,6 +349,12 @@ defmodule EdgeAdmin.Vpn do
     Nexmaker.Cli.read_nodes()
   end
 
+  @doc "Reads the locally enrolled Netmaker host ID from netclient state."
+  @spec read_local_vpn_host_id() :: {:ok, String.t()} | {:error, term()}
+  def read_local_vpn_host_id do
+    Nexmaker.Cli.read_host_id()
+  end
+
   @doc """
   Removes a host from a Netmaker network.
 

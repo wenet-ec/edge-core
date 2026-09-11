@@ -26,6 +26,60 @@ defmodule Nexmaker.CliTest do
   end
 
   # ---------------------------------------------------------------------------
+  # Nexmaker.Cli.read_host_id/0 — reads local netclient state only
+  # ---------------------------------------------------------------------------
+
+  describe "Nexmaker.Cli.read_host_id/0" do
+    setup do
+      original_path = Application.get_env(:nexmaker, :netclient_json_path)
+
+      path =
+        Path.join(
+          System.tmp_dir!(),
+          "nexmaker-netclient-#{System.unique_integer([:positive])}.json"
+        )
+
+      Application.put_env(:nexmaker, :netclient_json_path, path)
+
+      on_exit(fn ->
+        if original_path do
+          Application.put_env(:nexmaker, :netclient_json_path, original_path)
+        else
+          Application.delete_env(:nexmaker, :netclient_json_path)
+        end
+
+        File.rm(path)
+      end)
+
+      %{path: path}
+    end
+
+    test "reads the host ID directly from netclient.json", %{path: path} do
+      File.write!(path, ~s({"id":"host-123"}))
+
+      assert {:ok, "host-123"} = Nexmaker.Cli.read_host_id()
+    end
+
+    test "returns not_found when netclient.json is absent" do
+      assert {:error, :not_found} = Nexmaker.Cli.read_host_id()
+    end
+
+    test "rejects a missing or blank host ID", %{path: path} do
+      File.write!(path, ~s({"id":""}))
+      assert {:error, :invalid_host_id} = Nexmaker.Cli.read_host_id()
+
+      File.write!(path, ~s({"name":"admin"}))
+      assert {:error, :invalid_host_id} = Nexmaker.Cli.read_host_id()
+    end
+
+    test "returns the JSON decode error for malformed local state", %{path: path} do
+      File.write!(path, "not-json")
+
+      assert {:error, %Jason.DecodeError{}} = Nexmaker.Cli.read_host_id()
+    end
+  end
+
+  # ---------------------------------------------------------------------------
   # setup_all: ensure superadmin exists (same bootstrap as API tests)
   # ---------------------------------------------------------------------------
 

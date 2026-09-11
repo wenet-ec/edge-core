@@ -11,6 +11,8 @@ defmodule EdgeAdmin.Release do
     * `rotate_encryption_key/0` — re-encrypt rows through old → new encryption key
       (gated on the four `ROTATE_*` env vars; logs skip and exits clean
       otherwise)
+    * `cleanup_previous_admin_vpn_identity/0` — best-effort removal of the
+      previous ephemeral Admin's Netmaker host and recorded node memberships
     * `bootstrap_edge_vpn_admin/0` — bootstrap the Edge VPN UI admin
     * `create_default_cluster/0` — pre-create the cluster named by
       `DEFAULT_CLUSTER_NAME` (skipped if unset)
@@ -18,6 +20,7 @@ defmodule EdgeAdmin.Release do
 
   alias Cloak.Ciphers.AES.GCM
   alias Ecto.Migrator
+  alias EdgeAdmin.AdminClustering.Membership.Cleanup
   alias EdgeAdmin.Encryption.SchemaRegistry
   alias EdgeAdmin.Vpn
 
@@ -77,6 +80,56 @@ defmodule EdgeAdmin.Release do
 
     for repo <- repos() do
       {:ok, _, _} = Migrator.with_repo(repo, &Migrator.run(&1, :down, to: version))
+    end
+  end
+
+  @doc """
+  Best-effort cleanup of the prior ephemeral Admin VPN identity.
+
+  Reads host and node identities from netclient's local state before the start
+  script wipes it. The previous host ID is the only host deletion target; this
+  never resolves a host by Admin name. Recorded node memberships are also
+  deleted defensively because Netmaker host deletion can leave node rows behind
+  when its cached host-node relation has drifted.
+
+  Every failure is logged and ignored. Startup must proceed to the normal wipe
+  and fresh enrollment when local state is absent, malformed, or the VPN API is
+  unavailable; periodic zombie cleanup remains the recovery backstop.
+  """
+  @spec cleanup_previous_admin_vpn_identity() :: :ok
+  def cleanup_previous_admin_vpn_identity do
+    boot([:http])
+
+    Cleanup.remove_recorded_identity(previous_host_id(), previous_nodes())
+    :ok
+  end
+
+  defp previous_host_id do
+    case Vpn.read_local_vpn_host_id() do
+      {:ok, host_id} ->
+        host_id
+
+      {:error, :not_found} ->
+        Logger.info("No previous Admin VPN host state found")
+        nil
+
+      {:error, reason} ->
+        Logger.warning("Could not read previous Admin VPN host state: #{inspect(reason)}")
+        nil
+    end
+  end
+
+  defp previous_nodes do
+    case Vpn.read_local_vpn_nodes() do
+      {:ok, nodes} ->
+        nodes
+
+      {:error, :not_found} ->
+        []
+
+      {:error, reason} ->
+        Logger.warning("Could not read previous Admin VPN node state: #{inspect(reason)}")
+        []
     end
   end
 

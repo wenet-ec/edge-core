@@ -46,16 +46,6 @@ cleanup() {
     echo "Cleanup complete"
 }
 
-# Load-bearing lifecycle invariant: Admins are intentionally ephemeral. Every
-# boot gets a fresh Admin VPN identity, and stale Admin hosts are cleaned later
-# by zombie cleanup. Do not remove this wipe unless Admin persistent identity
-# and stale-membership reconciliation are implemented as a full lifecycle.
-echo "Resetting Admin VPN identity for ephemeral Admin lifecycle..."
-rm -rf /etc/netclient/*
-
-echo "Cleaning up stale WireGuard interface..."
-ip link delete netmaker 2>/dev/null || true
-
 # Use UPYUN ("Yun") mirror for hex.pm — if the Fastly-backed default is flaky
 # https://hex.pm/docs/mirrors
 # export HEX_MIRROR="https://hexpm.upyun.com"
@@ -65,6 +55,20 @@ ip link delete netmaker 2>/dev/null || true
 
 mix deps.get
 mix compile
+
+# Admins are intentionally ephemeral. Before wiping the local VPN state,
+# best-effort delete that exact prior host and its recorded node memberships
+# from Netmaker. Zombie cleanup remains the backstop for crashes, missing
+# state, and unavailable VPN API.
+echo "Cleaning up previous Admin VPN identity..."
+mix run --no-start -e "EdgeAdmin.Release.cleanup_previous_admin_vpn_identity()" || true
+
+echo "Resetting Admin VPN identity for ephemeral Admin lifecycle..."
+rm -rf /etc/netclient/*
+
+echo "Cleaning up stale WireGuard interface..."
+ip link delete netmaker 2>/dev/null || true
+
 mix run --no-start -e "EdgeAdmin.Release.migrate()"
 
 # Rotate the encryption key when ROTATE_OLD_ENCRYPTION_* + ROTATE_NEW_ENCRYPTION_* envs

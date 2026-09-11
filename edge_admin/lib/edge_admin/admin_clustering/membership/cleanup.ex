@@ -97,6 +97,60 @@ defmodule EdgeAdmin.AdminClustering.Membership.Cleanup do
     :ok
   end
 
+  @doc """
+  Removes a previous ephemeral Admin identity recorded in local netclient state.
+
+  The host ID is an exact recorded target, never resolved by Admin name. Node
+  memberships are deleted after the host as a defensive sweep for Netmaker's
+  cached host-node relation drift.
+
+  This operation is best-effort: a missing host or node is already clean, and
+  individual deletion failures are logged without preventing fresh enrollment.
+  """
+  @spec remove_recorded_identity(String.t() | nil, [map()]) :: :ok
+  def remove_recorded_identity(host_id, nodes) when is_list(nodes) do
+    remove_recorded_host(host_id)
+    remove_recorded_nodes(nodes)
+    :ok
+  end
+
+  defp remove_recorded_host(host_id) when is_binary(host_id) and host_id != "" do
+    Logger.info("Removing previous ephemeral Admin VPN host #{host_id}")
+
+    case Vpn.delete_host(host_id) do
+      {:ok, _} ->
+        Logger.info("Removed previous Admin VPN host #{host_id}")
+
+      {:error, :not_found} ->
+        Logger.info("Previous Admin VPN host #{host_id} was already absent")
+
+      {:error, reason} ->
+        Logger.warning("Could not remove previous Admin VPN host #{host_id}: #{inspect(reason)}")
+    end
+  end
+
+  defp remove_recorded_host(_host_id), do: :ok
+
+  defp remove_recorded_nodes(nodes) do
+    nodes
+    |> Enum.filter(fn node ->
+      is_binary(node["network"]) and node["network"] != "" and is_binary(node["node_id"]) and
+        node["node_id"] != ""
+    end)
+    |> Enum.each(fn %{"network" => network_name, "node_id" => node_id} ->
+      case Vpn.delete_node(network_name, node_id) do
+        {:ok, _} ->
+          Logger.info("Removed previous Admin VPN node #{node_id} from #{network_name}")
+
+        {:error, :not_found} ->
+          :ok
+
+        {:error, reason} ->
+          Logger.warning("Could not remove previous Admin VPN node #{node_id}: #{inspect(reason)}")
+      end
+    end)
+  end
+
   @doc false
   @spec zombie_node?(map(), integer(), non_neg_integer(), [String.t()] | MapSet.t()) :: boolean()
   def zombie_node?(node, current_time, threshold_seconds, protected_host_ids) do

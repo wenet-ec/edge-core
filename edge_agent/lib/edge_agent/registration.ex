@@ -12,6 +12,7 @@ defmodule EdgeAgent.Registration do
   """
 
   alias EdgeAgent.AdminGateway.Client
+  alias EdgeAgent.Ingress.Identity, as: IngressIdentity
   alias EdgeAgent.Settings
 
   require Logger
@@ -26,15 +27,19 @@ defmodule EdgeAgent.Registration do
   """
   @spec register(identity(), String.t() | nil) :: :ok | {:error, String.t()}
   def register(%{node_id: node_id, recovery_key: recovery_key}, network_name) do
-    node_id
-    |> registration_request(network_name, recovery_key)
-    |> handle_registration_response()
+    with {:ok, ingress_public_key} <- IngressIdentity.public_key() do
+      node_id
+      |> registration_request(network_name, recovery_key, ingress_public_key)
+      |> handle_registration_response()
+    else
+      {:error, reason} -> {:error, "Failed to load Ingress identity: #{inspect(reason)}"}
+    end
   end
 
-  defp registration_request(node_id, network_name, recovery_key) do
+  defp registration_request(node_id, network_name, recovery_key, ingress_public_key) do
     case Settings.get_api_token() do
       token when is_binary(token) and token != "" ->
-        Client.reregister_node(build_reregistration_payload(network_name))
+        Client.reregister_node(build_reregistration_payload(network_name, ingress_public_key))
 
       _ ->
         Client.register_node(
@@ -42,7 +47,8 @@ defmodule EdgeAgent.Registration do
             node_id,
             network_name,
             recovery_key,
-            Settings.get_enrollment_key_id()
+            Settings.get_enrollment_key_id(),
+            ingress_public_key
           )
         )
     end
@@ -83,15 +89,15 @@ defmodule EdgeAgent.Registration do
     end
   end
 
-  defp build_registration_payload(node_id, network_name, nil, enrollment_key_id) do
+  defp build_registration_payload(node_id, network_name, nil, enrollment_key_id, ingress_public_key) do
     network_name
-    |> node_metadata()
+    |> node_metadata(ingress_public_key)
     |> Map.merge(%{node_id: node_id, enrollment_key_id: enrollment_key_id})
   end
 
-  defp build_registration_payload(node_id, network_name, recovery_key, enrollment_key_id) do
+  defp build_registration_payload(node_id, network_name, recovery_key, enrollment_key_id, ingress_public_key) do
     network_name
-    |> node_metadata()
+    |> node_metadata(ingress_public_key)
     |> Map.merge(%{
       node_id: node_id,
       recovery_key: recovery_key,
@@ -99,9 +105,9 @@ defmodule EdgeAgent.Registration do
     })
   end
 
-  defp build_reregistration_payload(network_name), do: node_metadata(network_name)
+  defp build_reregistration_payload(network_name, ingress_public_key), do: node_metadata(network_name, ingress_public_key)
 
-  defp node_metadata(network_name) do
+  defp node_metadata(network_name, ingress_public_key) do
     # The wire field is `http_port` (Admin's API contract), but the Agent HTTP
     # server's port is configured as `:agent_api_port` from `AGENT_API_PORT`.
     %{
@@ -114,7 +120,8 @@ defmodule EdgeAgent.Registration do
       http_proxy_port: Application.fetch_env!(:edge_agent, :agent_http_proxy_port),
       socks5_proxy_port: Application.fetch_env!(:edge_agent, :agent_socks5_proxy_port),
       version: :edge_agent |> Application.spec(:vsn) |> to_string(),
-      self_update_enabled: Application.get_env(:edge_agent, :self_update_enabled, false)
+      self_update_enabled: Application.get_env(:edge_agent, :self_update_enabled, false),
+      ingress_public_key: ingress_public_key
     }
   end
 end

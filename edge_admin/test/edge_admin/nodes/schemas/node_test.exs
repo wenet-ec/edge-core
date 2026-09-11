@@ -47,6 +47,7 @@ defmodule EdgeAdmin.Nodes.Schemas.NodeTest do
         socks5_proxy_port: 41_080,
         api_token: "node-api-token",
         proxy_password: "node-proxy-password",
+        ingress_public_key: Base.encode64(:binary.copy(<<0>>, 32)),
         version: "1.0.0",
         self_update_enabled: false
       },
@@ -71,6 +72,16 @@ defmodule EdgeAdmin.Nodes.Schemas.NodeTest do
 
     test "accepts a recovery key" do
       assert Node.changeset(%Node{}, valid_attrs(%{recovery_key: "recovery-key"})).valid?
+    end
+
+    test "requires a canonical WireGuard Ingress public key" do
+      missing = Node.changeset(%Node{}, Map.delete(valid_attrs(), :ingress_public_key))
+      malformed = Node.changeset(%Node{}, valid_attrs(%{ingress_public_key: "not-a-wireguard-key"}))
+
+      refute missing.valid?
+      assert "can't be blank" in errors_on(missing).ingress_public_key
+      refute malformed.valid?
+      assert "must be a canonical base64-encoded WireGuard public key" in errors_on(malformed).ingress_public_key
     end
 
     test "accepts every node status from the enum registry" do

@@ -134,4 +134,10 @@ defmodule EdgeAgent.Settings do
 
   @spec set_proxy_password(String.t()) :: :ok
   def set_proxy_password(value), do: set_secret("proxy_password", value)
+
+  @spec get_ingress_private_key() :: String.t() | nil
+  def get_ingress_private_key, do: get_config("ingress_private_key")
+
+  @spec set_ingress_private_key(String.t()) :: {:ok, Setting.t()} | {:error, Ecto.Changeset.t()}
+  def set_ingress_private_key(value), do: set_config("ingress_private_key", value)
 end

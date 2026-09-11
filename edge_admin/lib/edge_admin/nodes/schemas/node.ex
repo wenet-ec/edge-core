@@ -16,6 +16,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
   - `api_token` - Bearer token for node API authentication
   - `proxy_password` - Password for proxy server authentication
   - `recovery_key` - One-use key for replacing a node after local state loss
+  - `ingress_public_key` - Agent-owned WireGuard public key for future Ingress Tunneling
   - `http_port`, `ssh_port`, etc. - Service ports exposed by the node
   - `last_seen_at` - Last successful health check timestamp
   - `version` - EdgeAgent version string
@@ -64,6 +65,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
           api_token: String.t(),
           proxy_password: String.t(),
           recovery_key: String.t() | nil,
+          ingress_public_key: String.t(),
           self_update_enabled: boolean(),
           vpn_host_id: String.t(),
           node_name: String.t() | nil,
@@ -119,6 +121,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
     field(:api_token, :string, redact: true)
     field(:proxy_password, :string, redact: true)
     field(:recovery_key, :string, redact: true)
+    field(:ingress_public_key, :string)
     field(:self_update_enabled, :boolean, default: false)
 
     field(:vpn_host_id, :binary_id)
@@ -174,6 +177,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
       :api_token,
       :proxy_password,
       :recovery_key,
+      :ingress_public_key,
       :last_seen_at,
       :version,
       :self_update_enabled
@@ -192,6 +196,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
       :socks5_proxy_port,
       :api_token,
       :proxy_password,
+      :ingress_public_key,
       :version,
       :self_update_enabled
     ])
@@ -207,6 +212,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
     |> unique_constraint(:recovery_key)
     |> foreign_key_constraint(:cluster_id)
     |> foreign_key_constraint(:enrollment_key_id)
+    |> validate_ingress_public_key()
     |> validate_ports()
   end
 
@@ -224,6 +230,14 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
       validate_change(changeset, field, fn ^field, value ->
         if NodeValidators.valid_port?(value), do: [], else: [{field, "must be between 1 and 65535"}]
       end)
+    end)
+  end
+
+  defp validate_ingress_public_key(changeset) do
+    validate_change(changeset, :ingress_public_key, fn :ingress_public_key, value ->
+      if NodeValidators.valid_wireguard_public_key?(value),
+        do: [],
+        else: [ingress_public_key: "must be a canonical base64-encoded WireGuard public key"]
     end)
   end
 

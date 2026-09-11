@@ -23,6 +23,7 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeFormTest do
         "socks5_proxy_port" => 1080,
         "version" => "1.0.0",
         "self_update_enabled" => false,
+        "ingress_public_key" => Base.encode64(:binary.copy(<<0>>, 32)),
         "enrollment_key_id" => Uniq.UUID.uuid7()
       },
       overrides
@@ -87,6 +88,7 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeFormTest do
           "socks5_proxy_port",
           "version",
           "self_update_enabled",
+          "ingress_public_key",
           "enrollment_key_id"
         ] do
       test "missing #{field} is rejected" do
@@ -197,7 +199,8 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeFormTest do
             "http_proxy_port",
             "socks5_proxy_port",
             "version",
-            "self_update_enabled"
+            "self_update_enabled",
+            "ingress_public_key"
           ] do
         assert Map.has_key?(result, key), "expected key #{key} in result"
       end

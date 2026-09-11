@@ -44,7 +44,8 @@ defmodule EdgeAdmin.Ssh.Resources.SshQueriesTest do
         http_proxy_port: 8080,
         socks5_proxy_port: 1080,
         api_token: Ecto.UUID.generate(),
-        proxy_password: Ecto.UUID.generate()
+        proxy_password: Ecto.UUID.generate(),
+        ingress_public_key: Base.encode64(:binary.copy(<<0>>, 32))
       })
     )
   end

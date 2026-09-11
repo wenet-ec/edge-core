@@ -28,7 +28,8 @@ defmodule EdgeAdmin.Nodes.Resources.NodesTest do
       http_proxy_port: 43_128,
       socks5_proxy_port: 41_080,
       api_token: Ecto.UUID.generate(),
-      proxy_password: Ecto.UUID.generate()
+      proxy_password: Ecto.UUID.generate(),
+      ingress_public_key: Base.encode64(:binary.copy(<<0>>, 32))
     })
   end
 

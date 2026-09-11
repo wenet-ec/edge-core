@@ -34,6 +34,7 @@ defmodule EdgeAdmin.Nodes.Resources.NodesDiscoveryTest do
       socks5_proxy_port: 1080,
       api_token: Ecto.UUID.generate(),
       proxy_password: Ecto.UUID.generate(),
+      ingress_public_key: Base.encode64(:binary.copy(<<0>>, 32)),
       self_update_enabled: true,
       inserted_at: ~U[2026-02-01 12:00:00Z],
       updated_at: ~U[2026-02-02 12:00:00Z]

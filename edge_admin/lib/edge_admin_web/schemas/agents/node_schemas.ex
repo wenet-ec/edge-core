@@ -55,6 +55,13 @@ defmodule EdgeAdminWeb.Schemas.Agents.NodeSchemas do
         socks5_proxy_port: %Schema{type: :integer, minimum: 1, maximum: 65_535, description: "SOCKS5 proxy port"},
         version: %Schema{type: :string, description: "Agent version string", example: "1.2.3"},
         self_update_enabled: %Schema{type: :boolean, description: "Whether the agent supports self-update"},
+        ingress_public_key: %Schema{
+          type: :string,
+          format: :byte,
+          minLength: 44,
+          maxLength: 44,
+          description: "Agent-owned Ingress WireGuard public key"
+        },
         recovery_key: %Schema{type: :string, description: "Optional node recovery key"},
         enrollment_key_id: %Schema{
           type: :string,
@@ -74,6 +81,7 @@ defmodule EdgeAdminWeb.Schemas.Agents.NodeSchemas do
         :socks5_proxy_port,
         :version,
         :self_update_enabled,
+        :ingress_public_key,
         :enrollment_key_id
       ]
     })
@@ -131,7 +139,14 @@ defmodule EdgeAdminWeb.Schemas.Agents.NodeSchemas do
         http_proxy_port: %Schema{type: :integer, minimum: 1, maximum: 65_535, description: "HTTP proxy port"},
         socks5_proxy_port: %Schema{type: :integer, minimum: 1, maximum: 65_535, description: "SOCKS5 proxy port"},
         version: %Schema{type: :string, description: "Agent version string", example: "1.2.3"},
-        self_update_enabled: %Schema{type: :boolean, description: "Whether the agent supports self-update"}
+        self_update_enabled: %Schema{type: :boolean, description: "Whether the agent supports self-update"},
+        ingress_public_key: %Schema{
+          type: :string,
+          format: :byte,
+          minLength: 44,
+          maxLength: 44,
+          description: "Agent-owned Ingress WireGuard public key"
+        }
       },
       required: [
         :network_name,
@@ -143,7 +158,8 @@ defmodule EdgeAdminWeb.Schemas.Agents.NodeSchemas do
         :http_proxy_port,
         :socks5_proxy_port,
         :version,
-        :self_update_enabled
+        :self_update_enabled,
+        :ingress_public_key
       ]
     })
   end

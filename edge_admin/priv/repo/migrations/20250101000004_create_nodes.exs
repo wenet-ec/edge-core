@@ -48,6 +48,7 @@ defmodule EdgeAdmin.Repo.Migrations.CreateNodes do
       add :api_token, :string, null: false
       add :proxy_password, :string, null: false
       add :recovery_key, :string
+      add :ingress_public_key, :string, null: false
       add :self_update_enabled, :boolean, null: false, default: false
 
       # Netmaker references

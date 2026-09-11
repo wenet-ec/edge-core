@@ -208,6 +208,7 @@ defmodule EdgeAdmin.Nodes.Workflows.Registration do
       proxy_password: Random.token(),
       version: attrs["version"],
       self_update_enabled: attrs["self_update_enabled"],
+      ingress_public_key: attrs["ingress_public_key"],
       enrollment_key_id: attrs["enrollment_key_id"]
     }
   end

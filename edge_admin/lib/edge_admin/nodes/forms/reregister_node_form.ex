@@ -21,6 +21,7 @@ defmodule EdgeAdmin.Nodes.Forms.ReregisterNodeForm do
     field(:socks5_proxy_port, :integer)
     field(:version, :string)
     field(:self_update_enabled, :boolean)
+    field(:ingress_public_key, :string)
   end
 
   @fields [
@@ -33,7 +34,8 @@ defmodule EdgeAdmin.Nodes.Forms.ReregisterNodeForm do
     :http_proxy_port,
     :socks5_proxy_port,
     :version,
-    :self_update_enabled
+    :self_update_enabled,
+    :ingress_public_key
   ]
 
   @doc "Validates and normalizes authenticated Agent re-registration attributes."
@@ -43,6 +45,7 @@ defmodule EdgeAdmin.Nodes.Forms.ReregisterNodeForm do
     |> cast(attrs, @fields)
     |> validate_required(@fields)
     |> validate_network_name()
+    |> validate_ingress_public_key()
     |> validate_port(:http_port)
     |> validate_port(:ssh_port)
     |> validate_port(:agent_metrics_port)
@@ -66,6 +69,14 @@ defmodule EdgeAdmin.Nodes.Forms.ReregisterNodeForm do
   defp validate_port(changeset, field) do
     validate_change(changeset, field, fn ^field, value ->
       if NodeValidators.valid_port?(value), do: [], else: [{field, "must be between 1 and 65535"}]
+    end)
+  end
+
+  defp validate_ingress_public_key(changeset) do
+    validate_change(changeset, :ingress_public_key, fn :ingress_public_key, value ->
+      if NodeValidators.valid_wireguard_public_key?(value),
+        do: [],
+        else: [ingress_public_key: "must be a canonical base64-encoded WireGuard public key"]
     end)
   end
 

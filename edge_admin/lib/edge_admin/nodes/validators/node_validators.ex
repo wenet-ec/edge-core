@@ -17,4 +17,17 @@ defmodule EdgeAdmin.Nodes.Validators.NodeValidators do
   @spec valid_network_name?(term()) :: boolean()
   def valid_network_name?(name) when is_binary(name), do: String.starts_with?(name, "cluster-")
   def valid_network_name?(_name), do: false
+
+  @doc "Returns whether a value is a canonical base64-encoded WireGuard public key."
+  @spec valid_wireguard_public_key?(term()) :: boolean()
+  def valid_wireguard_public_key?(key) when is_binary(key) do
+    with {:ok, decoded} <- Base.decode64(key),
+         true <- byte_size(decoded) == 32 do
+      Base.encode64(decoded) == key
+    else
+      _ -> false
+    end
+  end
+
+  def valid_wireguard_public_key?(_key), do: false
 end

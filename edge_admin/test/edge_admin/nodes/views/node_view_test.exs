@@ -50,6 +50,7 @@ defmodule EdgeAdmin.Nodes.Views.NodeViewTest do
       api_token: "token-abc",
       proxy_password: "pw-abc",
       recovery_key: "recovery-key-abc",
+      ingress_public_key: Base.encode64(:binary.copy(<<0>>, 32)),
       enrollment_key_id: "enrollment-key-abc",
       version: "0.1.0",
       self_update_enabled: true,

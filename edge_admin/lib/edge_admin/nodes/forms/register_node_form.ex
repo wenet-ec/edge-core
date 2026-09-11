@@ -22,6 +22,7 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeForm do
     field(:socks5_proxy_port, :integer)
     field(:version, :string)
     field(:self_update_enabled, :boolean)
+    field(:ingress_public_key, :string)
     field(:recovery_key, :string)
     field(:enrollment_key_id, :string)
   end
@@ -38,6 +39,7 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeForm do
     :socks5_proxy_port,
     :version,
     :self_update_enabled,
+    :ingress_public_key,
     :recovery_key,
     :enrollment_key_id
   ]
@@ -62,11 +64,13 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeForm do
       :socks5_proxy_port,
       :version,
       :self_update_enabled,
+      :ingress_public_key,
       :enrollment_key_id
     ])
     |> validate_uuid_format(:node_id)
     |> validate_uuid_format(:enrollment_key_id)
     |> validate_network_name()
+    |> validate_ingress_public_key()
     |> validate_port(:http_port)
     |> validate_port(:ssh_port)
     |> validate_port(:agent_metrics_port)
@@ -116,10 +120,19 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeForm do
       "socks5_proxy_port" => form.socks5_proxy_port,
       "version" => form.version,
       "self_update_enabled" => form.self_update_enabled,
+      "ingress_public_key" => form.ingress_public_key,
       "recovery_key" => form.recovery_key,
       "enrollment_key_id" => form.enrollment_key_id
     }
     |> Enum.reject(fn {_k, v} -> is_nil(v) end)
     |> Map.new()
+  end
+
+  defp validate_ingress_public_key(changeset) do
+    validate_change(changeset, :ingress_public_key, fn :ingress_public_key, value ->
+      if NodeValidators.valid_wireguard_public_key?(value),
+        do: [],
+        else: [ingress_public_key: "must be a canonical base64-encoded WireGuard public key"]
+    end)
   end
 end

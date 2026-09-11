@@ -96,7 +96,7 @@ defmodule EdgeAgent.Mixfile do
 
       # HTTP server
       {:bandit, "~> 1.12"},
-      {:ranch, "~> 2.2"},
+      {:ranch, "~> 2.3"},
       {:phoenix, "~> 1.8"},
       {:phoenix_live_reload, "~> 1.7", only: :dev},
       {:plug_checkup, git: "https://github.com/voughtdq/plug_checkup.git", tag: "v1.0.0"},

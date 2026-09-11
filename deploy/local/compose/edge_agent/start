@@ -53,6 +53,9 @@ trap cleanup EXIT INT TERM
 # https://hex.pm/docs/mirrors
 # export HEX_MIRROR="https://hexpm.upyun.com"
 
+# Also use these arguments when connection to hex.pm is slow or unreliable. See https://hex.pm/docs/http-concurrency
+# export HEX_HTTP_CONCURRENCY=1 HEX_HTTP_TIMEOUT=120
+
 mix deps.get
 mix compile
 mix ecto.migrate

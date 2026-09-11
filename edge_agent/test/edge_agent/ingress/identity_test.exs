@@ -9,12 +9,19 @@ defmodule EdgeAgent.Ingress.IdentityTest do
     assert Settings.get_ingress_private_key() == nil
 
     assert {:ok, public_key} = Identity.public_key()
-    assert {:ok, private_key} = Settings.get_ingress_private_key() |> Base.decode64()
+    assert {:ok, private_key} = Base.decode64(Settings.get_ingress_private_key())
 
     assert byte_size(private_key) == 32
     assert {:ok, decoded_public_key} = Base.decode64(public_key)
     assert byte_size(decoded_public_key) == 32
-    assert Base.encode64(:crypto.generate_key(:ecdh, :x25519, private_key)) == public_key
+
+    case apply(:crypto, :generate_key, [:ecdh, :x25519, private_key]) do
+      {derived_public_key, _private_key} when is_binary(derived_public_key) ->
+        assert Base.encode64(derived_public_key) == public_key
+
+      result ->
+        flunk("unexpected X25519 public-key derivation result: #{inspect(result)}")
+    end
 
     assert {:ok, ^public_key} = Identity.public_key()
   end

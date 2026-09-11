@@ -27,12 +27,14 @@ defmodule EdgeAgent.Registration do
   """
   @spec register(identity(), String.t() | nil) :: :ok | {:error, String.t()}
   def register(%{node_id: node_id, recovery_key: recovery_key}, network_name) do
-    with {:ok, ingress_public_key} <- IngressIdentity.public_key() do
-      node_id
-      |> registration_request(network_name, recovery_key, ingress_public_key)
-      |> handle_registration_response()
-    else
-      {:error, reason} -> {:error, "Failed to load Ingress identity: #{inspect(reason)}"}
+    case IngressIdentity.public_key() do
+      {:ok, ingress_public_key} ->
+        node_id
+        |> registration_request(network_name, recovery_key, ingress_public_key)
+        |> handle_registration_response()
+
+      {:error, reason} ->
+        {:error, "Failed to load Ingress identity: #{inspect(reason)}"}
     end
   end
 
@@ -105,7 +107,8 @@ defmodule EdgeAgent.Registration do
     })
   end
 
-  defp build_reregistration_payload(network_name, ingress_public_key), do: node_metadata(network_name, ingress_public_key)
+  defp build_reregistration_payload(network_name, ingress_public_key),
+    do: node_metadata(network_name, ingress_public_key)
 
   defp node_metadata(network_name, ingress_public_key) do
     # The wire field is `http_port` (Admin's API contract), but the Agent HTTP

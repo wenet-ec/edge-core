@@ -34,9 +34,19 @@ defmodule EdgeAgent.Ingress.Identity do
 
   defp public_key_from_private_key(encoded_private_key) do
     with {:ok, private_key} <- Base.decode64(encoded_private_key),
-         true <- byte_size(private_key) == 32,
-         public_key <- :crypto.generate_key(:ecdh, @curve, private_key) do
-      {:ok, Base.encode64(public_key)}
+         true <- byte_size(private_key) == 32 do
+      # OTP's generic ECDH spec does not specialize X25519's runtime
+      # `{binary(), binary()}` result, so keep the runtime shape check explicit.
+      case apply(:crypto, :generate_key, [:ecdh, @curve, private_key]) do
+        {public_key, _private_key} when is_binary(public_key) ->
+          {:ok, Base.encode64(public_key)}
+
+        public_key when is_binary(public_key) ->
+          {:ok, Base.encode64(public_key)}
+
+        _ ->
+          {:error, :invalid_ingress_private_key}
+      end
     else
       false -> {:error, :invalid_ingress_private_key}
       :error -> {:error, :invalid_ingress_private_key}

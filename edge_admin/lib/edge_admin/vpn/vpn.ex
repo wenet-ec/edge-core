@@ -555,9 +555,22 @@ defmodule EdgeAdmin.Vpn do
   @spec delete_node(String.t(), String.t()) ::
           {:ok, map()} | {:error, :not_found | :service_unavailable}
   def delete_node(network_name, node_id) do
-    network_name
-    |> Nodes.delete(node_id)
-    |> normalize_netmaker_error()
+    case network_name |> Nodes.delete(node_id) |> Api.normalize() do
+      {:error, {:bad_request, body}} -> classify_delete_node_400(body)
+      result -> normalize_netmaker_error(result)
+    end
+  end
+
+  @doc false
+  @spec classify_delete_node_400(term()) :: {:error, :not_found | :service_unavailable}
+  def classify_delete_node_400(body) do
+    message = Api.extract_message(body)
+
+    if String.contains?(message, "error fetching node during parameter validation: record not found") do
+      {:error, :not_found}
+    else
+      {:error, :service_unavailable}
+    end
   end
 
   @doc """

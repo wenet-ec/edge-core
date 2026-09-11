@@ -95,6 +95,21 @@ defmodule EdgeAdmin.VpnTest do
     end
   end
 
+  describe "classify_delete_node_400/1" do
+    test "Netmaker missing-node validation error → :not_found" do
+      body = %{
+        "Message" => "error fetching node during parameter validation: record not found"
+      }
+
+      assert Vpn.classify_delete_node_400(body) == {:error, :not_found}
+    end
+
+    test "other bad requests remain service_unavailable" do
+      assert Vpn.classify_delete_node_400(%{"Message" => "invalid node ID"}) ==
+               {:error, :service_unavailable}
+    end
+  end
+
   describe "normalize_netmaker_error/1" do
     test "ok tuple is preserved" do
       assert Vpn.normalize_netmaker_error({:ok, %{"netid" => "x"}}) == {:ok, %{"netid" => "x"}}

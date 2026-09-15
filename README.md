@@ -4,7 +4,7 @@
 [![Build](https://github.com/wenet-ec/edge-core/actions/workflows/production.yml/badge.svg?branch=main)](https://github.com/wenet-ec/edge-core/actions/workflows/production.yml)
 [![Docs](https://github.com/wenet-ec/edge-core/actions/workflows/docs.yml/badge.svg?branch=main)](https://github.com/wenet-ec/edge-core/actions/workflows/docs.yml)
 
-**Self-hostable control plane for distributed Linux and Edge fleets — WireGuard mesh, SSH proxy, remote execution, Prometheus metrics, events, and MCP over one API.**
+**Self-hostable Linux and edge fleet-management platform — operate machines behind NAT and firewalls with a WireGuard mesh, remote commands, SSH proxying, Prometheus metrics, events, and MCP over one API.**
 
 📖 **Docs:** [wenet-ec.github.io/edge-core](https://wenet-ec.github.io/edge-core/)
 
@@ -18,6 +18,14 @@ network, while commands, metrics, SSH verification, and proxy operations are
 coordinated through the responsible virtual gateway.
 
 The name comes from our original edge-device use case, but **edge means any machine that is remote from the operator**. A VM in Frankfurt and a Raspberry Pi in a factory present the same control-plane problem; the difference is how hostile and unreliable the surrounding network can be.
+
+## Is Edge Core a fit?
+
+Use Edge Core when you need to operate existing Linux machines distributed across networks you do not control: branch offices, factories, homes, customer sites, multiple clouds, or a homelab. It is especially useful when those machines are behind NAT or firewalls and you do not want to expose SSH or application ports publicly.
+
+Edge Core is the **fleet-operations layer on top of private connectivity**. It uses Netmaker and WireGuard for the mesh, then adds command delivery and results, centralized SSH verification, HTTP/SOCKS5 access, metrics aggregation, lifecycle events, and an MCP server.
+
+It is not a VM provisioner, Kubernetes manager, general-purpose MDM/RMM suite, or a replacement for a VPN product. It complements tools such as Ansible, Tailscale/Headscale, Prometheus/Grafana, and cloud providers. See [when to choose Edge Core and common use cases](docs/use-cases.md) and [comparisons with adjacent tools](docs/comparisons.md).
 
 ## The edge version of a cloud control plane
 
@@ -47,6 +55,12 @@ Edge Core manages machines that already exist; it is not a general-purpose compu
 - **Proxying** — tunnel HTTP or arbitrary TCP traffic through a node, including access to that node's local network.
 - **Lifecycle events** — publish CloudEvents through signed webhooks or a message broker instead of polling.
 - **AI operations** — expose the REST management surface through MCP for compatible assistants and automation.
+
+## AI-assisted fleet operations
+
+Edge Core includes an authenticated MCP server at `POST /mcp`; its management tools mirror the REST API. An assistant can inspect fleet health and metrics, diagnose a node, create a deliberately scoped command, and follow the resulting lifecycle events. The Admin HTTP and SOCKS5 proxies can reach services where an API tool is not the right interface.
+
+MCP access is privileged operational access, not a chat integration. Give an assistant a dedicated `MCP_KEY`, use the tool annotations and target scopes to review mutations, and treat that key with the same care as an SSH credential. Start with the [MCP fleet-operations guide](docs/mcp-for-fleet-operations.md) or the complete [MCP tool catalog](docs/admin-mcp-v0.2.0.md).
 
 ## Who is it for?
 
@@ -106,6 +120,9 @@ See the [operator guide](docs/guide.md) for host-specific notes, including `fire
 - [OpenAPI reference](docs/openapi.md)
 - [AsyncAPI event catalog](docs/admin-asyncapi-v0.2.0.md)
 - [MCP tool catalog](docs/admin-mcp-v0.2.0.md)
+- [MCP fleet-operations quickstart](docs/mcp-for-fleet-operations.md)
+- [Use cases and fit guide](docs/use-cases.md)
+- [Comparisons](docs/comparisons.md)
 - [Lite deployment](examples/lite/README.md)
 - [Standard deployment](examples/standard/README.md)
 - [Relay deployment](examples/relay/README.md)
@@ -124,7 +141,7 @@ See the [operator guide](docs/guide.md) for host-specific notes, including `fire
 
 ## License
 
-Edge Core ships under multiple licenses; see [`LICENSE`](LICENSE) for the complete terms.
+Edge Core is self-hostable but ships under multiple licenses; see [`LICENSE`](LICENSE) for the complete terms. The Agent and Nexmaker are open source; Edge Admin is source-available under ELv2.
 
 | Component | License | Posture |
 | --- | --- | --- |
@@ -136,3 +153,7 @@ Edge Core ships under multiple licenses; see [`LICENSE`](LICENSE) for the comple
 You may self-host, modify, and use Edge Core internally or as part of your own services. The Elastic License restricts offering Edge Admin itself, or a thin wrapper around it, as a hosted service to third parties. Contact **<licensing@wenet-ec.com>** if your use case needs clarification or a commercial license.
 
 Contributions are welcome. See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the contribution flow and DCO requirements.
+
+## Security
+
+Please do not report vulnerabilities through public issues. See [`SECURITY.md`](SECURITY.md) for the private reporting process.

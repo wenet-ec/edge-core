@@ -85,11 +85,14 @@ plugins:
 
 nav:
   - Home: index.md
+  - Is Edge Core a fit?: use-cases.md
+  - Comparisons: comparisons.md
   - Architecture: architecture.md
   - User guide: guide.md
   - API reference:
       - REST API overview: openapi.md
       - Events (AsyncAPI): admin-asyncapi-v0.2.0.md
+      - MCP fleet operations: mcp-for-fleet-operations.md
       - MCP tools: admin-mcp-v0.2.0.md
   - Deploying:
       - Examples overview: deploying/index.md

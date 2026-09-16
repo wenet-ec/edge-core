@@ -26,7 +26,8 @@ defmodule EdgeAdmin.Nodes.Views.ClusterViewTest do
   defp node_fixture(overrides \\ %{}) do
     base = %Node{
       id: "node-uuid-1",
-      status: :healthy
+      status: :healthy,
+      ingress_public_key: Base.encode64(:binary.copy(<<0>>, 32))
     }
 
     struct(base, overrides)
@@ -74,12 +75,13 @@ defmodule EdgeAdmin.Nodes.Views.ClusterViewTest do
       assert result.nodes == []
     end
 
-    test "node summaries carry id, enrollment key ID, status, and vpn_hostname" do
+    test "node summaries carry id, enrollment key ID, Ingress public key, status, and vpn_hostname" do
       cluster = cluster_fixture(%{name: "prod", nodes: [node_fixture(%{id: "abc-123"})]})
 
       [node_summary] = ClusterView.render(cluster).nodes
 
       assert node_summary.id == "abc-123"
+      assert node_summary.ingress_public_key == "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
       assert node_summary.status == "healthy"
       assert node_summary.vpn_hostname == "node-abc-123.cluster-prod.nm.internal"
     end
@@ -90,7 +92,9 @@ defmodule EdgeAdmin.Nodes.Views.ClusterViewTest do
       [node_summary] = ClusterView.render(cluster).nodes
 
       assert node_summary.enrollment_key_id == nil
-      assert node_summary |> Map.keys() |> Enum.sort() == [:enrollment_key_id, :id, :status, :vpn_hostname]
+
+      assert node_summary |> Map.keys() |> Enum.sort() ==
+               [:enrollment_key_id, :id, :ingress_public_key, :status, :vpn_hostname]
     end
 
     test "node_limit nil is preserved as nil (not coerced)" do

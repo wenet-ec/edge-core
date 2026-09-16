@@ -234,6 +234,7 @@ All node events share the same `data` shape unless noted.
 {
   "node_id": "abc-123",
   "cluster_name": "prod",
+  "ingress_public_key": "RWRnZUNvcmVJbmdyZXNzUHVibGljS2V5RXhhbXBsZTE=",
   "status": "healthy",
   "version": "1.2.0",
   "http_port": 44000,

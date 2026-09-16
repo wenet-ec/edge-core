@@ -238,6 +238,7 @@ defmodule EdgeAdmin.Events.Catalog do
   @node_base_data %{
     "node_id" => "node-abc123",
     "cluster_name" => "prod",
+    "ingress_public_key" => "RWRnZUNvcmVJbmdyZXNzUHVibGljS2V5RXhhbXBsZTE=",
     "status" => "healthy",
     "version" => "1.2.0",
     "http_port" => 44_000,
@@ -612,6 +613,7 @@ defmodule EdgeAdmin.Events.Catalog do
       "node_id" => node.id,
       "cluster_name" => cluster_name(node),
       "enrollment_key_id" => node.enrollment_key_id,
+      "ingress_public_key" => node.ingress_public_key,
       "status" => Atom.to_string(node.status),
       "version" => node.version,
       "http_port" => node.http_port,

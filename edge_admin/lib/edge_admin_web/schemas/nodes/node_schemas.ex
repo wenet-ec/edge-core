@@ -98,6 +98,13 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
           nullable: true,
           description: "VPN host UUID for API operations"
         },
+        ingress_public_key: %Schema{
+          type: :string,
+          format: :byte,
+          minLength: 44,
+          maxLength: 44,
+          description: "Agent-owned Ingress WireGuard public key"
+        },
         status: %Schema{
           type: :string,
           enum: @status_enum,
@@ -175,6 +182,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
       required: [
         :id,
         :cluster_name,
+        :ingress_public_key,
         :http_port,
         :ssh_port,
         :agent_metrics_port,
@@ -192,6 +200,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
         cluster_name: "prod-east",
         enrollment_key_id: "0190f1e0-7b2a-7abc-8def-0123456789ab",
         vpn_host_id: "def67890-5678-5678-5678-567890abcdef",
+        ingress_public_key: "RWRnZUNvcmVJbmdyZXNzUHVibGljS2V5RXhhbXBsZTE=",
         status: "healthy",
         vpn_hostname: "node-01234567-89ab-cdef-0123-456789abcdef.cluster-prod-east.nm.internal",
         mdns_hostname: "node-01234567-89ab-cdef-0123-456789abcdef.local",

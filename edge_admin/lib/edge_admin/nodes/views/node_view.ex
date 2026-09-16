@@ -18,6 +18,7 @@ defmodule EdgeAdmin.Nodes.Views.NodeView do
       cluster_name: cluster.name,
       enrollment_key_id: node.enrollment_key_id,
       vpn_host_id: node.vpn_host_id,
+      ingress_public_key: node.ingress_public_key,
       status: atom_to_string(node.status),
       vpn_hostname: NodeSchema.vpn_hostname(node),
       mdns_hostname: NodeSchema.mdns_hostname(node),

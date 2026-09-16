@@ -76,6 +76,7 @@ defmodule EdgeAdmin.Nodes.Views.NodeViewTest do
       assert result.cluster_name == "prod"
       assert result.enrollment_key_id == node.enrollment_key_id
       assert result.vpn_host_id == "host-1"
+      assert result.ingress_public_key == node.ingress_public_key
       assert result.status == "healthy"
 
       # Computed hostnames — pinned exactly so a regression in the helper
@@ -151,7 +152,7 @@ defmodule EdgeAdmin.Nodes.Views.NodeViewTest do
       result = NodeView.render(node)
 
       expected_keys = Enum.sort(~w(
-          id node_name cluster_name enrollment_key_id vpn_host_id status
+          id node_name cluster_name enrollment_key_id vpn_host_id ingress_public_key status
           vpn_hostname mdns_hostname
           http_port ssh_port host_metrics_port wireguard_metrics_port
           agent_metrics_port

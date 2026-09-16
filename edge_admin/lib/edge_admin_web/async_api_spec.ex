@@ -471,6 +471,13 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
         "type" => ["string", "null"],
         "format" => "uuid"
       },
+      "ingress_public_key" => %{
+        "type" => "string",
+        "format" => "byte",
+        "minLength" => 44,
+        "maxLength" => 44,
+        "description" => "Agent-owned Ingress WireGuard public key"
+      },
       "status" => %{"type" => "string", "enum" => NodeStatuses.status_strings()},
       "version" => %{"type" => "string"},
       "http_port" => %{"type" => "integer"},

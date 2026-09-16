@@ -330,6 +330,7 @@ defmodule EdgeAdmin.Events.CatalogTest do
       assert data["node_id"] == node.id
       assert data["cluster_name"] == "prod"
       assert data["enrollment_key_id"] == node.enrollment_key_id
+      assert data["ingress_public_key"] == node.ingress_public_key
       assert data["status"] == "healthy"
       assert data["version"] == "1.2.0"
       assert data["http_port"] == 44_000

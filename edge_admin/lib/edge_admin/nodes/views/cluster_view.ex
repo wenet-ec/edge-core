@@ -37,6 +37,7 @@ defmodule EdgeAdmin.Nodes.Views.ClusterView do
     %{
       id: node.id,
       enrollment_key_id: node.enrollment_key_id,
+      ingress_public_key: node.ingress_public_key,
       status: atom_to_string(node.status),
       vpn_hostname: Vpn.build_vpn_hostname(short_name, network_name)
     }

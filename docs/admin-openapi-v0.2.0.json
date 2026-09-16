@@ -322,12 +322,14 @@
             {
               "enrollment_key_id": "0190f1e0-7b2a-7abc-8def-0123456789ab",
               "id": "abc12345-1234-1234-1234-123456789abc",
+              "ingress_public_key": "RWRnZUNvcmVJbmdyZXNzUHVibGljS2V5RXhhbXBsZTE=",
               "status": "healthy",
               "vpn_hostname": "node-abc12345-1234-1234-1234-123456789abc.cluster-prod-east.nm.internal"
             },
             {
               "enrollment_key_id": null,
               "id": "def67890-5678-5678-5678-567890abcdef",
+              "ingress_public_key": "RWRnZUNvcmVJbmdyZXNzUHVibGljS2V5RXhhbXBsZTE=",
               "status": "healthy",
               "vpn_hostname": "node-def67890-5678-5678-5678-567890abcdef.cluster-prod-east.nm.internal"
             }
@@ -1347,6 +1349,7 @@
         "example": {
           "enrollment_key_id": "0190f1e0-7b2a-7abc-8def-0123456789ab",
           "id": "abc12345-1234-1234-1234-123456789abc",
+          "ingress_public_key": "RWRnZUNvcmVJbmdyZXNzUHVibGljS2V5RXhhbXBsZTE=",
           "status": "healthy",
           "vpn_hostname": "node-abc12345-1234-1234-1234-123456789abc.cluster-prod-east.nm.internal"
         },
@@ -1363,6 +1366,14 @@
             "example": "abc12345-1234-1234-1234-123456789abc",
             "type": "string"
           },
+          "ingress_public_key": {
+            "description": "Agent-owned Ingress WireGuard public key",
+            "example": "RWRnZUNvcmVJbmdyZXNzUHVibGljS2V5RXhhbXBsZTE=",
+            "format": "byte",
+            "maxLength": 44,
+            "minLength": 44,
+            "type": "string"
+          },
           "status": {
             "description": "Node status",
             "enum": ["healthy", "unhealthy", "unreachable"],
@@ -1375,7 +1386,13 @@
             "type": "string"
           }
         },
-        "required": ["id", "enrollment_key_id", "status", "vpn_hostname"],
+        "required": [
+          "id",
+          "enrollment_key_id",
+          "ingress_public_key",
+          "status",
+          "vpn_hostname"
+        ],
         "title": "NodeSummary",
         "type": "object"
       },
@@ -4162,6 +4179,7 @@
           "http_port": 44000,
           "http_proxy_port": 44880,
           "id": "01234567-89ab-cdef-0123-456789abcdef",
+          "ingress_public_key": "RWRnZUNvcmVJbmdyZXNzUHVibGljS2V5RXhhbXBsZTE=",
           "inserted_at": "2025-06-09T08:00:00Z",
           "last_seen_at": "2025-06-09T08:20:00Z",
           "mdns_hostname": "node-01234567-89ab-cdef-0123-456789abcdef.local",
@@ -4210,6 +4228,13 @@
           "id": {
             "description": "Unique node identifier",
             "format": "uuid",
+            "type": "string"
+          },
+          "ingress_public_key": {
+            "description": "Agent-owned Ingress WireGuard public key",
+            "format": "byte",
+            "maxLength": 44,
+            "minLength": 44,
             "type": "string"
           },
           "inserted_at": {
@@ -4276,6 +4301,7 @@
         "required": [
           "id",
           "cluster_name",
+          "ingress_public_key",
           "http_port",
           "ssh_port",
           "agent_metrics_port",

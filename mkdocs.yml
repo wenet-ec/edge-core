@@ -85,6 +85,10 @@ plugins:
 
 nav:
   - Home: index.md
+  - Documentation versions:
+      - Overview: versions/index.md
+      - V2 (current): versions/v2.md
+      - V3 (in development): versions/v3.md
   - Is Edge Core a fit?: use-cases.md
   - Comparisons: comparisons.md
   - Architecture: architecture.md

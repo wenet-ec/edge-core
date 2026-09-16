@@ -210,6 +210,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
     |> unique_constraint(:id, name: :nodes_pkey)
     |> unique_constraint(:api_token)
     |> unique_constraint(:recovery_key)
+    |> unique_constraint(:ingress_public_key)
     |> foreign_key_constraint(:cluster_id)
     |> foreign_key_constraint(:enrollment_key_id)
     |> validate_ingress_public_key()

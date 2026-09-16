@@ -84,6 +84,14 @@ defmodule EdgeAdmin.Nodes.Schemas.NodeTest do
       assert "must be a canonical base64-encoded WireGuard public key" in errors_on(malformed).ingress_public_key
     end
 
+    test "declares the database uniqueness constraint for the Ingress public key" do
+      changeset = Node.changeset(%Node{}, valid_attrs())
+
+      assert Enum.any?(changeset.constraints, fn constraint ->
+               constraint.field == :ingress_public_key and constraint.type == :unique
+             end)
+    end
+
     test "accepts every node status from the enum registry" do
       for status <- NodeStatuses.statuses() do
         changeset = Node.changeset(%Node{}, valid_attrs(%{status: status}))

@@ -73,6 +73,7 @@ defmodule EdgeAdmin.Repo.Migrations.CreateNodes do
 
     create unique_index(:nodes, [:api_token])
     create unique_index(:nodes, [:recovery_key])
+    create unique_index(:nodes, [:ingress_public_key])
     create index(:nodes, [:cluster_id])
     create index(:nodes, [:enrollment_key_id])
     create index(:nodes, [:status])

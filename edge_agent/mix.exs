@@ -77,11 +77,12 @@ defmodule EdgeAgent.Mixfile do
     ]
   end
 
-  # GHSA-g2wm-735q-3f56 is a distinct cow_cookie:cookie/1 issue, but this
-  # application has no Cowlib lock entry and needs no audit exception for it.
-  # GHSA-w4f7-4cxr-rv3c remains unpatched in Cowlib:
+  # GHSA-g2wm-735q-3f56 is a distinct cow_cookie:cookie/1 issue, but Cowlib
+  # 2.20.0 is outside its affected range (through 2.16.1), so it needs no
+  # audit exception. GHSA-w4f7-4cxr-rv3c remains unpatched in Cowlib:
   #
   # - It is a structured-field header encoder issue.
+  # - Gun 2.6.0 includes Gun's 2.4 request-header validation mitigation.
   # - This application uses Bandit rather than Cowboy.
   #
   # Re-check when Cowlib publishes a fix and remove this exception.

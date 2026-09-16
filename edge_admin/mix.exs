@@ -80,11 +80,11 @@ defmodule EdgeAdmin.Mixfile do
   end
 
   # GHSA-g2wm-735q-3f56 is a distinct cow_cookie:cookie/1 issue, but Cowlib
-  # 2.19.0 is outside its affected range (through 2.16.1), so it needs no
+  # 2.20.0 is outside its affected range (through 2.16.1), so it needs no
   # audit exception. GHSA-w4f7-4cxr-rv3c remains unpatched in Cowlib:
   #
   # - It is a structured-field header encoder issue.
-  # - Gun 2.5.0 includes Gun's 2.4 request-header validation mitigation.
+  # - Gun 2.6.0 includes Gun's 2.4 request-header validation mitigation.
   # - This application uses Bandit rather than Cowboy.
   #
   # Re-check when Cowlib publishes a fix and remove this exception.
@@ -172,7 +172,7 @@ defmodule EdgeAdmin.Mixfile do
       # compile and honors BUILD_WITHOUT_QUIC=1 (set in the Dockerfiles). Hex
       # flattens dynamic deps at publish time, so the Hex package always lists
       # `quicer` as non-optional even though the script would exclude it locally.
-      {:emqtt, github: "emqx/emqtt", tag: "1.16.0"},
+      {:emqtt, github: "emqx/emqtt", tag: "1.16.1"},
       {:ex_aws, "~> 2.7"},
       {:ex_aws_sns, "~> 2.3"},
       {:sweet_xml, "~> 0.7"},

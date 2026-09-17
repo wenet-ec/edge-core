@@ -93,16 +93,24 @@ defmodule EdgeAdminMcp.ToolRegistry do
     component(EdgeAdminMcp.Tools.Metrics.GetAgentMetrics)
     component(EdgeAdminMcp.Tools.Metrics.GetAdminMetrics)
 
-    # Webhooks
+    # Event catalog
+    component(EdgeAdminMcp.Tools.Events.ListEventTypes)
+    component(EdgeAdminMcp.Tools.Events.ExplainEventType)
+
+    # Events.Webhook
     component(EdgeAdminMcp.Tools.Events.ListWebhooks)
     component(EdgeAdminMcp.Tools.Events.GetWebhook)
     component(EdgeAdminMcp.Tools.Events.CreateWebhook)
     component(EdgeAdminMcp.Tools.Events.DeleteWebhook)
 
-    # Event catalog / publish helpers
-    component(EdgeAdminMcp.Tools.Events.ListEventTypes)
-    component(EdgeAdminMcp.Tools.Events.ExplainEventType)
+    # Events.Event
     component(EdgeAdminMcp.Tools.Events.PublishTestEvent)
+
+    # Ingress Tunneling
+    component(EdgeAdminMcp.Tools.IngressTunneling.ListTunnelClients)
+    component(EdgeAdminMcp.Tools.IngressTunneling.GetTunnelClient)
+    component(EdgeAdminMcp.Tools.IngressTunneling.CreateTunnelClient)
+    component(EdgeAdminMcp.Tools.IngressTunneling.DeleteTunnelClient)
   end
 
   # Public tools must be safe to invoke without an MCP bearer token. The tool

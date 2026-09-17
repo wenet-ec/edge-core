@@ -14,6 +14,15 @@ defmodule EdgeAdmin.IngressTunneling.Schemas.TunnelClient do
   alias EdgeAdmin.IngressTunneling.Schemas.TunnelConnection
   alias EdgeAdmin.IngressTunneling.Validators.WireGuardKeyValidators
 
+  @flop_options [
+    filterable: [:inserted_at, :updated_at],
+    sortable: [:inserted_at, :updated_at],
+    default_order: %{
+      order_by: [:inserted_at],
+      order_directions: [:desc]
+    }
+  ]
+
   @type t :: %__MODULE__{
           id: String.t(),
           public_key: String.t(),

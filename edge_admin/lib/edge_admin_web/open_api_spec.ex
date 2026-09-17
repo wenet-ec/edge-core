@@ -71,7 +71,10 @@ defmodule EdgeAdminWeb.OpenApiSpec do
     "/api/v1/webhooks",
     "/api/v1/webhooks/{id}",
     # Events.Event
-    "/api/v1/events/test"
+    "/api/v1/events/test",
+    # IngressTunneling.TunnelClient
+    "/api/v1/tunnel_clients",
+    "/api/v1/tunnel_clients/{id}"
   ]
 
   @doc "Returns a path → index map for sorting. Paths not listed get index 999_999."
@@ -127,7 +130,8 @@ defmodule EdgeAdminWeb.OpenApiSpec do
         %Tag{name: "SelfUpdates.Request"},
         %Tag{name: "Events.Type"},
         %Tag{name: "Events.Webhook"},
-        %Tag{name: "Events.Event"}
+        %Tag{name: "Events.Event"},
+        %Tag{name: "IngressTunneling.TunnelClient"}
       ]
     }
     |> maybe_add_security()

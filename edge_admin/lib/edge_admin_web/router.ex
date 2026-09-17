@@ -224,6 +224,10 @@ defmodule EdgeAdminWeb.Router do
       get("/event_types", EventTypeController, :index)
     end
 
+    scope "/", IngressTunneling do
+      resources("/tunnel_clients", TunnelClientController, only: [:index, :show, :create, :delete])
+    end
+
     scope "/", Commands do
       resources("/commands", CommandController, only: [:index, :create, :show])
       delete("/commands/:id", CommandController, :delete)

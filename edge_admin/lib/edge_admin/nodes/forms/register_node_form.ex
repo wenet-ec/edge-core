@@ -8,6 +8,7 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeForm do
   """
   use EdgeAdmin.Form
 
+  alias EdgeAdmin.IngressTunneling.Validators.WireGuardKeyValidators
   alias EdgeAdmin.Nodes.Validators.NodeValidators
 
   embedded_schema do
@@ -130,7 +131,7 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeForm do
 
   defp validate_ingress_public_key(changeset) do
     validate_change(changeset, :ingress_public_key, fn :ingress_public_key, value ->
-      if NodeValidators.valid_wireguard_public_key?(value),
+      if WireGuardKeyValidators.valid_key_material?(value),
         do: [],
         else: [ingress_public_key: "must be a canonical base64-encoded WireGuard public key"]
     end)

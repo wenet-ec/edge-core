@@ -26,6 +26,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
 
   alias Ecto.Association.NotLoaded
   alias EdgeAdmin.Commands.Schemas.CommandExecution
+  alias EdgeAdmin.IngressTunneling.Validators.WireGuardKeyValidators
   alias EdgeAdmin.Metrics.Schemas.NodeMetricsCache
   alias EdgeAdmin.Nodes.Enums.NodeStatuses
   alias EdgeAdmin.Nodes.Schemas.Alias
@@ -236,7 +237,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
 
   defp validate_ingress_public_key(changeset) do
     validate_change(changeset, :ingress_public_key, fn :ingress_public_key, value ->
-      if NodeValidators.valid_wireguard_public_key?(value),
+      if WireGuardKeyValidators.valid_key_material?(value),
         do: [],
         else: [ingress_public_key: "must be a canonical base64-encoded WireGuard public key"]
     end)

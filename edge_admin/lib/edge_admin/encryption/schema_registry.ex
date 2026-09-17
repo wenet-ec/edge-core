@@ -11,7 +11,8 @@ defmodule EdgeAdmin.Encryption.SchemaRegistry do
   @spec schemas() :: [module()]
   def schemas do
     [
-      EdgeAdmin.Events.Webhooks.Schemas.Webhook
+      EdgeAdmin.Events.Webhooks.Schemas.Webhook,
+      EdgeAdmin.IngressTunneling.Schemas.TunnelClient
     ]
   end
 end

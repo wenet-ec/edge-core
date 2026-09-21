@@ -18,11 +18,12 @@ defmodule EdgeAdminMcp.Tools.IngressTunneling.CreateTunnelClient do
   def annotations, do: %{"destructiveHint" => false, "idempotentHint" => false, "openWorldHint" => false}
 
   schema do
+    field :node_ids, {:list, :string}, default: []
   end
 
   @impl true
-  def execute(_params, frame) do
-    case IngressTunneling.create_tunnel_client() do
+  def execute(params, frame) do
+    case IngressTunneling.create_tunnel_client_with_connections(%{"node_ids" => params[:node_ids] || []}) do
       {:ok, tunnel_client} ->
         {:reply, Response.json(Response.tool(), TunnelClientView.render(tunnel_client)), frame}
 

@@ -111,6 +111,10 @@ defmodule EdgeAdminMcp.ToolRegistry do
     component(EdgeAdminMcp.Tools.IngressTunneling.GetTunnelClient)
     component(EdgeAdminMcp.Tools.IngressTunneling.CreateTunnelClient)
     component(EdgeAdminMcp.Tools.IngressTunneling.DeleteTunnelClient)
+    component(EdgeAdminMcp.Tools.IngressTunneling.ListTunnelConnections)
+    component(EdgeAdminMcp.Tools.IngressTunneling.GetTunnelConnection)
+    component(EdgeAdminMcp.Tools.IngressTunneling.CreateTunnelConnection)
+    component(EdgeAdminMcp.Tools.IngressTunneling.DeleteTunnelConnection)
   end
 
   # Public tools must be safe to invoke without an MCP bearer token. The tool

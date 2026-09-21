@@ -40,13 +40,20 @@ defmodule EdgeAdminWeb.Controllers.IngressTunneling.TunnelClientController do
     summary: "Create Tunnel Client",
     description:
       "Generates and persists a new Admin-owned X25519 WireGuard identity. Its private key remains encrypted at rest and is never included in an API response.",
+    request_body:
+      {"Tunnel Client creation data", "application/json", TunnelClientSchemas.TunnelClientCreateRequest,
+       required: false},
     responses: %{
-      201 => {"Tunnel Client created", "application/json", TunnelClientSchemas.TunnelClientSingleResponse}
+      201 => {"Tunnel Client created", "application/json", TunnelClientSchemas.TunnelClientSingleResponse},
+      404 => {"Requested Ingress Node not found", "application/json", CommonSchemas.NotFoundResponse},
+      409 => {"Connection conflict", "application/json", CommonSchemas.ConflictResponse},
+      422 => {"Validation error", "application/json", CommonSchemas.ChangesetErrorResponse}
     }
   )
 
-  def create(conn, _params) do
-    with {:ok, %TunnelClient{} = tunnel_client} <- IngressTunneling.create_tunnel_client() do
+  def create(conn, params) do
+    with {:ok, %TunnelClient{} = tunnel_client} <-
+           IngressTunneling.create_tunnel_client_with_connections(Map.merge(params, conn.body_params)) do
       conn
       |> put_status(:created)
       |> put_resp_header("location", ~p"/api/v1/tunnel_clients/#{tunnel_client.id}")

@@ -225,7 +225,11 @@ defmodule EdgeAdminWeb.Router do
     end
 
     scope "/", IngressTunneling do
-      resources("/tunnel_clients", TunnelClientController, only: [:index, :show, :create, :delete])
+      resources("/tunnel_clients", TunnelClientController, only: [:index, :show, :create, :delete]) do
+        resources("/tunnel_connections", TunnelConnectionController, only: [:create])
+      end
+
+      resources("/tunnel_connections", TunnelConnectionController, only: [:index, :show, :delete])
     end
 
     scope "/", Commands do

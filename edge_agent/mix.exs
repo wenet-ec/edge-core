@@ -6,7 +6,7 @@ defmodule EdgeAgent.Mixfile do
     [
       app: :edge_agent,
       version: "0.2.0",
-      erlang: "~> 29.0",
+      erlang: "~> 29.1",
       elixir: "~> 1.20",
       elixirc_paths: elixirc_paths(Mix.env()),
       test_paths: ["test"],

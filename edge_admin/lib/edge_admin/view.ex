@@ -1,7 +1,5 @@
 # edge_admin/lib/edge_admin/view.ex
 defmodule EdgeAdmin.View do
-  @moduledoc "Shared helpers for canonical domain view rendering."
-
   alias Ecto.Association.NotLoaded
 
   @doc "Renders a preloaded association, returning an empty list when it is not loaded."

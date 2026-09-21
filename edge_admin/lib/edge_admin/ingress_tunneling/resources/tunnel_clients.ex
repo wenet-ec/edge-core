@@ -13,7 +13,6 @@ defmodule EdgeAdmin.IngressTunneling.Resources.TunnelClients do
   alias EdgeAdmin.IngressTunneling.WireGuard
   alias EdgeAdmin.Repo
 
-  @doc "Lists Tunnel Clients with pagination and supported timestamp sorting."
   @spec list(map()) :: {:ok, {[TunnelClient.t()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
   def list(params \\ %{}) do
     case Flop.validate_and_run(TunnelClient, EdgeAdmin.RequestParser.parse(params),
@@ -28,7 +27,6 @@ defmodule EdgeAdmin.IngressTunneling.Resources.TunnelClients do
     end
   end
 
-  @doc "Gets a Tunnel Client by ID."
   @spec get(String.t()) :: {:ok, TunnelClient.t()} | {:error, :not_found}
   def get(id) do
     case Repo.get(TunnelClient, id) do
@@ -39,7 +37,6 @@ defmodule EdgeAdmin.IngressTunneling.Resources.TunnelClients do
     CastError -> {:error, :not_found}
   end
 
-  @doc "Generates and persists a new X25519 WireGuard Tunnel Client identity."
   @spec create() :: {:ok, TunnelClient.t()} | {:error, Ecto.Changeset.t()}
   def create do
     attrs = WireGuard.generate_keypair()
@@ -76,7 +73,6 @@ defmodule EdgeAdmin.IngressTunneling.Resources.TunnelClients do
     end
   end
 
-  @doc "Deletes a Tunnel Client and its dependent Tunnel Connections."
   @spec delete(TunnelClient.t()) :: {:ok, TunnelClient.t()} | {:error, Ecto.Changeset.t()}
   def delete(%TunnelClient{} = tunnel_client), do: Repo.delete(tunnel_client)
 end

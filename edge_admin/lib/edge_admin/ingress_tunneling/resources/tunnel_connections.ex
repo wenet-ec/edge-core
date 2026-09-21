@@ -17,7 +17,6 @@ defmodule EdgeAdmin.IngressTunneling.Resources.TunnelConnections do
   alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.Repo
 
-  @doc "Lists Tunnel Connections with pagination and supported filtering."
   @spec list(map()) :: {:ok, {[TunnelConnection.t()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
   def list(params \\ %{}) do
     Flop.validate_and_run(TunnelConnection, EdgeAdmin.RequestParser.parse(params),
@@ -26,7 +25,6 @@ defmodule EdgeAdmin.IngressTunneling.Resources.TunnelConnections do
     )
   end
 
-  @doc "Gets a Tunnel Connection by ID."
   @spec get(String.t()) :: {:ok, TunnelConnection.t()} | {:error, :not_found}
   def get(id) do
     case Repo.get(TunnelConnection, id) do
@@ -58,7 +56,6 @@ defmodule EdgeAdmin.IngressTunneling.Resources.TunnelConnections do
     CastError -> {:error, :not_found}
   end
 
-  @doc "Deletes a Tunnel Connection. Agent synchronization is intentionally deferred."
   @spec delete(TunnelConnection.t()) :: {:ok, TunnelConnection.t()} | {:error, Ecto.Changeset.t()}
   def delete(%TunnelConnection{} = tunnel_connection), do: Repo.delete(tunnel_connection)
 

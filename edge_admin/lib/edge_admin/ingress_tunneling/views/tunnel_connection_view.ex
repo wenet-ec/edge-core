@@ -1,7 +1,5 @@
 # edge_admin/lib/edge_admin/ingress_tunneling/views/tunnel_connection_view.ex
 defmodule EdgeAdmin.IngressTunneling.Views.TunnelConnectionView do
-  @moduledoc "Canonical public render shape for Tunnel Connections."
-
   alias EdgeAdmin.IngressTunneling.Schemas.TunnelConnection
 
   @spec render(TunnelConnection.t()) :: map()

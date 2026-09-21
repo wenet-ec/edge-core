@@ -1,6 +1,6 @@
 # edge_admin/lib/edge_admin/ingress_tunneling/forms/create_tunnel_client_form.ex
 defmodule EdgeAdmin.IngressTunneling.Forms.CreateTunnelClientForm do
-  @moduledoc "Validates Tunnel Client creation and optional connection targets."
+  @moduledoc false
   use EdgeAdmin.Form
 
   embedded_schema do

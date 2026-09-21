@@ -35,12 +35,12 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
     )
   end
 
-  defmodule AliasSummary do
+  defmodule EmbeddedAliasData do
     @moduledoc false
 
     schema(%{
-      title: "AliasSummary",
-      description: "Brief alias information within a node response",
+      title: "EmbeddedAliasData",
+      description: "Embedded alias representation within a node response",
       type: :object,
       properties: %{
         id: %Schema{type: :string, format: :uuid, description: "Unique alias identifier"},
@@ -60,13 +60,13 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
     })
   end
 
-  defmodule NodeResponse do
+  defmodule NodeData do
     @moduledoc false
 
     @status_enum NodeStatuses.status_strings()
 
     schema(%{
-      title: "NodeResponse",
+      title: "NodeData",
       description: "Edge node information",
       type: :object,
       properties: %{
@@ -176,7 +176,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
         aliases: %Schema{
           type: :array,
           description: "DNS aliases registered for this node",
-          items: AliasSummary
+          items: EmbeddedAliasData
         }
       },
       required: [
@@ -232,7 +232,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
 
     schema(
       CommonSchemas.paginated_response(
-        NodeResponse,
+        NodeData,
         "NodePaginatedResponse",
         "Paginated list of nodes with filtering and sorting metadata"
       )
@@ -242,7 +242,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
   defmodule NodeSingleResponse do
     @moduledoc false
 
-    schema(CommonSchemas.single_response(NodeResponse, "NodeSingleResponse", "Single node response"))
+    schema(CommonSchemas.single_response(NodeData, "NodeSingleResponse", "Single node response"))
   end
 
   defmodule ChangeClusterRequest do

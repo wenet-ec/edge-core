@@ -8,6 +8,7 @@ defmodule EdgeAdmin.Nodes.Views.ClusterView do
 
   alias EdgeAdmin.Nodes.Schemas.Cluster
   alias EdgeAdmin.Nodes.Schemas.Node
+  alias EdgeAdmin.View
   alias EdgeAdmin.Vpn
 
   @spec render(Cluster.t()) :: map()
@@ -19,7 +20,7 @@ defmodule EdgeAdmin.Nodes.Views.ClusterView do
       ipv6_range: cluster.ipv6_range,
       node_limit: cluster.node_limit,
       node_count: Cluster.node_count(cluster),
-      nodes: render_nodes(nodes, cluster),
+      nodes: View.render_embedded(nodes, &render_embedded_node(&1, cluster)),
       network_name: Cluster.network_name(cluster),
       vpn_domain: Cluster.vpn_domain(cluster),
       inserted_at: cluster.inserted_at,
@@ -27,10 +28,7 @@ defmodule EdgeAdmin.Nodes.Views.ClusterView do
     }
   end
 
-  defp render_nodes(nodes, cluster) when is_list(nodes), do: Enum.map(nodes, &node_summary(&1, cluster))
-  defp render_nodes(_not_loaded, _cluster), do: []
-
-  defp node_summary(node, cluster) do
+  defp render_embedded_node(node, cluster) do
     short_name = Node.node_name(node)
     network_name = Cluster.network_name(cluster)
 

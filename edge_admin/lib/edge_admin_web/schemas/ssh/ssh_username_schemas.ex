@@ -8,11 +8,33 @@ defmodule EdgeAdminWeb.Schemas.Ssh.SshUsernameSchemas do
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias OpenApiSpex.Schema
 
-  defmodule SshUsernameResponse do
+  defmodule EmbeddedSshPublicKeyData do
     @moduledoc false
 
     schema(%{
-      title: "SshUsername",
+      title: "EmbeddedSshPublicKeyData",
+      description: "Embedded SSH public key representation within an SSH username",
+      type: :object,
+      properties: %{
+        id: %Schema{type: :string, format: :uuid, description: "Unique SSH public key identifier"},
+        key_name: %Schema{type: :string, description: "Human-readable name for the SSH key", example: "laptop"},
+        public_key: %Schema{
+          type: :string,
+          description: "SSH public key in OpenSSH format",
+          example: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGQw7Di3fBr2oc2vbZN5YLz8YpJ8PQb5bXwQwe+QgYX8 user@laptop"
+        },
+        inserted_at: %Schema{type: :string, format: :"date-time", description: "When the key was created"},
+        updated_at: %Schema{type: :string, format: :"date-time", description: "When the key was last updated"}
+      },
+      required: [:id, :key_name, :public_key, :inserted_at, :updated_at]
+    })
+  end
+
+  defmodule SshUsernameData do
+    @moduledoc false
+
+    schema(%{
+      title: "SshUsernameData",
       description: "SSH username information for node access",
       type: :object,
       properties: %{
@@ -39,21 +61,7 @@ defmodule EdgeAdminWeb.Schemas.Ssh.SshUsernameSchemas do
         public_keys: %Schema{
           type: :array,
           description: "SSH public keys associated with this username",
-          items: %Schema{
-            type: :object,
-            properties: %{
-              id: %Schema{type: :string, format: :uuid, description: "Unique key identifier"},
-              key_name: %Schema{type: :string, description: "Human-readable name for the key", example: "laptop"},
-              public_key: %Schema{
-                type: :string,
-                description: "SSH public key in OpenSSH format",
-                example: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGQw7Di3fBr2oc2vbZN5YLz8YpJ8PQb5bXwQwe+QgYX8 user@laptop"
-              },
-              inserted_at: %Schema{type: :string, format: :"date-time", description: "When the key was created"},
-              updated_at: %Schema{type: :string, format: :"date-time", description: "When the key was last updated"}
-            },
-            required: [:id, :key_name, :public_key, :inserted_at, :updated_at]
-          }
+          items: EmbeddedSshPublicKeyData
         },
         inserted_at: %Schema{
           type: :string,
@@ -92,7 +100,7 @@ defmodule EdgeAdminWeb.Schemas.Ssh.SshUsernameSchemas do
 
     schema(
       CommonSchemas.paginated_response(
-        SshUsernameResponse,
+        SshUsernameData,
         "SshUsernamePaginatedResponse",
         "Paginated list of SSH usernames with filtering and sorting metadata"
       )
@@ -104,7 +112,7 @@ defmodule EdgeAdminWeb.Schemas.Ssh.SshUsernameSchemas do
 
     schema(
       CommonSchemas.single_response(
-        SshUsernameResponse,
+        SshUsernameData,
         "SshUsernameSingleResponse",
         "Single SSH username response"
       )

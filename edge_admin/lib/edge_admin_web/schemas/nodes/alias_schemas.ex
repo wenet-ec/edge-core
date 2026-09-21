@@ -8,11 +8,11 @@ defmodule EdgeAdminWeb.Schemas.Nodes.AliasSchemas do
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias OpenApiSpex.Schema
 
-  defmodule AliasResponse do
+  defmodule AliasData do
     @moduledoc false
 
     schema(%{
-      title: "AliasResponse",
+      title: "AliasData",
       description: "Node alias with custom DNS entry",
       type: :object,
       properties: %{
@@ -69,7 +69,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.AliasSchemas do
   defmodule AliasSingleResponse do
     @moduledoc false
 
-    schema(CommonSchemas.single_response(AliasResponse, "AliasSingleResponse", "Single alias response"))
+    schema(CommonSchemas.single_response(AliasData, "AliasSingleResponse", "Single alias response"))
   end
 
   defmodule AliasPaginatedResponse do
@@ -77,7 +77,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.AliasSchemas do
 
     schema(
       CommonSchemas.paginated_response(
-        AliasResponse,
+        AliasData,
         "AliasPaginatedResponse",
         "Paginated list of aliases with filtering and sorting metadata"
       )

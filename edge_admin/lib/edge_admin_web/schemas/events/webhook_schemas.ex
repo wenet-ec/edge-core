@@ -7,11 +7,11 @@ defmodule EdgeAdminWeb.Schemas.Events.WebhookSchemas do
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias OpenApiSpex.Schema
 
-  defmodule WebhookResponse do
+  defmodule WebhookData do
     @moduledoc false
 
     schema(%{
-      title: "Webhook",
+      title: "WebhookData",
       description: """
       A webhook subscription. Receives a POST per matching event with the full
       CloudEvents envelope as the body and an HMAC-SHA256 signature in the
@@ -73,7 +73,7 @@ defmodule EdgeAdminWeb.Schemas.Events.WebhookSchemas do
 
     schema(
       CommonSchemas.paginated_response(
-        WebhookResponse,
+        WebhookData,
         "WebhookPaginatedResponse",
         "Paginated list of webhooks with filtering and sorting metadata"
       )
@@ -85,7 +85,7 @@ defmodule EdgeAdminWeb.Schemas.Events.WebhookSchemas do
 
     schema(
       CommonSchemas.single_response(
-        WebhookResponse,
+        WebhookData,
         "WebhookSingleResponse",
         "Single webhook response"
       )

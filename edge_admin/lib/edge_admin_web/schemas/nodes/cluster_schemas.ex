@@ -9,14 +9,14 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias OpenApiSpex.Schema
 
-  defmodule NodeSummary do
+  defmodule EmbeddedNodeData do
     @moduledoc false
 
     @status_enum NodeStatuses.status_strings()
 
     schema(%{
-      title: "NodeSummary",
-      description: "Brief node information within cluster response",
+      title: "EmbeddedNodeData",
+      description: "Embedded node representation within a cluster response",
       type: :object,
       properties: %{
         id: %Schema{
@@ -62,11 +62,11 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
     })
   end
 
-  defmodule ClusterResponse do
+  defmodule ClusterData do
     @moduledoc false
 
     schema(%{
-      title: "ClusterResponse",
+      title: "ClusterData",
       description: "Edge cluster information",
       type: :object,
       properties: %{
@@ -103,8 +103,8 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
         },
         nodes: %Schema{
           type: :array,
-          description: "Summary of nodes in this cluster",
-          items: NodeSummary
+          description: "Nodes embedded in this cluster",
+          items: EmbeddedNodeData
         },
         network_name: %Schema{
           type: :string,
@@ -176,7 +176,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
 
     schema(
       CommonSchemas.paginated_response(
-        ClusterResponse,
+        ClusterData,
         "ClusterPaginatedResponse",
         "Paginated list of clusters with metadata"
       )
@@ -186,7 +186,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
   defmodule ClusterSingleResponse do
     @moduledoc false
 
-    schema(CommonSchemas.single_response(ClusterResponse, "ClusterSingleResponse", "Single cluster response"))
+    schema(CommonSchemas.single_response(ClusterData, "ClusterSingleResponse", "Single cluster response"))
   end
 
   defmodule ClusterUpdateRequest do

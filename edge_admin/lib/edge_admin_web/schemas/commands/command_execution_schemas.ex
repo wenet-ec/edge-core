@@ -8,13 +8,13 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandExecutionSchemas do
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias OpenApiSpex.Schema
 
-  defmodule CommandExecutionResponse do
+  defmodule CommandExecutionData do
     @moduledoc false
 
     @status_enum CommandExecutionStatuses.status_strings()
 
     schema(%{
-      title: "CommandExecutionResponse",
+      title: "CommandExecutionData",
       description: "Command execution information",
       type: :object,
       properties: %{
@@ -133,7 +133,7 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandExecutionSchemas do
 
     schema(
       CommonSchemas.paginated_response(
-        CommandExecutionResponse,
+        CommandExecutionData,
         "CommandExecutionPaginatedResponse",
         "Paginated list of command executions with filtering and sorting metadata"
       )
@@ -145,7 +145,7 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandExecutionSchemas do
 
     schema(
       CommonSchemas.single_response(
-        CommandExecutionResponse,
+        CommandExecutionData,
         "CommandExecutionSingleResponse",
         "Single command execution response"
       )

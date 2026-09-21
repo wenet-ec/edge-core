@@ -8,11 +8,11 @@ defmodule EdgeAdminWeb.Schemas.Ssh.SshPublicKeySchemas do
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias OpenApiSpex.Schema
 
-  defmodule SshPublicKeyResponse do
+  defmodule SshPublicKeyData do
     @moduledoc false
 
     schema(%{
-      title: "SshPublicKey",
+      title: "SshPublicKeyData",
       description: "SSH public key information for username access",
       type: :object,
       properties: %{
@@ -64,7 +64,7 @@ defmodule EdgeAdminWeb.Schemas.Ssh.SshPublicKeySchemas do
 
     schema(
       CommonSchemas.paginated_response(
-        SshPublicKeyResponse,
+        SshPublicKeyData,
         "SshPublicKeyPaginatedResponse",
         "Paginated list of SSH public keys with filtering and sorting metadata"
       )
@@ -76,7 +76,7 @@ defmodule EdgeAdminWeb.Schemas.Ssh.SshPublicKeySchemas do
 
     schema(
       CommonSchemas.single_response(
-        SshPublicKeyResponse,
+        SshPublicKeyData,
         "SshPublicKeySingleResponse",
         "Single SSH public key response"
       )

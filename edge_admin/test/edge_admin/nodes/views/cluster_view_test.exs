@@ -78,22 +78,22 @@ defmodule EdgeAdmin.Nodes.Views.ClusterViewTest do
     test "node summaries carry id, enrollment key ID, Ingress public key, status, and vpn_hostname" do
       cluster = cluster_fixture(%{name: "prod", nodes: [node_fixture(%{id: "abc-123"})]})
 
-      [node_summary] = ClusterView.render(cluster).nodes
+      [embedded_node] = ClusterView.render(cluster).nodes
 
-      assert node_summary.id == "abc-123"
-      assert node_summary.ingress_public_key == "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
-      assert node_summary.status == "healthy"
-      assert node_summary.vpn_hostname == "node-abc-123.cluster-prod.nm.internal"
+      assert embedded_node.id == "abc-123"
+      assert embedded_node.ingress_public_key == "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+      assert embedded_node.status == "healthy"
+      assert embedded_node.vpn_hostname == "node-abc-123.cluster-prod.nm.internal"
     end
 
     test "node summary contains exactly the documented keys" do
       cluster = cluster_fixture(%{nodes: [node_fixture()]})
 
-      [node_summary] = ClusterView.render(cluster).nodes
+      [embedded_node] = ClusterView.render(cluster).nodes
 
-      assert node_summary.enrollment_key_id == nil
+      assert embedded_node.enrollment_key_id == nil
 
-      assert node_summary |> Map.keys() |> Enum.sort() ==
+      assert embedded_node |> Map.keys() |> Enum.sort() ==
                [:enrollment_key_id, :id, :ingress_public_key, :status, :vpn_hostname]
     end
 

@@ -8,6 +8,7 @@ defmodule EdgeAdmin.Ssh.Views.SshUsernameView do
   """
 
   alias EdgeAdmin.Ssh.Schemas.SshUsername
+  alias EdgeAdmin.View
 
   @spec render(SshUsername.t()) :: map()
   def render(%SshUsername{ssh_public_keys: ssh_public_keys} = u) do
@@ -16,18 +17,13 @@ defmodule EdgeAdmin.Ssh.Views.SshUsernameView do
       username: u.username,
       has_password: SshUsername.has_password?(u),
       node_id: u.node_id,
-      public_keys: render_public_keys(ssh_public_keys),
+      public_keys: View.render_embedded(ssh_public_keys, &render_embedded_public_key/1),
       inserted_at: u.inserted_at,
       updated_at: u.updated_at
     }
   end
 
-  defp render_public_keys(ssh_public_keys) when is_list(ssh_public_keys),
-    do: Enum.map(ssh_public_keys, &public_key_summary/1)
-
-  defp render_public_keys(_not_loaded), do: []
-
-  defp public_key_summary(key) do
+  defp render_embedded_public_key(key) do
     %{
       id: key.id,
       key_name: key.key_name,

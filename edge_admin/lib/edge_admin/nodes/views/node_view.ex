@@ -9,6 +9,7 @@ defmodule EdgeAdmin.Nodes.Views.NodeView do
 
   alias EdgeAdmin.Nodes.Schemas.Alias
   alias EdgeAdmin.Nodes.Schemas.Node, as: NodeSchema
+  alias EdgeAdmin.View
 
   @spec render(NodeSchema.t()) :: map()
   def render(%NodeSchema{cluster: cluster, aliases: aliases} = node) do
@@ -32,16 +33,13 @@ defmodule EdgeAdmin.Nodes.Views.NodeView do
       version: node.version,
       self_update_enabled: node.self_update_enabled,
       last_seen_at: node.last_seen_at,
-      aliases: render_aliases(aliases),
+      aliases: View.render_embedded(aliases, &render_embedded_alias/1),
       inserted_at: node.inserted_at,
       updated_at: node.updated_at
     }
   end
 
-  defp render_aliases(aliases) when is_list(aliases), do: Enum.map(aliases, &alias_summary/1)
-  defp render_aliases(_not_loaded), do: []
-
-  defp alias_summary(a) do
+  defp render_embedded_alias(a) do
     %{
       id: a.id,
       name: a.name,

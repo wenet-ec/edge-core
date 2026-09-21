@@ -6,9 +6,9 @@ defmodule EdgeAdmin.IngressTunneling.Views.TunnelClientView do
   The private key is deliberately excluded from every public response.
   """
 
-  alias Ecto.Association.NotLoaded
   alias EdgeAdmin.IngressTunneling.Schemas.TunnelClient
   alias EdgeAdmin.IngressTunneling.Schemas.TunnelConnection
+  alias EdgeAdmin.View
 
   @spec render(TunnelClient.t()) :: map()
   def render(%TunnelClient{} = tunnel_client) do
@@ -19,16 +19,14 @@ defmodule EdgeAdmin.IngressTunneling.Views.TunnelClientView do
       updated_at: tunnel_client.updated_at
     }
 
-    connections =
-      case tunnel_client.tunnel_connections do
-        %NotLoaded{} -> []
-        connections when is_list(connections) -> connections
-      end
-
-    Map.put(response, :tunnel_connections, Enum.map(connections, &render_connection/1))
+    Map.put(
+      response,
+      :tunnel_connections,
+      View.render_embedded(tunnel_client.tunnel_connections, &render_embedded_tunnel_connection/1)
+    )
   end
 
-  defp render_connection(%TunnelConnection{} = connection),
+  defp render_embedded_tunnel_connection(%TunnelConnection{} = connection),
     do: %{
       id: connection.id,
       node_id: connection.node_id,

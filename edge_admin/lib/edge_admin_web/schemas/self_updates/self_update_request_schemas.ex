@@ -9,13 +9,13 @@ defmodule EdgeAdminWeb.Schemas.SelfUpdates.SelfUpdateRequestSchemas do
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias OpenApiSpex.Schema
 
-  defmodule SelfUpdateRequestResponse do
+  defmodule SelfUpdateRequestData do
     @moduledoc false
 
     @status_enum SelfUpdateRequestStatuses.status_strings()
 
     schema(%{
-      title: "SelfUpdateRequestResponse",
+      title: "SelfUpdateRequestData",
       description: "Self-update request information",
       type: :object,
       properties: %{
@@ -93,7 +93,7 @@ defmodule EdgeAdminWeb.Schemas.SelfUpdates.SelfUpdateRequestSchemas do
 
     schema(
       CommonSchemas.paginated_response(
-        SelfUpdateRequestResponse,
+        SelfUpdateRequestData,
         "SelfUpdateRequestPaginatedResponse",
         "Paginated list of self-update requests"
       )
@@ -105,7 +105,7 @@ defmodule EdgeAdminWeb.Schemas.SelfUpdates.SelfUpdateRequestSchemas do
 
     schema(
       CommonSchemas.single_response(
-        SelfUpdateRequestResponse,
+        SelfUpdateRequestData,
         "SelfUpdateRequestSingleResponse",
         "Single self-update request response"
       )

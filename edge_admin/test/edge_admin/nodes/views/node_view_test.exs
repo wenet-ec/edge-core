@@ -135,9 +135,9 @@ defmodule EdgeAdmin.Nodes.Views.NodeViewTest do
       aliases = [alias_fixture("node-uuid-1", cluster, "web")]
       node = node_fixture(%{cluster: cluster, aliases: aliases})
 
-      [alias_summary] = NodeView.render(node).aliases
+      [embedded_alias] = NodeView.render(node).aliases
 
-      assert alias_summary |> Map.keys() |> Enum.sort() == [:id, :name, :vpn_hostname]
+      assert embedded_alias |> Map.keys() |> Enum.sort() == [:id, :name, :vpn_hostname]
     end
 
     test "unloaded aliases association renders as an empty aliases list" do

@@ -11,7 +11,7 @@ defmodule EdgeAdminWeb.Schemas.IngressTunneling.TunnelConnectionSchemas do
     @moduledoc false
 
     schema(%{
-      title: "TunnelConnection",
+      title: "TunnelConnectionData",
       description: "A Tunnel Client connection to an Ingress Node.",
       type: :object,
       properties: %{

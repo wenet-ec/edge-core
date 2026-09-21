@@ -8,11 +8,11 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias OpenApiSpex.Schema
 
-  defmodule CommandResponse do
+  defmodule CommandData do
     @moduledoc false
 
     schema(%{
-      title: "CommandResponse",
+      title: "CommandData",
       description: "Command information",
       type: :object,
       properties: %{
@@ -81,7 +81,7 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
 
     schema(
       CommonSchemas.paginated_response(
-        CommandResponse,
+        CommandData,
         "CommandPaginatedResponse",
         "Paginated list of commands with filtering and sorting metadata"
       )
@@ -91,7 +91,7 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
   defmodule CommandSingleResponse do
     @moduledoc false
 
-    schema(CommonSchemas.single_response(CommandResponse, "CommandSingleResponse", "Single command response"))
+    schema(CommonSchemas.single_response(CommandData, "CommandSingleResponse", "Single command response"))
   end
 
   defmodule CommandCreateRequest do

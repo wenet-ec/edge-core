@@ -187,6 +187,15 @@ EDGE_VPN_API_SCHEME=http
 # CLUSTER_AUTO_GENERATED_V6_RANGES=fd7a:91c2:4e8b::/48
 # CLUSTER_V6_SUBNET_PREFIX=64
 
+# Edge Tunnel address allocation. These isolated pools are reused per Ingress
+# Node and are never advertised into protected-side cluster networks. The
+# Ingress reserves each pool's first usable address; Tunnel Clients begin at
+# the next address. `.1` / `::1` are only the usual result for canonical pools.
+# Values are normalized to their CIDR network boundary at boot. Keep them
+# disjoint from every cluster and admin VPN range.
+# INGRESS_TUNNEL_AUTO_GENERATED_V4_RANGES=10.240.0.0/12
+# INGRESS_TUNNEL_AUTO_GENERATED_V6_RANGES=fd20:240::/48
+
 # Slots reserved for Admin Gateway nodes (e.g. split-brain flooding) — tune
 # to match Admin Gateway instance count per core.
 # ADMIN_GATEWAY_SLOT_RESERVATION=10

@@ -56,6 +56,19 @@ defmodule EdgeAdmin.Nodes.Forms.CreateClusterFormTest do
       assert result["ipv4_range"] == "100.64.1.0/24"
     end
 
+    test "normalizes provided IPv4 and IPv6 ranges to their network boundaries" do
+      assert {:ok, result} =
+               CreateClusterForm.changeset(
+                 valid_attrs(%{
+                   "ipv4_range" => "100.64.1.42/24",
+                   "ipv6_range" => "fd7a:91c2:4e8b:42::99/64"
+                 })
+               )
+
+      assert result["ipv4_range"] == "100.64.1.0/24"
+      assert result["ipv6_range"] == "fd7a:91c2:4e8b:42::/64"
+    end
+
     test "name is required" do
       assert {:error, changeset} = CreateClusterForm.changeset(%{"ipv4_range" => "100.64.1.0/24"})
       assert %{name: [_msg]} = errors_on(changeset)

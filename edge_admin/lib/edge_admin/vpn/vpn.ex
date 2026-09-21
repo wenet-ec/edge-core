@@ -63,9 +63,25 @@ defmodule EdgeAdmin.Vpn do
   defdelegate validate_network_name(name), to: VpnNaming
 
   defdelegate parse_cidr(cidr), to: VpnAddressing
+  defdelegate normalize_ipv4_cidr(cidr), to: VpnAddressing
+  defdelegate normalize_ipv4_cidr!(cidr), to: VpnAddressing
+
+  def normalize_ipv4_ranges!(ranges, opts \\ []) do
+    VpnAddressing.normalize_ipv4_ranges!(ranges, opts)
+  end
+
+  defdelegate ensure_disjoint_ipv4_ranges!(ranges), to: VpnAddressing
   defdelegate generate_next_subnet(existing_ranges \\ []), to: VpnAddressing
   defdelegate generate_next_ipv6_subnet(existing_ranges \\ []), to: VpnAddressing
   defdelegate parse_ipv6_cidr(cidr), to: VpnAddressing
+  defdelegate normalize_ipv6_cidr(cidr), to: VpnAddressing
+  defdelegate normalize_ipv6_cidr!(cidr), to: VpnAddressing
+
+  def normalize_ipv6_ranges!(ranges, opts \\ []) do
+    VpnAddressing.normalize_ipv6_ranges!(ranges, opts)
+  end
+
+  defdelegate ensure_disjoint_ipv6_ranges!(ranges), to: VpnAddressing
   defdelegate ipv6_cidrs_overlap?(cidr, existing_ranges), to: VpnAddressing
   defdelegate ipv4_cidrs_overlap?(cidr, existing_ranges), to: VpnAddressing
 

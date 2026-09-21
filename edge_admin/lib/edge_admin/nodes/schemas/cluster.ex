@@ -79,6 +79,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Cluster do
   def changeset(cluster, attrs) do
     cluster
     |> cast(attrs, [:name, :ipv4_range, :ipv6_range, :node_limit])
+    |> normalize_ranges()
     |> maybe_generate_name()
     |> validate_required([:name, :ipv4_range, :ipv6_range])
     |> validate_name()
@@ -128,6 +129,25 @@ defmodule EdgeAdmin.Nodes.Schemas.Cluster do
       random_name = Random.string(12)
 
       put_change(changeset, :name, random_name)
+    end
+  end
+
+  defp normalize_ranges(changeset) do
+    changeset
+    |> normalize_range(:ipv4_range, &Vpn.normalize_ipv4_cidr/1)
+    |> normalize_range(:ipv6_range, &Vpn.normalize_ipv6_cidr/1)
+  end
+
+  defp normalize_range(changeset, field, normalize) do
+    case get_change(changeset, field) do
+      nil ->
+        changeset
+
+      value ->
+        case normalize.(value) do
+          {:ok, normalized} -> put_change(changeset, field, normalized)
+          {:error, _reason} -> changeset
+        end
     end
   end
 

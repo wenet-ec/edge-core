@@ -34,6 +34,29 @@ defmodule EdgeAdmin.Vpn.Addressing do
     end
   end
 
+  @doc "Returns an IPv4 CIDR with its address aligned to the network boundary."
+  @spec normalize_ipv4_cidr(String.t()) :: {:ok, String.t()} | {:error, String.t()}
+  def normalize_ipv4_cidr(cidr) do
+    with {:ok, {address, prefix}} <- parse_cidr(cidr) do
+      normalized_address = address |> ip_to_int() |> band(prefix_to_mask(prefix))
+      {:ok, "#{int_to_ip_string(normalized_address)}/#{prefix}"}
+    end
+  end
+
+  @doc "Normalizes an IPv4 CIDR or raises for invalid input."
+  @spec normalize_ipv4_cidr!(String.t()) :: String.t()
+  def normalize_ipv4_cidr!(cidr), do: normalize_cidr!(cidr, &normalize_ipv4_cidr/1, :ipv4)
+
+  @doc "Normalizes an IPv4 CIDR list, rejects overlaps, and optionally limits prefix length."
+  @spec normalize_ipv4_ranges!([String.t()], keyword()) :: [String.t()]
+  def normalize_ipv4_ranges!(ranges, opts \\ []) do
+    normalize_ranges!(ranges, &normalize_ipv4_cidr/1, Keyword.get(opts, :max_prefix, 32), :ipv4)
+  end
+
+  @doc "Raises when IPv4 CIDR ranges overlap; returns the input otherwise."
+  @spec ensure_disjoint_ipv4_ranges!([String.t()]) :: [String.t()]
+  def ensure_disjoint_ipv4_ranges!(ranges), do: ensure_disjoint_ranges!(ranges, &ipv4_cidrs_overlap?/2, :ipv4)
+
   @doc """
   Parses an IPv4 address string into a tuple.
   """
@@ -141,6 +164,29 @@ defmodule EdgeAdmin.Vpn.Addressing do
 
   def parse_ipv6_cidr(_), do: {:error, "invalid IPv6 CIDR format"}
 
+  @doc "Returns an IPv6 CIDR with its address aligned to the network boundary."
+  @spec normalize_ipv6_cidr(String.t()) :: {:ok, String.t()} | {:error, String.t()}
+  def normalize_ipv6_cidr(cidr) do
+    with {:ok, {address, prefix}} <- parse_ipv6_cidr(cidr) do
+      normalized_address = address |> ipv6_to_int() |> band(ipv6_prefix_to_mask(prefix))
+      {:ok, "#{ipv6_int_to_string(normalized_address)}/#{prefix}"}
+    end
+  end
+
+  @doc "Normalizes an IPv6 CIDR or raises for invalid input."
+  @spec normalize_ipv6_cidr!(String.t()) :: String.t()
+  def normalize_ipv6_cidr!(cidr), do: normalize_cidr!(cidr, &normalize_ipv6_cidr/1, :ipv6)
+
+  @doc "Normalizes an IPv6 CIDR list, rejects overlaps, and optionally limits prefix length."
+  @spec normalize_ipv6_ranges!([String.t()], keyword()) :: [String.t()]
+  def normalize_ipv6_ranges!(ranges, opts \\ []) do
+    normalize_ranges!(ranges, &normalize_ipv6_cidr/1, Keyword.get(opts, :max_prefix, 128), :ipv6)
+  end
+
+  @doc "Raises when IPv6 CIDR ranges overlap; returns the input otherwise."
+  @spec ensure_disjoint_ipv6_ranges!([String.t()]) :: [String.t()]
+  def ensure_disjoint_ipv6_ranges!(ranges), do: ensure_disjoint_ranges!(ranges, &ipv6_cidrs_overlap?/2, :ipv6)
+
   @doc "Returns whether an IPv6 CIDR intersects any IPv6 CIDR in the given list."
   @spec ipv6_cidrs_overlap?(String.t(), [String.t()]) :: boolean()
   def ipv6_cidrs_overlap?(cidr, existing_ranges) do
@@ -165,6 +211,51 @@ defmodule EdgeAdmin.Vpn.Addressing do
     mask = ipv6_prefix_to_mask(prefix)
     (ipv6_to_int(network) &&& mask) == (ipv6_to_int(address) &&& mask)
   end
+
+  defp normalize_ranges!([], _normalize, _max_prefix, family) do
+    raise ArgumentError, "#{family} CIDR range list must contain at least one CIDR"
+  end
+
+  defp normalize_ranges!(ranges, normalize, max_prefix, family) do
+    ranges
+    |> Enum.map(fn range ->
+      with {:ok, normalized} <- normalize.(range),
+           {:ok, {_address, prefix}} <- parse_range(normalized, family),
+           true <- prefix <= max_prefix do
+        normalized
+      else
+        _ -> raise ArgumentError, "invalid #{family} CIDR range #{inspect(range)}"
+      end
+    end)
+    |> ensure_disjoint_ranges!(family_overlap_function(family), family)
+  end
+
+  defp normalize_cidr!(cidr, normalize, family) do
+    case normalize.(cidr) do
+      {:ok, normalized} -> normalized
+      {:error, _reason} -> raise ArgumentError, "invalid #{family} CIDR #{inspect(cidr)}"
+    end
+  end
+
+  defp parse_range(range, :ipv4), do: parse_cidr(range)
+  defp parse_range(range, :ipv6), do: parse_ipv6_cidr(range)
+
+  defp ensure_disjoint_ranges!(ranges, overlap?, family) do
+    ranges
+    |> Enum.with_index()
+    |> Enum.each(fn {range, index} ->
+      previous_ranges = Enum.take(ranges, index)
+
+      if Enum.any?(previous_ranges, fn previous -> overlap?.(range, [previous]) end) do
+        raise ArgumentError, "overlapping #{family} CIDR ranges include #{inspect(range)}"
+      end
+    end)
+
+    ranges
+  end
+
+  defp family_overlap_function(:ipv4), do: &ipv4_cidrs_overlap?/2
+  defp family_overlap_function(:ipv6), do: &ipv6_cidrs_overlap?/2
 
   defp ipv6_prefix_to_mask(0), do: 0
   defp ipv6_prefix_to_mask(prefix), do: ((1 <<< 128) - 1) <<< (128 - prefix) &&& (1 <<< 128) - 1

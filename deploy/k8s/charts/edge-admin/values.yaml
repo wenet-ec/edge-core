@@ -123,6 +123,10 @@ config:
 #   EVENT_BROKER_MQTT_CLIENT_CERT_FILE: "/etc/mqtt/tls/client.crt"
 #   EVENT_BROKER_MQTT_CLIENT_KEY_FILE: "/etc/mqtt/tls/client.key"
 #   CORE_DERP_MAP_URLS: "https://relay-new.example.com/derpmap/default,https://relay-old.example.com/derpmap/default"
+#   # Optional isolated per-Ingress Tunnel address pools. The Ingress reserves
+#   # each pool's first usable address; Tunnel Clients begin at the next address.
+#   INGRESS_TUNNEL_AUTO_GENERATED_V4_RANGES: "10.240.0.0/12"
+#   INGRESS_TUNNEL_AUTO_GENERATED_V6_RANGES: "fd20:240::/48"
 #   SENTRY_DSN: "https://..."
 #   CORE_NAME: "prod-us"
 extraEnv: {}

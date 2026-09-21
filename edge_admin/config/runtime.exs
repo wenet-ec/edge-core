@@ -396,6 +396,59 @@ oban_queues =
 admin_tcp_tunnel_secret =
   get_env("ADMIN_TCP_TUNNEL_SECRET", :string, "edge_admin_default_tcp_tunnel_secret")
 
+admin_cluster_v4_subnet =
+  "ADMIN_CLUSTER_V4_SUBNET"
+  |> get_env!()
+  |> EdgeAdmin.Vpn.normalize_ipv4_cidr!()
+
+admin_cluster_v6_subnet =
+  "ADMIN_CLUSTER_V6_SUBNET"
+  |> get_env!()
+  |> EdgeAdmin.Vpn.normalize_ipv6_cidr!()
+
+cluster_v4_subnet_prefix = get_env("CLUSTER_V4_SUBNET_PREFIX", :integer, 24)
+cluster_v6_subnet_prefix = get_env("CLUSTER_V6_SUBNET_PREFIX", :integer, 64)
+
+cluster_auto_generated_v4_ranges =
+  "CLUSTER_AUTO_GENERATED_V4_RANGES"
+  |> get_env(:list, ["100.64.0.0/10"])
+  |> EdgeAdmin.Vpn.normalize_ipv4_ranges!(max_prefix: cluster_v4_subnet_prefix)
+
+cluster_auto_generated_v6_ranges =
+  "CLUSTER_AUTO_GENERATED_V6_RANGES"
+  |> get_env(:list, ["fd7a:91c2:4e8b::/48"])
+  |> EdgeAdmin.Vpn.normalize_ipv6_ranges!(max_prefix: cluster_v6_subnet_prefix)
+
+default_cluster_v4_subnet =
+  case get_env("DEFAULT_CLUSTER_V4_SUBNET") do
+    nil -> nil
+    subnet -> EdgeAdmin.Vpn.normalize_ipv4_cidr!(subnet)
+  end
+
+default_cluster_v6_subnet =
+  case get_env("DEFAULT_CLUSTER_V6_SUBNET") do
+    nil -> nil
+    subnet -> EdgeAdmin.Vpn.normalize_ipv6_cidr!(subnet)
+  end
+
+ingress_tunnel_auto_generated_v4_ranges =
+  "INGRESS_TUNNEL_AUTO_GENERATED_V4_RANGES"
+  |> get_env(:list, ["10.240.0.0/12"])
+  |> EdgeAdmin.Vpn.normalize_ipv4_ranges!(max_prefix: 30)
+
+ingress_tunnel_auto_generated_v6_ranges =
+  "INGRESS_TUNNEL_AUTO_GENERATED_V6_RANGES"
+  |> get_env(:list, ["fd20:240::/48"])
+  |> EdgeAdmin.Vpn.normalize_ipv6_ranges!(max_prefix: 126)
+
+EdgeAdmin.Vpn.ensure_disjoint_ipv4_ranges!([
+  admin_cluster_v4_subnet | cluster_auto_generated_v4_ranges ++ ingress_tunnel_auto_generated_v4_ranges
+])
+
+EdgeAdmin.Vpn.ensure_disjoint_ipv6_ranges!([
+  admin_cluster_v6_subnet | cluster_auto_generated_v6_ranges ++ ingress_tunnel_auto_generated_v6_ranges
+])
+
 # Event delivery applies to both broker and webhook channels.
 core_name = get_env("CORE_NAME", :string, "default")
 
@@ -487,8 +540,8 @@ config :edge_admin,
   admin_max_wireguard_peers: get_env!("ADMIN_MAX_WIREGUARD_PEERS", :positive_integer),
   # VPN network for multi-admin coordination.
   admin_cluster_name: EdgeAdmin.Vpn.build_network_name(get_env!("ADMIN_CLUSTER_NAME"), prefix: :admin),
-  admin_cluster_v4_subnet: get_env!("ADMIN_CLUSTER_V4_SUBNET"),
-  admin_cluster_v6_subnet: get_env!("ADMIN_CLUSTER_V6_SUBNET"),
+  admin_cluster_v4_subnet: admin_cluster_v4_subnet,
+  admin_cluster_v6_subnet: admin_cluster_v6_subnet,
   # Static port for WireGuard (must match UDP port mapping in docker-compose for external connectivity)
   admin_wireguard_port: get_env("ADMIN_WIREGUARD_PORT", :integer),
   admin_cluster_cookie: get_env("ADMIN_CLUSTER_COOKIE", :atom, :edge_admin_default_cookie),
@@ -496,20 +549,24 @@ config :edge_admin,
   admin_tcp_tunnel_port: get_env("ADMIN_TCP_TUNNEL_PORT", :integer, 45_207),
   admin_tcp_tunnel_secret: admin_tcp_tunnel_secret,
   # IPv4 subnet size for auto-generated clusters (e.g., 24 = /24 = 254 hosts)
-  cluster_v4_subnet_prefix: get_env("CLUSTER_V4_SUBNET_PREFIX", :integer, 24),
+  cluster_v4_subnet_prefix: cluster_v4_subnet_prefix,
   # IPv4 CIDR ranges to use for auto-generated cluster subnets (CGNAT space)
-  cluster_auto_generated_v4_ranges: get_env("CLUSTER_AUTO_GENERATED_V4_RANGES", :list, ["100.64.0.0/10"]),
+  cluster_auto_generated_v4_ranges: cluster_auto_generated_v4_ranges,
   # Immutable Core-owned ULA /48 pool(s). Set explicitly in production and share
   # the same value across every admin that uses this PostgreSQL/Netmaker core.
-  cluster_auto_generated_v6_ranges: get_env("CLUSTER_AUTO_GENERATED_V6_RANGES", :list, ["fd7a:91c2:4e8b::/48"]),
-  cluster_v6_subnet_prefix: get_env("CLUSTER_V6_SUBNET_PREFIX", :integer, 64),
+  cluster_auto_generated_v6_ranges: cluster_auto_generated_v6_ranges,
+  cluster_v6_subnet_prefix: cluster_v6_subnet_prefix,
+  # Isolated, non-routed per-Ingress address pools for Edge Tunnel clients.
+  # Addresses are intentionally reused by different Ingress Nodes.
+  ingress_tunnel_auto_generated_v4_ranges: ingress_tunnel_auto_generated_v4_ranges,
+  ingress_tunnel_auto_generated_v6_ranges: ingress_tunnel_auto_generated_v6_ranges,
   # Slots reserved for Admin Gateway nodes (e.g. split-brain flooding).
   # Tune to match total Admin Gateway instances across all admin clusters per core.
   admin_gateway_slot_reservation: get_env("ADMIN_GATEWAY_SLOT_RESERVATION", :integer, 10),
   # Optional: Pre-defined default cluster for agent enrollment
   default_cluster_name: get_env("DEFAULT_CLUSTER_NAME"),
-  default_cluster_v4_subnet: get_env("DEFAULT_CLUSTER_V4_SUBNET"),
-  default_cluster_v6_subnet: get_env("DEFAULT_CLUSTER_V6_SUBNET"),
+  default_cluster_v4_subnet: default_cluster_v4_subnet,
+  default_cluster_v6_subnet: default_cluster_v6_subnet,
   default_cluster_node_limit: get_env("DEFAULT_CLUSTER_NODE_LIMIT", :integer),
   # Allow public enrollment without authentication (dev/testing only)
   public_enrollment_key_enabled: get_env("PUBLIC_ENROLLMENT_KEY_ENABLED", :boolean, false),

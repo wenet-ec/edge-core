@@ -22,6 +22,7 @@ defmodule EdgeAdmin.Nodes.Forms.CreateClusterForm do
   def changeset(attrs) when is_map(attrs) do
     %__MODULE__{}
     |> cast(attrs, [:name, :ipv4_range, :ipv6_range, :node_limit])
+    |> normalize_ranges()
     |> validate_required([:name])
     |> validate_name()
     |> validate_ipv4_range()
@@ -50,6 +51,25 @@ defmodule EdgeAdmin.Nodes.Forms.CreateClusterForm do
         {:error, message} -> [name: message]
       end
     end)
+  end
+
+  defp normalize_ranges(changeset) do
+    changeset
+    |> normalize_range(:ipv4_range, &EdgeAdmin.Vpn.normalize_ipv4_cidr/1)
+    |> normalize_range(:ipv6_range, &EdgeAdmin.Vpn.normalize_ipv6_cidr/1)
+  end
+
+  defp normalize_range(changeset, field, normalize) do
+    case get_change(changeset, field) do
+      nil ->
+        changeset
+
+      value ->
+        case normalize.(value) do
+          {:ok, normalized} -> put_change(changeset, field, normalized)
+          {:error, _reason} -> changeset
+        end
+    end
   end
 
   defp validate_ipv4_range(changeset) do

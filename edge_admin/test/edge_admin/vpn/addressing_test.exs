@@ -91,6 +91,41 @@ defmodule EdgeAdmin.Vpn.AddressingTest do
     end
   end
 
+  describe "normalize_ipv4_cidr/1" do
+    test "aligns a host address to its network boundary" do
+      assert VpnAddressing.normalize_ipv4_cidr("100.64.1.42/24") == {:ok, "100.64.1.0/24"}
+    end
+
+    test "preserves invalid CIDR errors" do
+      assert {:error, _reason} = VpnAddressing.normalize_ipv4_cidr("not-a-cidr")
+    end
+
+    test "raises for invalid configuration input" do
+      assert_raise ArgumentError, fn -> VpnAddressing.normalize_ipv4_cidr!("not-a-cidr") end
+    end
+  end
+
+  describe "normalize_ipv4_ranges!/2" do
+    test "normalizes every configured range to its network boundary" do
+      assert VpnAddressing.normalize_ipv4_ranges!(["10.240.1.99/24"]) == ["10.240.1.0/24"]
+    end
+
+    test "rejects empty, malformed, and too-narrow configured ranges" do
+      assert_raise ArgumentError, fn -> VpnAddressing.normalize_ipv4_ranges!([]) end
+      assert_raise ArgumentError, fn -> VpnAddressing.normalize_ipv4_ranges!(["not-a-cidr"]) end
+
+      assert_raise ArgumentError, fn ->
+        VpnAddressing.normalize_ipv4_ranges!(["10.240.0.0/31"], max_prefix: 30)
+      end
+    end
+
+    test "rejects overlapping ranges after normalization" do
+      assert_raise ArgumentError, ~r/overlapping ipv4 CIDR ranges/, fn ->
+        VpnAddressing.normalize_ipv4_ranges!(["10.240.1.99/24", "10.240.1.0/25"])
+      end
+    end
+  end
+
   # usable_ipv4_capacity/1
 
   describe "usable_ipv4_capacity/1" do
@@ -154,6 +189,31 @@ defmodule EdgeAdmin.Vpn.AddressingTest do
     test "parses a compressed IPv6 CIDR" do
       assert {:ok, {{0xFD7A, 0x91C2, 0x4E8B, 0, 0, 0, 0, 0}, 48}} =
                VpnAddressing.parse_ipv6_cidr("fd7a:91c2:4e8b::/48")
+    end
+
+    test "aligns a host address to its network boundary" do
+      assert VpnAddressing.normalize_ipv6_cidr("fd7a:91c2:4e8b:42::99/64") ==
+               {:ok, "fd7a:91c2:4e8b:42::/64"}
+    end
+
+    test "raises for invalid configuration input" do
+      assert_raise ArgumentError, fn -> VpnAddressing.normalize_ipv6_cidr!("not-a-cidr") end
+    end
+
+    test "normalizes every configured range to its network boundary" do
+      assert VpnAddressing.normalize_ipv6_ranges!(["fd20:240::99/64"]) == ["fd20:240::/64"]
+    end
+
+    test "rejects a configured range too narrow for its declared limit" do
+      assert_raise ArgumentError, fn ->
+        VpnAddressing.normalize_ipv6_ranges!(["fd20:240::/127"], max_prefix: 126)
+      end
+    end
+
+    test "rejects overlapping ranges after normalization" do
+      assert_raise ArgumentError, ~r/overlapping ipv6 CIDR ranges/, fn ->
+        VpnAddressing.normalize_ipv6_ranges!(["fd20:240::99/64", "fd20:240::/65"])
+      end
     end
 
     test "detects IPv6 overlap in either direction" do

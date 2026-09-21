@@ -12,6 +12,8 @@ defmodule EdgeAdmin.Repo.Migrations.CreateTunnelConnections do
           null: false
 
       add :node_id, references(:nodes, type: :binary_id, on_delete: :delete_all), null: false
+      add :ingress_ipv4_address, :string, null: false
+      add :ingress_ipv6_address, :string, null: false
       add :tunnel_ipv4_address, :string, null: false
       add :tunnel_ipv6_address, :string, null: false
 

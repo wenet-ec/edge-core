@@ -106,6 +106,20 @@ defmodule EdgeAdmin.Nodes.Schemas.ClusterTest do
     end
   end
 
+  describe "changeset/2 — CIDR normalization" do
+    test "normalizes provided ranges to their network boundaries" do
+      assert {:ok, cluster} =
+               apply(%{
+                 "name" => "prod",
+                 "ipv4_range" => "100.64.1.42/24",
+                 "ipv6_range" => "fd7a:91c2:4e8b:42::99/64"
+               })
+
+      assert cluster.ipv4_range == "100.64.1.0/24"
+      assert cluster.ipv6_range == "fd7a:91c2:4e8b:42::/64"
+    end
+  end
+
   # changeset/2 — ipv4_range CIDR format validation
 
   describe "changeset/2 — ipv4_range CIDR format" do
@@ -117,8 +131,10 @@ defmodule EdgeAdmin.Nodes.Schemas.ClusterTest do
       assert {:ok, _} = apply(%{"name" => "prod", "ipv4_range" => "100.64.0.0/10"})
     end
 
-    test "prefix /0 is valid format" do
-      assert {:ok, _} = apply(%{"name" => "prod", "ipv4_range" => "100.64.1.0/0"})
+    test "prefix /0 is rejected after canonicalization to the default route" do
+      changeset = build_changeset(%{"name" => "prod", "ipv4_range" => "100.64.1.0/0"})
+      assert %{ipv4_range: [msg]} = errors_on(changeset)
+      assert msg =~ "private"
     end
 
     test "prefix /32 is rejected (too small for any node to enroll)" do

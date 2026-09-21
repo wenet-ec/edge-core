@@ -114,7 +114,7 @@ defmodule EdgeAgent.Mixfile do
       {:quantum, "~> 3.5"},
 
       # SSH server
-      {:erlexec, "~> 2.4", runtime: Mix.env() != :test},
+      {:erlexec, "~> 2.5", runtime: Mix.env() != :test},
 
       # Telemetry
       {:prom_ex, "~> 1.12"},

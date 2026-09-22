@@ -97,10 +97,6 @@ defmodule EdgeAdmin.Commands.Workflows.CommandExecutionLifecycle do
   - `{:error, {:conflict, reason}}` - Execution not in `:pending` status
   - `{:error, changeset}` - Status update failed validation
 
-  ## Examples
-
-      iex> acknowledge_command_execution(execution, %{})
-      {:ok, %CommandExecution{status: :sent}}
   """
   @spec acknowledge_command_execution(CommandExecution.t(), map()) ::
           {:ok, CommandExecution.t()}

@@ -210,9 +210,8 @@ defmodule EdgeAdmin.Commands.Workflows.Delivery do
   Delivers pending command executions for nodes currently assigned to this
   Admin's Gateway routing domain.
 
-  Called by Quantum on the `EXECUTION_DELIVERY_SCHEDULE`
-  cadence (default: every minute). Local metadata selects assigned clusters;
-  the delivery operation itself goes through the assigned Admin Gateway.
+  Local ownership selects assigned clusters; delivery goes through the assigned
+  Admin Gateway.
 
   ## Behavior
 

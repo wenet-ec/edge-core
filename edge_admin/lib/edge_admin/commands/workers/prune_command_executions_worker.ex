@@ -1,20 +1,15 @@
 # edge_admin/lib/edge_admin/commands/workers/prune_command_executions_worker.ex
 defmodule EdgeAdmin.Commands.Workers.PruneCommandExecutionsWorker do
   @moduledoc """
-  Periodic worker that deletes finalised command executions older than
-  `EXECUTION_RETENTION_DAYS`.
+  Periodic worker that deletes finalised command executions older than the
+  configured retention period.
 
-  The cron entry is always registered; the worker no-ops when
-  `EXECUTION_PRUNING_ENABLED` is `false` (the default). This mirrors the
-  `cluster_reconciliation_enabled` pattern — keep scheduling unconditional,
-  gate execution at the worker.
+  The worker no-ops when execution pruning is disabled.
 
   Only rows where the execution can no longer receive any updates are deleted
   (see `EdgeAdmin.Commands.prune_command_executions/1`). In-flight executions
   (`pending`, `sent`) are never touched.
 
-  `max_attempts: 1` — a missed run is recovered by the next cron tick, no
-  retry storm needed.
   """
 
   use Oban.Worker, queue: :execution_pruning, max_attempts: 1

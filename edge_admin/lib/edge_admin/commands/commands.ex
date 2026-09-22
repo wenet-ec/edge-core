@@ -10,22 +10,21 @@ defmodule EdgeAdmin.Commands do
   ## Concurrency model
 
   This context runs on every admin in a multi-admin cluster simultaneously.
-  Cluster ownership (via `AdminClustering.Metadata`) is *eventually* consistent and can
-  flap during reconciliation — at any moment, two admins may both believe they
-  own the same edge cluster. Independently, a single admin's HTTP round trip
+  Cluster ownership is eventually consistent and can flap during reconciliation;
+  at any moment, two admins may both believe they own the same edge cluster.
+  Independently, a single admin's HTTP round trip
   to an agent can outlast the agent's command execution, so the agent can
   report results back before the admin has finished marking the row `:sent`.
 
   Both situations were producing lost-update races on every status transition
   (a terminal row could be clobbered back to `:sent` or `:expired` by a stale
-  in-memory struct). Every transition now flows through `transition_status/3`
-  or `transition_to_result/2`, which run a single conditional `UPDATE … WHERE
-  status IN (allowed)` and return `{:error, :stale_state}` if the row already
-  left the expected source status. Check modules (`Checks.Execution*`) remain
-  as early 409 gates but the DB is authoritative.
+  in-memory struct). Every transition now uses a conditional database update
+  that restricts the allowed source statuses and returns `{:error, :stale_state}`
+  when a row has already moved. Early conflict checks remain useful, but the
+  database is authoritative.
 
-  Commands are globally visible, but delivery is local to the clusters this
-  Admin owns according to `EdgeAdmin.AdminClustering.Metadata`.
+  Commands are globally visible, but delivery is local to the clusters currently
+  owned by each Admin.
   """
 
   alias EdgeAdmin.Commands.Resources.CommandExecutions, as: CommandExecutionResource
@@ -55,14 +54,7 @@ defmodule EdgeAdmin.Commands do
   @doc """
   Lists commands with filtering, sorting, and pagination.
 
-  Supports filtering by:
-  - `command_text` - Text search with wildcard support
-  - `timeout` - Exact, `__gte`, `__lte` (milliseconds; null = no timeout)
-  - `has_timeout` - Boolean: true returns commands with a timeout set
-  - `expires_at__gte/lte` - Date range filter
-  - `has_expires_at` - Boolean: true returns commands with an expiry set
-  - `inserted_at__gte/lte` - Date range filter
-  - `updated_at__gte/lte` - Date range filter
+  Supports command filters, sorting, and pagination.
 
   ## Returns
   - `{:ok, {commands, meta}}` - List of commands with Flop.Meta pagination info
@@ -92,21 +84,7 @@ defmodule EdgeAdmin.Commands do
   @doc """
   Lists command executions with filtering, sorting, and pagination.
 
-  Supports filtering by:
-  - `status__in` - Enum IN: `"pending"`, `"sent"`, `"completed"`, `"cancelled"`, `"expired"`, `"dropped"` — comma-separated list (`status__in=pending,sent`)
-  - `target_all` - Boolean
-  - `exit_code` - Exact, `__gte`, `__lte`
-  - `command_id__in` - Exact IN match on command IDs — comma-separated UUIDs
-  - `node_id__in` - Exact IN match on node IDs — comma-separated UUIDs
-  - `output` - Text search with wildcard support
-  - `cluster_name` - Wildcard (`prod*`), exact, or comma-separated IN match on cluster name (via node's cluster)
-  - `has_cluster` - Boolean (filters by cluster_id presence: true = NOT NULL, false = IS NULL)
-  - `has_output` - Boolean: true returns executions with output present
-  - `inserted_at__gte/lte` - Date range filter
-  - `updated_at__gte/lte` - Date range filter
-  - `sent_at__gte/lte` - Date range filter
-  - `completed_at__gte/lte` - Date range filter
-  - `cancelled_at__gte/lte` - Date range filter
+  Supports execution filters, sorting, and pagination.
 
   ## Returns
   - `{:ok, {command_executions, meta}}` - List of command executions with Flop.Meta pagination info

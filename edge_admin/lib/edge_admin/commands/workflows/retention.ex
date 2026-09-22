@@ -22,7 +22,7 @@ defmodule EdgeAdmin.Commands.Workflows.Retention do
   @doc """
   Expires all stale command executions whose command's `expires_at` has passed.
 
-  Called by the Quantum scheduler (every minute). Processes executions in two passes:
+  Processes executions in two passes:
 
   - `pending` - Command never reached the agent; mark expired immediately in DB.
   - `sent` - Command was delivered; send best-effort cancellation to agent, then mark
@@ -37,8 +37,8 @@ defmodule EdgeAdmin.Commands.Workflows.Retention do
     now = DateTime.utc_now()
 
     # Scope to clusters owned by this admin. Without this gate, every admin in
-    # the fleet runs the expiration loop against every cluster every minute,
-    # producing write amplification and (pre-conditional-update) clobbering
+    # the fleet runs the expiration loop against every cluster, producing write
+    # amplification and (pre-conditional-update) clobbering
     # terminal rows. Mirrors the ownership gate in `deliver_local_command_executions/0`.
     my_cluster_names =
       Metadata.get_my_clusters()

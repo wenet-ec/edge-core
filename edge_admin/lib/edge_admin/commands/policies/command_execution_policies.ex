@@ -2,12 +2,6 @@
 defmodule EdgeAdmin.Commands.Policies.CommandExecutionPolicies do
   @moduledoc """
   Authorization policy for command execution actions.
-
-  ## Usage
-
-      with :ok <- CommandExecutionPolicies.authorize({:update, node, execution}) do
-        ...
-      end
   """
   use EdgeAdmin.Policy
 

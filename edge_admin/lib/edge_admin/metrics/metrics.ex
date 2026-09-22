@@ -3,19 +3,9 @@ defmodule EdgeAdmin.Metrics do
   @moduledoc """
   The Metrics context handles all metrics operations for Edge Admin.
 
-  This module consolidates metrics collection, caching, and retrieval for:
-  - Admin metrics (PromEx)
-  - Node host metrics (node_exporter)
-  - Node agent metrics (agent PromEx)
-  - Node WireGuard metrics (wireguard_exporter)
-
-  ## VPN Scraping
-
-  Node metrics are scraped via VPN using the Gateway pattern:
-
-  1. Find node's cluster via Metadata (ETS)
-  2. Lookup Gateway process for that cluster (syn registry)
-  3. Gateway makes HTTP request to node via VPN DNS
+  This module consolidates metrics collection, parsing, caching, and retrieval
+  for Admin and node sources. Node metrics are collected through the owning
+  cluster's VPN gateway.
 
   ## HTTP Fallback Caching
 
@@ -24,7 +14,7 @@ defmodule EdgeAdmin.Metrics do
   proxy endpoints even when direct VPN access to agents is down.
 
   - **Metrics Cache**: Temporary storage for node metrics when VPN is unavailable
-  - **Staleness Threshold**: Cache entries older than 5 minutes are not served
+  - **Staleness Threshold**: Cache entries older than the cache window are not served
   - **Upsert**: Each node can only have one cache entry per metrics type (host/agent/wireguard)
   - **Fallback**: Admin tries VPN scrape first, falls back to cache if VPN fails
   """

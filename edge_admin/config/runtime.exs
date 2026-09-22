@@ -378,7 +378,8 @@ oban_queues =
         cluster_deletion: 1,
         self_updates: 1,
         event_broker: 1,
-        webhooks: 1
+        webhooks: 1,
+        ingress_tunneling: 1
       ]
 
     :postgres ->
@@ -389,7 +390,8 @@ oban_queues =
         cluster_deletion: 1,
         self_updates: 1,
         event_broker: 2,
-        webhooks: 2
+        webhooks: 2,
+        ingress_tunneling: 2
       ]
   end
 

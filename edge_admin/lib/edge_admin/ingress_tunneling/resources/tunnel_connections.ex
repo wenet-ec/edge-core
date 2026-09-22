@@ -2,10 +2,6 @@
 defmodule EdgeAdmin.IngressTunneling.Resources.TunnelConnections do
   @moduledoc """
   Owns Tunnel Connection persistence and per-Ingress address allocation.
-
-  Creating or deleting a row intentionally has no Agent synchronization side
-  effect yet. The database is the desired authorization state; Agent delivery
-  will be added as a separate reconciliation workflow.
   """
 
   import Ecto.Query, warn: false

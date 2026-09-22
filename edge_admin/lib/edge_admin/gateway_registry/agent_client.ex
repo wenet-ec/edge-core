@@ -122,6 +122,25 @@ defmodule EdgeAdmin.GatewayRegistry.AgentClient do
     end
   end
 
+  @doc "Delivers the current Ingress Tunneling desired state to an Agent."
+  @spec deliver_ingress_tunneling(Node.t(), map()) :: {:ok, :sent} | {:error, term()}
+  def deliver_ingress_tunneling(%Node{} = node, desired_state) when is_map(desired_state) do
+    url = agent_base_url(node) <> "/api/v1/ingress_tunneling"
+    opts = Keyword.merge([json: desired_state, auth: {:bearer, node.api_token}], command_opts())
+
+    case Req.post(url, opts) do
+      {:ok, %{status: status}} when status in 200..299 ->
+        {:ok, :sent}
+
+      {:ok, %{status: status}} ->
+        {:error, "HTTP #{status}"}
+
+      {:error, reason} ->
+        Logger.error("deliver_ingress_tunneling failed for node #{node.id}: #{inspect(reason)}")
+        {:error, reason}
+    end
+  end
+
   @doc """
   Sends a cancellation request for a command execution to the agent.
 

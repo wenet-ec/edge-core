@@ -25,4 +25,12 @@ defmodule EdgeAgent.IngressTunneling.IdentityTest do
 
     assert {:ok, ^public_key} = Identity.public_key()
   end
+
+  test "verifies that a candidate public key belongs to the Agent identity" do
+    assert {:ok, public_key} = Identity.public_key()
+    assert :ok = Identity.verify_public_key(public_key)
+
+    assert {:error, {:conflict, "ingress_public_key does not match Agent identity"}} =
+             Identity.verify_public_key(String.duplicate("A", byte_size(public_key)))
+  end
 end

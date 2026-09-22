@@ -32,6 +32,7 @@ defmodule EdgeAdmin.BackgroundJobs.Oban.Queues do
   alias EdgeAdmin.Commands.Workers.PruneCommandExecutionsWorker
   alias EdgeAdmin.Events.Broker.Workers.PublishEventWorker
   alias EdgeAdmin.Events.Webhooks.Workers.DeliverEventWorker
+  alias EdgeAdmin.IngressTunneling.Workers.DeliverIngressTunnelingWorker
   alias EdgeAdmin.Nodes.Workers.DeleteClusterWorker
   alias EdgeAdmin.Nodes.Workers.ReconcileClusterWorker
   alias EdgeAdmin.Nodes.Workers.ScheduleClusterReconciliationWorker
@@ -42,6 +43,7 @@ defmodule EdgeAdmin.BackgroundJobs.Oban.Queues do
     PruneCommandExecutionsWorker,
     PublishEventWorker,
     DeliverEventWorker,
+    DeliverIngressTunnelingWorker,
     DeleteClusterWorker,
     ReconcileClusterWorker,
     ScheduleClusterReconciliationWorker,

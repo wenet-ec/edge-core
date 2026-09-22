@@ -123,6 +123,14 @@ defmodule EdgeAdmin.GatewayRegistry.VirtualGateway do
     GenServer.call(gateway_pid, {:deliver_execution, node, execution_data}, AgentClient.command_call_timeout())
   end
 
+  def deliver_ingress_tunneling(gateway_pid, node, desired_state) do
+    GenServer.call(
+      gateway_pid,
+      {:deliver_ingress_tunneling, node, desired_state},
+      AgentClient.command_call_timeout()
+    )
+  end
+
   @impl true
   def init(cluster_name) do
     Process.flag(:trap_exit, true)
@@ -280,6 +288,12 @@ defmodule EdgeAdmin.GatewayRegistry.VirtualGateway do
   @impl true
   def handle_call({:deliver_execution, node, execution_data}, from, state) do
     Task.start(fn -> GenServer.reply(from, AgentClient.deliver_execution(node, execution_data)) end)
+    {:noreply, state}
+  end
+
+  @impl true
+  def handle_call({:deliver_ingress_tunneling, node, desired_state}, from, state) do
+    Task.start(fn -> GenServer.reply(from, AgentClient.deliver_ingress_tunneling(node, desired_state)) end)
     {:noreply, state}
   end
 

@@ -58,6 +58,10 @@ defmodule EdgeAdmin.GatewayRegistry do
   def deliver_execution(gateway_pid, node, execution_data),
     do: VirtualGateway.deliver_execution(gateway_pid, node, execution_data)
 
+  @spec deliver_ingress_tunneling(pid(), struct(), map()) :: {:ok, :sent} | {:error, term()}
+  def deliver_ingress_tunneling(gateway_pid, node, desired_state),
+    do: VirtualGateway.deliver_ingress_tunneling(gateway_pid, node, desired_state)
+
   @spec open_stream(String.t(), String.t(), 1..65_535) ::
           {:ok, :gen_tcp.socket()} | {:error, term()}
   def open_stream(cluster_name, target_host, target_port) do

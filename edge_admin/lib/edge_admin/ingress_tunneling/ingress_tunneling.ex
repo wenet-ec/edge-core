@@ -7,12 +7,19 @@ defmodule EdgeAdmin.IngressTunneling do
   connections, provisioning artifacts, and Agent Ingress desired state.
   """
 
+  alias EdgeAdmin.GatewayRegistry
+  alias EdgeAdmin.IngressTunneling.DesiredState
   alias EdgeAdmin.IngressTunneling.Forms.CreateTunnelClientForm
   alias EdgeAdmin.IngressTunneling.Forms.CreateTunnelConnectionForm
   alias EdgeAdmin.IngressTunneling.Resources.TunnelClients
   alias EdgeAdmin.IngressTunneling.Resources.TunnelConnections
   alias EdgeAdmin.IngressTunneling.Schemas.TunnelClient
   alias EdgeAdmin.IngressTunneling.Schemas.TunnelConnection
+  alias EdgeAdmin.IngressTunneling.Workers.DeliverIngressTunnelingWorker
+  alias EdgeAdmin.Nodes.Schemas.Node
+  alias EdgeAdmin.Repo
+
+  require Logger
 
   @doc "Lists Tunnel Clients."
   @spec list_tunnel_clients(map()) :: {:ok, {[TunnelClient.t()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
@@ -30,7 +37,17 @@ defmodule EdgeAdmin.IngressTunneling do
   @spec create_tunnel_client_with_connections(map()) :: {:ok, TunnelClient.t()} | {:error, term()}
   def create_tunnel_client_with_connections(attrs \\ %{}) do
     with {:ok, params} <- CreateTunnelClientForm.changeset(attrs) do
-      TunnelClients.create_with_connections(params["node_ids"])
+      case TunnelClients.create_with_connections(params["node_ids"]) do
+        {:ok, tunnel_client} = result ->
+          tunnel_client.tunnel_connections
+          |> Enum.map(& &1.node_id)
+          |> enqueue_deliveries()
+
+          result
+
+        error ->
+          error
+      end
     end
   end
 
@@ -52,11 +69,58 @@ defmodule EdgeAdmin.IngressTunneling do
           | {:error, :not_found | {:conflict, String.t()} | Ecto.Changeset.t()}
   def create_tunnel_connection(tunnel_client_id, attrs) when is_map(attrs) do
     with {:ok, params} <- CreateTunnelConnectionForm.changeset(attrs) do
-      TunnelConnections.create(tunnel_client_id, params["node_id"])
+      case TunnelConnections.create(tunnel_client_id, params["node_id"]) do
+        {:ok, tunnel_connection} = result ->
+          enqueue_deliveries([tunnel_connection.node_id])
+          result
+
+        error ->
+          error
+      end
     end
   end
 
   @doc "Deletes a Tunnel Connection."
-  @spec delete_tunnel_connection(TunnelConnection.t()) :: {:ok, TunnelConnection.t()} | {:error, Ecto.Changeset.t()}
-  defdelegate delete_tunnel_connection(tunnel_connection), to: TunnelConnections, as: :delete
+  @spec delete_tunnel_connection(TunnelConnection.t()) ::
+          {:ok, TunnelConnection.t()} | {:error, Ecto.Changeset.t()}
+  def delete_tunnel_connection(%TunnelConnection{} = tunnel_connection) do
+    case TunnelConnections.delete(tunnel_connection) do
+      {:ok, deleted} = result ->
+        enqueue_deliveries([deleted.node_id])
+        result
+
+      error ->
+        error
+    end
+  end
+
+  @spec deliver_ingress_tunneling(String.t()) :: :ok | {:error, term()}
+  def deliver_ingress_tunneling(node_id) do
+    case {Repo.get(Node, node_id), DesiredState.build(node_id)} do
+      {nil, {:error, :not_found}} ->
+        :ok
+
+      {%Node{} = node, {:ok, desired_state}} ->
+        node = Repo.preload(node, :cluster)
+
+        with {:ok, gateway} <- GatewayRegistry.resolve_node(node),
+             {:ok, :sent} <- GatewayRegistry.deliver_ingress_tunneling(gateway, node, desired_state) do
+          :ok
+        end
+
+      {_, {:error, :not_found}} ->
+        :ok
+    end
+  end
+
+  defp enqueue_deliveries(node_ids) do
+    Enum.each(node_ids, fn node_id ->
+      worker = DeliverIngressTunnelingWorker.new(%{node_id: node_id})
+
+      case Oban.insert(worker) do
+        {:ok, _job} -> :ok
+        {:error, reason} -> Logger.error("Failed to enqueue Ingress Tunneling delivery: #{inspect(reason)}")
+      end
+    end)
+  end
 end

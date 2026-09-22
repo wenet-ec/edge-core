@@ -20,6 +20,18 @@ defmodule EdgeAgent.IngressTunneling.Identity do
     end
   end
 
+  @doc "Verifies that a public key belongs to the durable Agent identity."
+  @spec verify_public_key(term()) :: :ok | {:error, {:conflict, String.t()}} | {:error, term()}
+  def verify_public_key(candidate) do
+    with {:ok, public_key} <- public_key(),
+         true <- candidate == public_key do
+      :ok
+    else
+      false -> {:error, {:conflict, "ingress_public_key does not match Agent identity"}}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
   defp generate_and_store_keypair do
     {public_key, private_key} = :crypto.generate_key(:ecdh, @curve)
     encoded_private_key = Base.encode64(private_key)

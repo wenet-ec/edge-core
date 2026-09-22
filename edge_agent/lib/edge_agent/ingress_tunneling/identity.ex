@@ -1,5 +1,5 @@
-# edge_agent/lib/edge_agent/ingress/identity.ex
-defmodule EdgeAgent.Ingress.Identity do
+# edge_agent/lib/edge_agent/ingress_tunneling/identity.ex
+defmodule EdgeAgent.IngressTunneling.Identity do
   @moduledoc """
   Owns the Agent's durable WireGuard identity for future Ingress Tunneling.
 

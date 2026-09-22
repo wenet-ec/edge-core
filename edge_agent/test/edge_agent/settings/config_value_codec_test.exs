@@ -15,6 +15,17 @@ defmodule EdgeAgent.Settings.ConfigValueCodecTest do
     assert ConfigValueCodec.encode_string_list(["a", "b"]) == ~s(["a","b"])
   end
 
+  test "encodes and decodes JSON maps for durable settings storage" do
+    value = %{"peers" => [%{"node_id" => "node-1"}], "enabled" => true}
+
+    encoded = ConfigValueCodec.encode_map(value)
+
+    assert ConfigValueCodec.decode_map(encoded) == value
+    assert ConfigValueCodec.decode_map("invalid json") == nil
+    assert ConfigValueCodec.decode_map(~s(["not", "a", "map"])) == nil
+    assert ConfigValueCodec.decode_map(nil) == nil
+  end
+
   test "prepends unique non-empty incoming strings" do
     assert ConfigValueCodec.prepend_new_strings(["", "b", "b", "a"], ["a", "c"]) == ["b", "a", "c"]
   end

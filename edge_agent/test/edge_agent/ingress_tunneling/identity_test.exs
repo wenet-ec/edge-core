@@ -1,8 +1,8 @@
-# edge_agent/test/edge_agent/ingress/identity_test.exs
-defmodule EdgeAgent.Ingress.IdentityTest do
+# edge_agent/test/edge_agent/ingress_tunneling/identity_test.exs
+defmodule EdgeAgent.IngressTunneling.IdentityTest do
   use EdgeAgent.DataCase, async: false
 
-  alias EdgeAgent.Ingress.Identity
+  alias EdgeAgent.IngressTunneling.Identity
   alias EdgeAgent.Settings
 
   test "creates a durable WireGuard keypair and returns the stable public key" do

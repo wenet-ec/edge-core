@@ -70,6 +70,23 @@ defmodule EdgeAgent.SettingsTest do
     end
   end
 
+  describe "get_ingress_tunneling/0 and set_ingress_tunneling/1" do
+    test "returns nil when no ingress tunneling state exists" do
+      assert Settings.get_ingress_tunneling() == nil
+    end
+
+    test "stores and decodes the ingress tunneling state" do
+      state = %{
+        "ingress_public_key" => "public-key",
+        "peers" => [%{"tunnel_connection_id" => "connection-1"}]
+      }
+
+      assert {:ok, setting} = Settings.set_ingress_tunneling(state)
+      assert setting.key == "ingress_tunneling"
+      assert Settings.get_ingress_tunneling() == state
+    end
+  end
+
   # delete_config/1
 
   describe "delete_config/1" do

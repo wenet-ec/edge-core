@@ -140,4 +140,15 @@ defmodule EdgeAgent.Settings do
 
   @spec set_ingress_private_key(String.t()) :: {:ok, Setting.t()} | {:error, Ecto.Changeset.t()}
   def set_ingress_private_key(value), do: set_config("ingress_private_key", value)
+
+  @spec get_ingress_tunneling() :: map() | nil
+  def get_ingress_tunneling do
+    "ingress_tunneling" |> get_config() |> ConfigValueCodec.decode_map()
+  end
+
+  @spec set_ingress_tunneling(map()) ::
+          {:ok, Setting.t()} | {:error, Ecto.Changeset.t()}
+  def set_ingress_tunneling(value) when is_map(value) do
+    set_config("ingress_tunneling", ConfigValueCodec.encode_map(value))
+  end
 end

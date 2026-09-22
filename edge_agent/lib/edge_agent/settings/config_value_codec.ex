@@ -19,6 +19,21 @@ defmodule EdgeAgent.Settings.ConfigValueCodec do
   @spec encode_string_list(list()) :: String.t()
   def encode_string_list(values) when is_list(values), do: JSON.encode!(values)
 
+  @spec decode_map(String.t() | nil) :: map() | nil
+  def decode_map(nil), do: nil
+
+  def decode_map(json) when is_binary(json) do
+    case JSON.decode(json) do
+      {:ok, value} when is_map(value) -> value
+      _ -> nil
+    end
+  end
+
+  def decode_map(_), do: nil
+
+  @spec encode_map(map()) :: String.t()
+  def encode_map(value) when is_map(value), do: JSON.encode!(value)
+
   @doc "Prepends new non-empty values while preserving incoming and existing order."
   @spec prepend_new_strings([term()], [term()]) :: [term()]
   def prepend_new_strings(incoming, existing) do

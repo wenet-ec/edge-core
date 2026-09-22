@@ -12,7 +12,7 @@ defmodule EdgeAgent.Registration do
   """
 
   alias EdgeAgent.AdminGateway.Client
-  alias EdgeAgent.Ingress.Identity, as: IngressIdentity
+  alias EdgeAgent.IngressTunneling.Identity, as: IngressIdentity
   alias EdgeAgent.Settings
 
   require Logger

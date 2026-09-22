@@ -19,13 +19,7 @@ defmodule EdgeAdmin.Query do
   `LIKE` semantics and are not escaped here — callers control them.
   """
 
-  @doc """
-  Case-insensitive LIKE that works on both Postgres and SQLite.
-
-  Use inside an Ecto query in place of `ilike/2`:
-
-      from u in User, where: case_insensitive_like(u.name, ^pattern)
-  """
+  @doc "Case-insensitive LIKE that works on both Postgres and SQLite."
   defmacro case_insensitive_like(left, right) do
     quote do
       fragment("lower(?) LIKE lower(?)", unquote(left), unquote(right))

@@ -3,20 +3,7 @@ defmodule EdgeAdmin.RequestParser do
   @moduledoc """
   Parses flat query params from API requests into Flop-compatible format.
 
-  Converts URL query strings like:
-    ?name=prod*&inserted_at__gte=2025-01-01&sort=-inserted_at,name
-
-  Into Flop params:
-    %{
-      filters: [
-        %{field: :name, op: :ilike, value: "prod%"},
-        %{field: :inserted_at, op: :>=, value: "2025-01-01T00:00:00Z"}
-      ],
-      order_by: ["inserted_at", "name"],
-      order_directions: [:desc, :asc],
-      page: 1,
-      page_size: 20
-    }
+  Converts flat query parameters into filters, ordering, and pagination values.
 
   ## Supported Operators
 
@@ -61,13 +48,10 @@ defmodule EdgeAdmin.RequestParser do
   @doc """
   Parses flat query params into Flop format.
 
-  Accepts both string-keyed params (from CastAndValidate public endpoints) and
-  atom-keyed params (from internal callers). All keys are normalized to strings
-  before processing.
+  Accepts string-keyed and atom-keyed params. All keys are normalized to
+  strings before processing.
 
-  Values arrive pre-cast from CastAndValidate: integers as integers, booleans as
-  booleans, Date/DateTime structs for date params. MCP tools must provide the
-  same native types before calling domain list functions.
+  Values must already be cast to their native types before parsing.
   """
   def parse(params) when is_map(params) do
     params = stringify_keys(params)
@@ -78,19 +62,11 @@ defmodule EdgeAdmin.RequestParser do
   end
 
   @doc """
-  Splits ilike filters for the given fields out of a Flop params map.
+  Splits case-insensitive pattern filters for the given fields out of a query
+  parameter map.
 
-  Flop's `:ilike` operator calls `add_wildcard/1` internally, which escapes any
-  `%` characters in the value and wraps the whole thing in `%..%`. This breaks
-  user-supplied wildcard patterns like `"prod%"` (starts-with) because the `%`
-  gets escaped before the SQL executes.
-
-  Call this after `parse/1` to extract ilike filters for fields you want to
-  apply as raw Ecto `ilike/2` clauses instead of letting Flop handle them.
-
-  Use `EdgeAdmin.Query.case_insensitive_like/2` instead of raw `ilike/2` so
-  the query works on both Postgres and SQLite (`ecto_sqlite3` does not
-  support `ilike`). Returns `{ilike_filters, updated_flop_params}`.
+  Returns `{ilike_filters, updated_params}` so callers can apply these filters
+  with the adapter-compatible query helper.
   """
   def split_ilike_filters(flop_params, fields) when is_list(fields) do
     {ilike, other} =

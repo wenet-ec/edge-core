@@ -3,23 +3,8 @@ defmodule EdgeAdmin.ChangesetErrors do
   @moduledoc """
   Canonical rendering of `Ecto.Changeset` errors for public-API surfaces.
 
-  Both REST (`EdgeAdminWeb.Controllers.ChangesetJSON`) and MCP
-  (`EdgeAdminMcp.ToolError`) read from this module so the *interpolated
-  message text* is identical across surfaces. Each surface still renders
-  the result the way its protocol requires:
-
-  - REST: returns the structured map (`traverse/1`) inside the JSON
-    envelope so clients can key off field names programmatically.
-  - MCP: flattens to a single string (`to_flat_string/1`) because tool
-    errors are bare strings on the wire and the model consumes them as
-    natural language.
-
-  ## Why share
-
-  Without this module, the two surfaces independently translated the
-  same `{"can't be %{kind}", kind: "blank"}` opt tuples. They produced
-  the same text by accident, not by contract — drift between them was
-  one careless edit away.
+  Structured rendering preserves field paths for clients, while flat rendering
+  produces a single message for protocols that accept only string errors.
   """
 
   @doc """
@@ -27,8 +12,7 @@ defmodule EdgeAdmin.ChangesetErrors do
   Returns a map shaped like `%{field => [msg, ...]}` or, for embedded
   schemas, `%{field => %{nested_field => [msg, ...]}}`.
 
-  Used by REST to render the `details` payload in the validation-error
-  envelope.
+  Returns field-level details for structured validation responses.
   """
   @spec traverse(Ecto.Changeset.t()) :: map()
   def traverse(%Ecto.Changeset{} = changeset) do
@@ -40,8 +24,7 @@ defmodule EdgeAdmin.ChangesetErrors do
   with nested paths joined by `.`. Returns `"Validation failed"` (no
   detail) if no errors are present.
 
-  Used by MCP to render tool errors that fit the protocol's
-  one-string-per-error contract.
+  Returns a single validation message for string-based error responses.
   """
   @spec to_flat_string(Ecto.Changeset.t()) :: String.t()
   def to_flat_string(%Ecto.Changeset{} = changeset) do

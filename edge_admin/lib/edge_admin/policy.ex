@@ -1,7 +1,7 @@
 # edge_admin/lib/edge_admin/policy.ex
 defmodule EdgeAdmin.Policy do
   @moduledoc """
-  Lightweight authorization base module following the Bodyguard/Pundit convention.
+  Lightweight authorization base module.
 
   Policy modules implement boolean `authorize?/1` clauses. The base injects
   `authorize/1`, which wraps the boolean result as `:ok | {:error, :forbidden}`

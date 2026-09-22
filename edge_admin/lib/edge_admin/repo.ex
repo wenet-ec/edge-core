@@ -1,36 +1,9 @@
 # edge_admin/lib/edge_admin/repo.ex
-#
-# Three-module design: a dispatcher facade + two real Ecto.Repo impls.
-#
-#   EdgeAdmin.Repo           Public dispatcher facade. Application code calls
-#                            EdgeAdmin.Repo.* and is naive about which adapter
-#                            is running. NOT an Ecto.Repo — a thin forwarder
-#                            that reads :repo_impl from app env at runtime
-#                            and delegates.
-#
-#   EdgeAdmin.Repo.Postgres  Real Ecto.Repo with the Postgres adapter baked in.
-#                            Started in Postgres mode (DB_ADAPTER=postgres).
-#                            Hosts the Notifier sub-repo for Oban LISTEN.
-#
-#   EdgeAdmin.Repo.SQLite    Real Ecto.Repo with the SQLite3 adapter baked in.
-#                            Started in SQLite mode (DB_ADAPTER=sqlite).
-#
-# Both impl modules exist in every binary (no compile-time DB_ADAPTER read).
-# At runtime, only the configured impl's pool is started — the other module
-# is dormant code. One compiled artifact serves both modes.
-#
-# Test infrastructure (Sandbox), release tasks (Migrator), and Oban
-# take a real Ecto.Repo module — for those, we read :repo_impl (or pass the
-# implementation explicitly) and bypass the dispatcher. LiveDashboard discovers
-# the running implementation through Ecto.Repo.all_running/0 and supports both
-# configured adapters; it does not use this facade as an Ecto.Repo.
-
 defmodule EdgeAdmin.Repo do
   @moduledoc """
   Dispatcher facade. Forwards every callable on `Ecto.Repo` (and the
   functions injected by `Ecto.Adapters.SQL.__before_compile__`) to the
-  impl module configured in `:repo_impl` (set in `runtime.exs` from
-  `DB_ADAPTER`).
+  implementation configured at runtime.
 
   Comprehensive on purpose: covers the entire `Ecto.Repo` surface so
   application code never has to think about which adapter is active,
@@ -42,15 +15,14 @@ defmodule EdgeAdmin.Repo do
     * Lifecycle callbacks (`start_link/1`, `stop/1`, `init/2`,
       `child_spec/1`) — the dispatcher is not a real `Ecto.Repo` and
       cannot be supervised. Supervisors must reference the impl
-      directly (see `EdgeAdmin.Application.repo_children/0`).
+      directly from the supervision configuration.
     * `config/0` — adapter/pool configuration is impl-specific.
     * User callback hooks (`prepare_query/3`, `prepare_transaction/2`,
       `default_options/1`) — these are intended to be *overridden* on
       the impl, not invoked through it.
 
   Anything that genuinely needs the running adapter (Sandbox, Migrator, Oban)
-  should reference the implementation module directly via
-  `Application.fetch_env!(:edge_admin, :repo_impl)`.
+  should reference the configured implementation directly.
   """
 
   defp impl, do: Application.fetch_env!(:edge_admin, :repo_impl)

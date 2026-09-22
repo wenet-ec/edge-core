@@ -4,15 +4,9 @@ defmodule EdgeAdmin.Naming do
   Shared naming rules for resources whose identifiers travel through the
   Edge VPN / WireGuard / SSH stacks.
 
-  Centralised so every layer that validates a name (Layer 1 OpenApiSpex
-  string pattern, Layer 1 MCP Peri regex, Layer 2 Form `validate_format`,
-  Layer 4 Ecto schema `validate_format`, runtime checks in
-  `EdgeAdmin.Vpn`) references the same constants. Validation passes stay
-  independent (defense in depth); only the *patterns and length bounds*
-  are shared.
-
-  When tightening a rule, update here. The change automatically takes
-  effect at every layer that imports it.
+  Centralized so boundary, form, schema, and runtime validation can share the
+  same patterns and length bounds while keeping their validation passes
+  independent.
 
   ## Why two forms per pattern
 

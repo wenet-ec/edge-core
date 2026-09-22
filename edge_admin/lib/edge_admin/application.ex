@@ -3,23 +3,9 @@ defmodule EdgeAdmin.Application do
   @moduledoc """
   OTP application entry point and supervision tree.
 
-  Two child-tree shapes selected by the `:supervision_profile` application
-  setting:
-
-    * `:test` — minimal tree (Vault, Repo, PubSub, Oban,
-      Endpoint). Used by the test env; skips PromEx, AdminClustering,
-      GatewayRegistry, Metadata, Quantum, EdgeAdminProxy, MCP, etc.
-    * `:server` (default) — the bundled Admin tree.
-
-  The bundled Admin contains Admin Clustering and the Gateway Registry in one
-  application. Admin Clustering coordinates membership, metadata, ownership,
-  and reconciliation; the Gateway Registry supervises local virtual gateways
-  and their data-plane access.
-
-  The active repo is selected by `DB_ADAPTER` via `:repo_impl` (Postgres or
-  SQLite). Postgres mode also starts a Notifier sub-repo for Oban LISTEN.
-
-  Event-broker children only start when `EVENT_BROKER_ENABLED=true`.
+  The supervision tree is selected by the configured supervision profile. The
+  active repository implementation is selected at runtime, and optional
+  integrations start only when enabled by configuration.
   """
 
   use Application

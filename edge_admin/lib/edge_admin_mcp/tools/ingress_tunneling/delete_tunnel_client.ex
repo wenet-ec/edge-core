@@ -2,7 +2,7 @@
 defmodule EdgeAdminMcp.Tools.IngressTunneling.DeleteTunnelClient do
   @moduledoc """
   Permanently delete an Admin-managed Tunnel Client and its dependent Tunnel
-  Connections.
+  Connections. Its private key is never returned by the tool.
   """
   use EdgeAdminMcp, :tool
 

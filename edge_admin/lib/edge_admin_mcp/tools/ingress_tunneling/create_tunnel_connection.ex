@@ -1,6 +1,11 @@
 # edge_admin/lib/edge_admin_mcp/tools/ingress_tunneling/create_tunnel_connection.ex
 defmodule EdgeAdminMcp.Tools.IngressTunneling.CreateTunnelConnection do
-  @moduledoc "Create a Tunnel Connection for an existing Tunnel Client."
+  @moduledoc """
+  Create one connection for an existing Tunnel Client and selected Ingress Node.
+
+  The connection receives the next available address pair in the Ingress
+  Node's isolated allocation pool.
+  """
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.IngressTunneling

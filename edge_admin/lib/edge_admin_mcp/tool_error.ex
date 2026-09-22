@@ -16,7 +16,7 @@ defmodule EdgeAdminMcp.ToolError do
   | `%Flop.Meta{}`        | `"Invalid filter or sort parameters"`                             |
   | anything else         | `"An unexpected error occurred"`                                  |
 
-  Tools that need a tailored not-found message (e.g. including the resource id)
+  Tools that need a tailored not-found message, including a resource identifier,
   should use `error_response/2` from `EdgeAdminMcp` rather than this module.
 
   Changeset rendering delegates to `EdgeAdmin.ChangesetErrors.to_flat_string/1`

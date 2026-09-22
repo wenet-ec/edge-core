@@ -1,6 +1,6 @@
 # edge_admin/lib/edge_admin_mcp/tools/ingress_tunneling/get_tunnel_connection.ex
 defmodule EdgeAdminMcp.Tools.IngressTunneling.GetTunnelConnection do
-  @moduledoc "Get a Tunnel Connection by ID."
+  @moduledoc "Returns one Tunnel Connection and its allocated addresses."
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.IngressTunneling

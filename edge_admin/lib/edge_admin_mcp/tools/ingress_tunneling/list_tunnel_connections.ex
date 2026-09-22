@@ -1,6 +1,6 @@
 # edge_admin/lib/edge_admin_mcp/tools/ingress_tunneling/list_tunnel_connections.ex
 defmodule EdgeAdminMcp.Tools.IngressTunneling.ListTunnelConnections do
-  @moduledoc "List Tunnel Client connections."
+  @moduledoc "Lists Tunnel Client connections with pagination, filtering, and sorting."
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.IngressTunneling

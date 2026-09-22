@@ -1,6 +1,6 @@
 # edge_admin/lib/edge_admin_mcp/tools/ingress_tunneling/delete_tunnel_connection.ex
 defmodule EdgeAdminMcp.Tools.IngressTunneling.DeleteTunnelConnection do
-  @moduledoc "Delete a Tunnel Connection."
+  @moduledoc "Permanently delete a Tunnel Connection and release its address allocation."
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.IngressTunneling

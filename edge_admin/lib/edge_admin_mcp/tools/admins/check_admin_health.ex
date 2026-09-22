@@ -1,24 +1,9 @@
 # edge_admin/lib/edge_admin_mcp/tools/admins/check_admin_health.ex
 defmodule EdgeAdminMcp.Tools.Admins.CheckAdminHealth do
   @moduledoc """
-  Run all admin health checks and return pass/fail per component.
-
-  Checks: Database, Membership, Metadata, Edge VPN API, Edge VPN CLI, Proxy
-  Servers, Event Broker. Use this to diagnose why nodes can't enroll,
-  commands aren't reaching nodes, or the admin is in a degraded state.
-
-  Check names match the labels in `EdgeAdminHealth.checks/0` so the
-  response is searchable against the same identifiers operators see in
-  `/health` payloads and in logs.
-
-  ## Why the shape differs from `/healthz`
-
-  Both surfaces invoke the same check functions in `EdgeAdminHealth` and run
-  them through the same `PlugCheckup.Check.Runner` — checks and runner are
-  shared. Only the output shape diverges: `/healthz` returns PlugCheckup's
-  JSON (with HTTP status semantics for K8s probes / load balancers); this
-  tool flattens to `%{healthy, checks: [%{name, status, reason?}]}` because
-  that shape is friendlier for an AI agent to summarise.
+  Runs the Admin health checks and returns a model-friendly status for each
+  component. The result includes an overall `healthy` flag and per-check status
+  with a reason when a check fails.
   """
   use EdgeAdminMcp, :tool
 

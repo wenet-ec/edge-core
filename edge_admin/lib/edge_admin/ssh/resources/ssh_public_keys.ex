@@ -1,4 +1,4 @@
-# edge_admin/lib/edge_admin/ssh/resources/public_keys.ex
+# edge_admin/lib/edge_admin/ssh/resources/ssh_public_keys.ex
 defmodule EdgeAdmin.Ssh.Resources.SshPublicKeys do
   @moduledoc false
 

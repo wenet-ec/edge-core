@@ -3,8 +3,8 @@ defmodule EdgeAdmin.Ssh do
   @moduledoc """
   Canonical API for SSH usernames, public keys, and credential verification.
 
-  Persistence is delegated to the `SshUsernames` and `SshPublicKeys` resources;
-  authentication is delegated to the explicit `Credentials` workflow.
+  The context coordinates persistence and credential verification for SSH
+  accounts and keys.
   """
 
   alias EdgeAdmin.Nodes.Schemas.Node

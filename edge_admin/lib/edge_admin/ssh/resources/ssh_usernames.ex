@@ -1,4 +1,4 @@
-# edge_admin/lib/edge_admin/ssh/resources/usernames.ex
+# edge_admin/lib/edge_admin/ssh/resources/ssh_usernames.ex
 defmodule EdgeAdmin.Ssh.Resources.SshUsernames do
   @moduledoc false
 

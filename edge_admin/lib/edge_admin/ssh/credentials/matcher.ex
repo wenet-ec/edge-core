@@ -6,7 +6,7 @@ defmodule EdgeAdmin.Ssh.Credentials.Matcher do
   Given a stored `SshUsername` (with preloaded `ssh_public_keys`) plus an
   attempted password OR public key, returns whether the attempt matches and
   which auth method was used. No DB calls, no telemetry, no events — those
-  are orchestrated by `EdgeAdmin.Ssh.verify_ssh_credentials/2`.
+  are orchestrated by the credential verification workflow.
 
   ## Auth method semantics
 

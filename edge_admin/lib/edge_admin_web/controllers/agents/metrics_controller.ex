@@ -20,6 +20,7 @@ defmodule EdgeAdminWeb.Controllers.Agents.MetricsController do
     request_body: {"Metrics payload", "application/json", MetricsSchemas.MetricsCachePushRequest, required: true},
     responses: %{
       200 => {"Metrics cache updated", "application/json", MetricsSchemas.MetricsCachePushResponse},
+      400 => {"Invalid request parameters", "application/json", CommonSchemas.BadRequestResponse},
       422 => {"Validation error", "application/json", CommonSchemas.ChangesetErrorResponse}
     }
   )

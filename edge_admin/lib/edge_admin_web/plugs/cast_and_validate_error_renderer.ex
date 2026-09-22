@@ -3,25 +3,8 @@ defmodule EdgeAdminWeb.Plugs.CastAndValidateErrorRenderer do
   @moduledoc """
   Custom render_error plug for `OpenApiSpex.Plug.CastAndValidate`.
 
-  Formats schema validation errors (invalid path/query params or request body)
-  into the standard API envelope so clients always see the same shape:
-
-      {
-        "error": {
-          "code": "bad_request",
-          "message": "Invalid request parameters",
-          "details": {
-            "name": ["Invalid format. Expected ~r/…/"],
-            "status__in": ["must be a comma-separated list of unique allowed values"]
-          }
-        },
-        "meta": { "request_id": "…", "timestamp": "…" }
-      }
-
-  Wire it up in every controller instead of `json_render_error_v2: true`:
-
-      plug OpenApiSpex.Plug.CastAndValidate,
-        render_error: EdgeAdminWeb.Plugs.CastAndValidateErrorRenderer
+  Formats schema validation errors for invalid path, query, and body
+  parameters into the standard API error envelope.
   """
 
   @behaviour Plug

@@ -96,6 +96,7 @@ defmodule EdgeAdminWeb.Controllers.Agents.CommandExecutionController do
     responses: %{
       200 =>
         {"Command execution updated", "application/json", CommandExecutionSchemas.AgentCommandExecutionSingleResponse},
+      400 => {"Invalid request parameters", "application/json", CommonSchemas.BadRequestResponse},
       403 => {"Forbidden", "application/json", CommonSchemas.ForbiddenResponse},
       404 => {"Not found", "application/json", CommonSchemas.NotFoundResponse},
       409 => {"Execution not in a state that accepts a result", "application/json", CommonSchemas.ConflictResponse},

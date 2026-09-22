@@ -27,6 +27,7 @@ defmodule EdgeAdminWeb.Controllers.Agents.SshUsernameController do
       {"SSH credentials to verify", "application/json", SshUsernameSchemas.SshCredentialsVerifyRequest, required: true},
     responses: %{
       200 => {"Verification result", "application/json", SshUsernameSchemas.SshCredentialsVerifyResponse},
+      400 => {"Invalid request parameters", "application/json", CommonSchemas.BadRequestResponse},
       422 => {"Validation error", "application/json", CommonSchemas.ChangesetErrorResponse}
     }
   )

@@ -19,6 +19,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeDiagnosticController do
     parameters: [EdgeAdminWeb.Schemas.PathParams.uuid(:id, "Node ID")],
     responses: %{
       200 => {"Node diagnostics", "application/json", NodeDiagnosticSchemas.NodeDiagnosticResponse},
+      400 => {"Invalid path parameters", "application/json", CommonSchemas.BadRequestResponse},
       404 => {"Node not found", "application/json", CommonSchemas.NotFoundResponse},
       503 => {"No diagnostic report available", "application/json", CommonSchemas.ServiceUnavailableResponse}
     }

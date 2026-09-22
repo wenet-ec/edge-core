@@ -70,6 +70,7 @@ defmodule EdgeAdminWeb.Controllers.Events.WebhookController do
     request_body: {"Webhook creation data", "application/json", WebhookSchemas.WebhookCreateRequest, required: true},
     responses: %{
       201 => {"Webhook created", "application/json", WebhookSchemas.WebhookSingleResponse},
+      400 => {"Invalid request parameters", "application/json", CommonSchemas.BadRequestResponse},
       422 => {"Validation error", "application/json", CommonSchemas.ChangesetErrorResponse}
     }
   )
@@ -90,6 +91,7 @@ defmodule EdgeAdminWeb.Controllers.Events.WebhookController do
     parameters: [PathParams.uuid(:id, "Webhook ID")],
     responses: %{
       204 => {"Webhook deleted", "", nil},
+      400 => {"Invalid path parameters", "application/json", CommonSchemas.BadRequestResponse},
       404 => {"Webhook not found", "application/json", CommonSchemas.NotFoundResponse}
     }
   )

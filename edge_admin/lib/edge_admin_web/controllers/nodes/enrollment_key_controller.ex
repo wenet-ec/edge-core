@@ -111,6 +111,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
     request_body: {"Enrollment key parameters", "application/json", EnrollmentKeySchemas.EnrollmentKeyCreateRequest},
     responses: %{
       201 => {"Enrollment key created", "application/json", EnrollmentKeySchemas.EnrollmentKeySingleResponse},
+      400 => {"Invalid request parameters", "application/json", CommonSchemas.BadRequestResponse},
       404 => {"Cluster not found", "application/json", CommonSchemas.NotFoundResponse},
       422 => {"Validation error", "application/json", CommonSchemas.ChangesetErrorResponse},
       503 => {"Service Unavailable", "application/json", CommonSchemas.ServiceUnavailableResponse}
@@ -133,6 +134,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
     request_body: {"Enrollment key parameters", "application/json", EnrollmentKeySchemas.EnrollmentKeyCreateRequest},
     responses: %{
       201 => {"Enrollment key created", "application/json", EnrollmentKeySchemas.EnrollmentKeySingleResponse},
+      400 => {"Invalid request parameters", "application/json", CommonSchemas.BadRequestResponse},
       403 => {"Default cluster not configured", "application/json", CommonSchemas.ForbiddenResponse},
       404 => {"Default cluster not found", "application/json", CommonSchemas.NotFoundResponse},
       422 => {"Validation error", "application/json", CommonSchemas.ChangesetErrorResponse},
@@ -159,6 +161,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
     """,
     responses: %{
       201 => {"Enrollment key created", "application/json", EnrollmentKeySchemas.EnrollmentKeySingleResponse},
+      400 => {"Invalid request parameters", "application/json", CommonSchemas.BadRequestResponse},
       403 => {"Public enrollment disabled", "application/json", CommonSchemas.ForbiddenResponse},
       404 => {"Default cluster not found", "application/json", CommonSchemas.NotFoundResponse},
       503 => {"Service Unavailable", "application/json", CommonSchemas.ServiceUnavailableResponse}
@@ -182,6 +185,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
     request_body: {"Update parameters", "application/json", EnrollmentKeySchemas.EnrollmentKeyUpdateRequest},
     responses: %{
       200 => {"Updated enrollment key", "application/json", EnrollmentKeySchemas.EnrollmentKeySingleResponse},
+      400 => {"Invalid request parameters", "application/json", CommonSchemas.BadRequestResponse},
       404 => {"Not found", "application/json", CommonSchemas.NotFoundResponse},
       422 => {"Validation error", "application/json", CommonSchemas.ChangesetErrorResponse},
       503 => {"Service Unavailable", "application/json", CommonSchemas.ServiceUnavailableResponse}

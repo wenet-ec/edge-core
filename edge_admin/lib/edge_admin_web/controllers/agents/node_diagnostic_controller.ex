@@ -22,6 +22,7 @@ defmodule EdgeAdminWeb.Controllers.Agents.NodeDiagnosticController do
       {"Diagnostic snapshot", "application/json", NodeDiagnosticSchemas.NodeDiagnosticPushRequest, required: true},
     responses: %{
       200 => {"Diagnostics pushed", "application/json", NodeDiagnosticSchemas.NodeDiagnosticPushResponse},
+      400 => {"Invalid request parameters", "application/json", CommonSchemas.BadRequestResponse},
       422 => {"Validation error", "application/json", CommonSchemas.ChangesetErrorResponse}
     }
   )

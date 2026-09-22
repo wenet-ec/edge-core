@@ -136,6 +136,7 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionController do
       200 =>
         {"Pending execution cancelled", "application/json", CommandExecutionSchemas.CommandExecutionSingleResponse},
       202 => {"Cancellation accepted; final execution state is asynchronous", "", nil},
+      400 => {"Invalid path parameters", "application/json", CommonSchemas.BadRequestResponse},
       404 => {"Command execution not found", "application/json", CommonSchemas.NotFoundResponse},
       409 =>
         {"Execution not in a cancellable state (already terminal)", "application/json", CommonSchemas.ConflictResponse},

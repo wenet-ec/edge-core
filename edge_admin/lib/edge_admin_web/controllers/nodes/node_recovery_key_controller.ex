@@ -21,6 +21,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeRecoveryKeyController do
     parameters: [PathParams.uuid(:id, "Node ID")],
     responses: %{
       201 => {"Recovery key created", "application/json", NodeSchemas.NodeRecoveryKeyResponse},
+      400 => {"Invalid path parameters", "application/json", CommonSchemas.BadRequestResponse},
       404 => {"Node not found", "application/json", CommonSchemas.NotFoundResponse},
       503 => {"Service Unavailable", "application/json", CommonSchemas.ServiceUnavailableResponse}
     }
@@ -41,6 +42,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeRecoveryKeyController do
     parameters: [PathParams.uuid(:id, "Node ID")],
     responses: %{
       204 => {"Recovery key deleted", "", nil},
+      400 => {"Invalid path parameters", "application/json", CommonSchemas.BadRequestResponse},
       404 => {"Node not found", "application/json", CommonSchemas.NotFoundResponse},
       503 => {"Service Unavailable", "application/json", CommonSchemas.ServiceUnavailableResponse}
     }

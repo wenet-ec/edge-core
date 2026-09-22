@@ -71,6 +71,7 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandController do
       {"Command creation parameters", "application/json", CommandSchemas.CommandCreateRequest, required: true},
     responses: %{
       201 => {"Command created successfully", "application/json", CommandSchemas.CommandSingleResponse},
+      400 => {"Invalid request parameters", "application/json", CommonSchemas.BadRequestResponse},
       422 => {"Validation error", "application/json", CommonSchemas.ChangesetErrorResponse}
     }
   )

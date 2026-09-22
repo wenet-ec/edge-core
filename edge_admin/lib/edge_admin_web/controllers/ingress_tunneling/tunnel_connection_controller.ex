@@ -16,6 +16,7 @@ defmodule EdgeAdminWeb.Controllers.IngressTunneling.TunnelConnectionController d
 
   operation(:index,
     summary: "List Tunnel Connections",
+    description: "Returns a paginated list of Tunnel Client connections to Ingress Nodes.",
     parameters:
       QueryParams.pagination() ++
         QueryParams.sort() ++
@@ -26,7 +27,8 @@ defmodule EdgeAdminWeb.Controllers.IngressTunneling.TunnelConnectionController d
     responses: %{
       200 =>
         {"Paginated Tunnel Connection list", "application/json",
-         TunnelConnectionSchemas.TunnelConnectionPaginatedResponse}
+         TunnelConnectionSchemas.TunnelConnectionPaginatedResponse},
+      400 => {"Invalid query parameters", "application/json", CommonSchemas.BadRequestResponse}
     }
   )
 
@@ -38,12 +40,15 @@ defmodule EdgeAdminWeb.Controllers.IngressTunneling.TunnelConnectionController d
 
   operation(:create,
     summary: "Create Tunnel Connection",
+    description:
+      "Creates one connection for an existing Tunnel Client and allocates addresses in the selected Ingress Node's isolated address pool.",
     parameters: [PathParams.uuid(:tunnel_client_id, "Tunnel Client ID")],
     request_body:
       {"Tunnel Connection creation data", "application/json", TunnelConnectionSchemas.TunnelConnectionCreateRequest,
        required: true},
     responses: %{
       201 => {"Tunnel Connection created", "application/json", TunnelConnectionSchemas.TunnelConnectionSingleResponse},
+      400 => {"Invalid request parameters", "application/json", CommonSchemas.BadRequestResponse},
       404 => {"Tunnel Client or Node not found", "application/json", CommonSchemas.NotFoundResponse},
       409 => {"Connection conflict", "application/json", CommonSchemas.ConflictResponse},
       422 => {"Validation error", "application/json", CommonSchemas.ChangesetErrorResponse}
@@ -61,9 +66,11 @@ defmodule EdgeAdminWeb.Controllers.IngressTunneling.TunnelConnectionController d
 
   operation(:show,
     summary: "Get Tunnel Connection",
+    description: "Returns one Tunnel Connection and its allocated addresses.",
     parameters: [PathParams.uuid(:id, "Tunnel Connection ID")],
     responses: %{
       200 => {"Tunnel Connection", "application/json", TunnelConnectionSchemas.TunnelConnectionSingleResponse},
+      400 => {"Invalid path parameters", "application/json", CommonSchemas.BadRequestResponse},
       404 => {"Tunnel Connection not found", "application/json", CommonSchemas.NotFoundResponse}
     }
   )
@@ -76,9 +83,11 @@ defmodule EdgeAdminWeb.Controllers.IngressTunneling.TunnelConnectionController d
 
   operation(:delete,
     summary: "Delete Tunnel Connection",
+    description: "Permanently deletes a Tunnel Connection and releases its database allocation.",
     parameters: [PathParams.uuid(:id, "Tunnel Connection ID")],
     responses: %{
       204 => {"Tunnel Connection deleted", "", nil},
+      400 => {"Invalid path parameters", "application/json", CommonSchemas.BadRequestResponse},
       404 => {"Tunnel Connection not found", "application/json", CommonSchemas.NotFoundResponse}
     }
   )

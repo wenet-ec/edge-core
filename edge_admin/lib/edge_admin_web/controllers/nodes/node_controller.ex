@@ -62,6 +62,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeController do
     request_body: {"Cluster change parameters", "application/json", NodeSchemas.ChangeClusterRequest, required: true},
     responses: %{
       200 => {"Node cluster changed successfully", "application/json", NodeSchemas.NodeSingleResponse},
+      400 => {"Invalid request parameters", "application/json", CommonSchemas.BadRequestResponse},
       404 => {"Node not found", "application/json", CommonSchemas.NotFoundResponse},
       409 =>
         {"Node already in the target cluster, or target cluster has reached its node limit", "application/json",

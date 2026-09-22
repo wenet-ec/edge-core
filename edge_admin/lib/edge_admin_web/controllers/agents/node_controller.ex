@@ -21,6 +21,7 @@ defmodule EdgeAdminWeb.Controllers.Agents.NodeController do
     request_body: {"Node registration parameters", "application/json", NodeSchemas.NodeRegisterRequest, required: true},
     responses: %{
       201 => {"Node registered", "application/json", NodeSchemas.NodeRegistrationResponse},
+      400 => {"Invalid request parameters", "application/json", CommonSchemas.BadRequestResponse},
       401 => {"Registration credentials required", "application/json", CommonSchemas.UnauthorizedResponse},
       409 =>
         {"Node is not present in the expected Edge VPN network", "application/json", CommonSchemas.ConflictResponse},
@@ -44,6 +45,7 @@ defmodule EdgeAdminWeb.Controllers.Agents.NodeController do
       {"Node re-registration parameters", "application/json", NodeSchemas.NodeReregisterRequest, required: true},
     responses: %{
       200 => {"Node re-registered", "application/json", NodeSchemas.NodeRegistrationResponse},
+      400 => {"Invalid request parameters", "application/json", CommonSchemas.BadRequestResponse},
       401 => {"Unauthorized", "application/json", CommonSchemas.UnauthorizedResponse},
       409 =>
         {"Node is not present in the expected Edge VPN network", "application/json", CommonSchemas.ConflictResponse},
@@ -65,6 +67,7 @@ defmodule EdgeAdminWeb.Controllers.Agents.NodeController do
     request_body: {"Health check parameters", "application/json", NodeSchemas.NodeHealthCheckRequest, required: true},
     responses: %{
       200 => {"Health check recorded", "application/json", NodeSchemas.NodeHealthCheckResponse},
+      400 => {"Invalid request parameters", "application/json", CommonSchemas.BadRequestResponse},
       422 => {"Validation error", "application/json", CommonSchemas.ChangesetErrorResponse}
     }
   )

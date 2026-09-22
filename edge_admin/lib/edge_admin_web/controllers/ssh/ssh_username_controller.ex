@@ -71,6 +71,7 @@ defmodule EdgeAdminWeb.Controllers.Ssh.SshUsernameController do
       {"SSH username creation data", "application/json", SshUsernameSchemas.SshUsernameCreateRequest, required: true},
     responses: %{
       201 => {"SSH username created", "application/json", SshUsernameSchemas.SshUsernameSingleResponse},
+      400 => {"Invalid request parameters", "application/json", CommonSchemas.BadRequestResponse},
       404 => {"Node not found", "application/json", CommonSchemas.NotFoundResponse},
       409 => {"Username already exists for this node", "application/json", CommonSchemas.ConflictResponse},
       422 => {"Validation error", "application/json", CommonSchemas.ChangesetErrorResponse}

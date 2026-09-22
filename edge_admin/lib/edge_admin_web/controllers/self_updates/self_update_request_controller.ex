@@ -69,6 +69,7 @@ defmodule EdgeAdminWeb.Controllers.SelfUpdates.SelfUpdateRequestController do
       201 =>
         {"Self-update request created successfully", "application/json",
          SelfUpdateRequestSchemas.SelfUpdateRequestSingleResponse},
+      400 => {"Invalid request parameters", "application/json", CommonSchemas.BadRequestResponse},
       422 => {"Validation error", "application/json", CommonSchemas.ChangesetErrorResponse}
     }
   )

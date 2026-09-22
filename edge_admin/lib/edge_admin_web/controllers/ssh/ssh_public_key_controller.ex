@@ -77,6 +77,7 @@ defmodule EdgeAdminWeb.Controllers.Ssh.SshPublicKeyController do
        required: true},
     responses: %{
       201 => {"SSH public key created", "application/json", SshPublicKeySchemas.SshPublicKeySingleResponse},
+      400 => {"Invalid request parameters", "application/json", CommonSchemas.BadRequestResponse},
       404 => {"SSH username not found", "application/json", CommonSchemas.NotFoundResponse},
       409 => {"Key name already exists for this username", "application/json", CommonSchemas.ConflictResponse},
       422 =>

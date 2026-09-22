@@ -40,6 +40,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.AliasController do
         QueryParams.datetime_range_filter(:updated_at),
     responses: %{
       200 => {"Paginated list of aliases", "application/json", AliasSchemas.AliasPaginatedResponse},
+      400 => {"Invalid query parameters", "application/json", CommonSchemas.BadRequestResponse},
       400 => {"Invalid query parameters", "application/json", CommonSchemas.BadRequestResponse}
     }
   )
@@ -74,6 +75,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.AliasController do
     request_body: {"Alias creation parameters", "application/json", AliasSchemas.CreateAliasRequest, required: true},
     responses: %{
       201 => {"Alias created successfully", "application/json", AliasSchemas.AliasSingleResponse},
+      400 => {"Invalid request parameters", "application/json", CommonSchemas.BadRequestResponse},
       404 => {"Node not found", "application/json", CommonSchemas.NotFoundResponse},
       409 =>
         {"Alias name already exists, node state conflicts with the requested alias, or node is not yet enrolled/has no IP in the VPN network",

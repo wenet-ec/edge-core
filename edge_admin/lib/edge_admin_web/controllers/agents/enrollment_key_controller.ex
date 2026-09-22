@@ -18,6 +18,7 @@ defmodule EdgeAdminWeb.Controllers.Agents.EnrollmentKeyController do
       {"Enrollment key to verify", "application/json", EnrollmentKeySchemas.EnrollmentKeyVerifyRequest, required: true},
     responses: %{
       200 => {"Verification result", "application/json", EnrollmentKeySchemas.EnrollmentKeyVerifyResponse},
+      400 => {"Invalid request parameters", "application/json", CommonSchemas.BadRequestResponse},
       422 => {"Validation error", "application/json", CommonSchemas.ChangesetErrorResponse}
     }
   )

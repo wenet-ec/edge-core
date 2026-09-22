@@ -3,15 +3,7 @@ defmodule EdgeAdminWeb.Plugs.ApiDocsEnabled do
   @moduledoc """
   Plug to conditionally allow access to API documentation endpoints.
 
-  Gates the following routes — returns 404 when disabled:
-  - `/` — Edge Admin guide
-  - `/swaggerui` — Swagger UI
-  - `/redoc` — ReDoc
-  - `/asyncdoc` — AsyncAPI viewer
-  - `/api/openapi` — OpenAPI JSON spec
-  - `/api/asyncapi` — AsyncAPI JSON spec
-
-  Returns 404 when `API_DOCS_ENABLED=false`.
+  Returns 404 for the documentation surface when `API_DOCS_ENABLED=false`.
   """
 
   import Plug.Conn

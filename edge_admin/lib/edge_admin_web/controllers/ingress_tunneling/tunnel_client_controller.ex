@@ -45,6 +45,7 @@ defmodule EdgeAdminWeb.Controllers.IngressTunneling.TunnelClientController do
        required: false},
     responses: %{
       201 => {"Tunnel Client created", "application/json", TunnelClientSchemas.TunnelClientSingleResponse},
+      400 => {"Invalid request parameters", "application/json", CommonSchemas.BadRequestResponse},
       404 => {"Requested Ingress Node not found", "application/json", CommonSchemas.NotFoundResponse},
       409 => {"Connection conflict", "application/json", CommonSchemas.ConflictResponse},
       422 => {"Validation error", "application/json", CommonSchemas.ChangesetErrorResponse}

@@ -83,6 +83,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterController do
       {"Cluster creation parameters", "application/json", ClusterSchemas.ClusterCreateRequest, required: true},
     responses: %{
       201 => {"Cluster created successfully", "application/json", ClusterSchemas.ClusterSingleResponse},
+      400 => {"Invalid request parameters", "application/json", CommonSchemas.BadRequestResponse},
       409 =>
         {"Cluster name already exists, or IP range conflicts with an existing cluster", "application/json",
          CommonSchemas.ConflictResponse},
@@ -109,6 +110,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterController do
       {"Cluster update parameters", "application/json", ClusterSchemas.ClusterUpdateRequest, required: true},
     responses: %{
       200 => {"Cluster updated successfully", "application/json", ClusterSchemas.ClusterSingleResponse},
+      400 => {"Invalid request parameters", "application/json", CommonSchemas.BadRequestResponse},
       404 => {"Cluster not found", "application/json", CommonSchemas.NotFoundResponse},
       409 =>
         {"Node limit cannot be less than the cluster's current node count", "application/json",

@@ -2,7 +2,9 @@
 defmodule EdgeAdmin.IngressTunneling.DesiredState do
   @moduledoc """
   Builds the complete Ingress Tunneling desired state for an Agent node from
-  the current Tunnel Client and Tunnel Connection records.
+  the current Tunnel Client and Tunnel Connection records. The result includes
+  the node's ingress identity, cluster VPN settings, and one peer entry for
+  each connection owned by the node.
   """
 
   import Ecto.Query, warn: false
@@ -12,6 +14,7 @@ defmodule EdgeAdmin.IngressTunneling.DesiredState do
   alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.Repo
 
+  @doc "Builds the desired state for an existing node."
   @spec build(String.t()) :: {:ok, map()} | {:error, :not_found}
   def build(node_id) do
     case Repo.get(Node, node_id) do

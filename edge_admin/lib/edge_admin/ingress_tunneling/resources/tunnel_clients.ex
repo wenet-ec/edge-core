@@ -3,8 +3,7 @@ defmodule EdgeAdmin.IngressTunneling.Resources.TunnelClients do
   @moduledoc """
   Owns persistence and generated identity creation for Tunnel Clients.
 
-  A Tunnel Client is immutable after creation. Agent Ingress synchronization
-  is deliberately separate from this persistence workflow.
+  Tunnel Clients are immutable after creation.
   """
 
   alias Ecto.Query.CastError

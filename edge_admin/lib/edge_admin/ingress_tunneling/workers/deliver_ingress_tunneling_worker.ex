@@ -1,6 +1,11 @@
 # edge_admin/lib/edge_admin/ingress_tunneling/workers/deliver_ingress_tunneling_worker.ex
 defmodule EdgeAdmin.IngressTunneling.Workers.DeliverIngressTunnelingWorker do
-  @moduledoc false
+  @moduledoc """
+  Delivers the current Ingress Tunneling desired state to one Agent node.
+
+  Incomplete jobs are unique per node for five minutes and retry up to three
+  attempts.
+  """
   use Oban.Worker,
     queue: :ingress_tunneling,
     max_attempts: 3,

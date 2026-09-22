@@ -8,22 +8,9 @@ defmodule EdgeAdmin.Events.Broker do
   `EdgeAdmin.Events.publish/1`, which fans out to this channel (and any
   other delivery channels) via Oban workers.
 
-  ## Configuration
-
-  Set `EVENT_BROKER_ENABLED=true` to enable. When disabled (default),
-  the supervisor is not started, no connection is made, and events
-  bypass this channel entirely.
-
-  When enabled, `EVENT_BROKER_ADAPTER` and the adapter's endpoint env vars
-  are required:
-
-  - `nats` — NATS pub/sub; add `EVENT_BROKER_NATS_JETSTREAM=true` for durable log
-  - `kafka` — Kafka-compatible protocol (Redpanda recommended)
-  - `rabbitmq` — RabbitMQ topic exchange; consumer queue durability is the consumer's choice
-  - `redis` — Redis Pub/Sub; fire-and-forget, no durability or replay
-  - `mqtt` — MQTT 3.1.1 / 5 brokers (EMQX, Mosquitto, HiveMQ, AWS IoT, etc.); pub/sub, configurable QoS
-  - `aws_sns` — AWS Simple Notification Service; managed pub/sub, fan-out via subscriptions
-  - `google_pubsub` — Google Cloud Pub/Sub; managed pub/sub
+  The channel is enabled by deployment configuration. When disabled, no broker
+  connection is started and events bypass this channel. The selected adapter
+  owns connection, routing, and durability semantics.
   """
 
   alias EdgeAdmin.Events.Broker.AdapterRegistry

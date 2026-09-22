@@ -3,35 +3,14 @@ defmodule EdgeAdmin.Events.Broker.Adapters.Rabbitmq do
   @moduledoc """
   RabbitMQ adapter for the event broker.
 
-  Uses a single topic exchange `edge.events`. Routing key = `envelope["type"]`
-  (e.g. `edge.node.registered`). Consumers subscribe to the exchange with any
-  binding key — `edge.node.*`, `edge.command_execution.#`, `edge.#`, etc.
+  Uses a durable topic exchange. The CloudEvents type is the routing key, so
+  consumers choose their own bindings.
 
   The exchange is declared durable on startup. Consumer queue durability is the
   consumer's choice — Core publishes and forgets.
 
-  ## Auth
-
-  Embed credentials directly in the URL: `amqp://user:pass@host:port/vhost`.
-  The amqp library parses them natively — no separate env vars needed.
-
-  ## TLS
-
-  Set `EVENT_BROKER_RABBITMQ_SSL=true` to enable TLS (`amqps://`). The amqp
-  library uses the OTP `:ssl` application; no client certs required for standard
-  managed brokers that present a trusted CA-signed certificate.
-
-  ## Configuration (set in runtime.exs from env vars)
-
-      config :edge_admin, :event_broker_rabbitmq,
-        url: "amqp://user:pass@host:5672",
-        ssl: false    # set true for TLS (amqps://)
-
-  Controlled by env vars:
-  - `EVENT_BROKER_RABBITMQ_URL` — AMQP URL, e.g. `amqp://host:5672` or `amqp://user:pass@host:5672/vhost`.
-                                 Single endpoint — RabbitMQ clustering is handled broker-side.
-  - `EVENT_BROKER_RABBITMQ_SSL=true` — enable TLS (default: false)
-  - `EVENT_BROKER_RABBITMQ_NAME` — connection name shown in RabbitMQ management
+  Authentication is carried by the AMQP URL. TLS is controlled by deployment
+  configuration. Consumer queue durability is independent of the publisher.
   """
 
   @behaviour EdgeAdmin.Events.Broker.Adapter

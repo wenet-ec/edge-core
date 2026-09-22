@@ -6,17 +6,8 @@ defmodule EdgeAdmin.Events.Broker.Adapter do
   An adapter receives a fully-built envelope map and is responsible
   for serialising and publishing it to the underlying broker.
 
-  ## Adding a new adapter
-
-    1. Implement the `Adapter` behaviour in `broker/adapters/your_adapter.ex`.
-    2. Add an entry to `EdgeAdmin.Events.Broker.AdapterRegistry`.
-    3. Add a `build_children/1` clause in `broker/supervisor.ex` for the
-       adapter's supervised processes (this stays per-adapter because the
-       supervision shape is genuinely heterogeneous).
-    4. Add the per-adapter env-var parsing block in `config/runtime.exs`.
-
-  Broker delivery routing and the rejection error in `runtime.exs` pick up
-  the new adapter automatically.
+  Adapters are selected by the broker registry and supervised according to
+  their connection requirements.
   """
 
   @doc """

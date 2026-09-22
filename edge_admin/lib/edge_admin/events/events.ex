@@ -11,11 +11,6 @@ defmodule EdgeAdmin.Events do
   Publishing is fire-and-forget from the call site's perspective: errors are
   logged inside each channel but never returned to the caller.
 
-  ## Usage
-
-      # In business logic, immediately after the DB write succeeds:
-      Events.publish(%Events.Catalog.NodeRegistered{node: node})
-
   ## Event envelope
 
   Every published event is wrapped in a CloudEvents 1.0 envelope:
@@ -67,8 +62,8 @@ defmodule EdgeAdmin.Events do
   own their own queuing, retry, and failure semantics. Always returns `:ok`.
 
   Per-channel health checks are not exposed through `Events` — operators query
-  each channel directly (e.g. `EdgeAdmin.Events.Broker.healthy?/0`) so dashboards
-  and health endpoints can report each channel under its own name.
+  each channel directly so dashboards and health endpoints can report each
+  channel under its own name.
   """
   @spec publish(event()) :: :ok
   def publish(event) do
@@ -91,10 +86,6 @@ defmodule EdgeAdmin.Events do
   end
 
   @doc false
-  # Public for unit testing. Builds the CloudEvents 1.0 envelope from an event
-  # struct — captures `id`, `time`, and `corename` at call time, delegates
-  # `type` and `data` to the catalog. Not meant for direct use in business
-  # logic; call `publish/1` instead.
   @spec build_envelope(event()) :: map()
   def build_envelope(event) do
     %{

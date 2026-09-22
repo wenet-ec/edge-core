@@ -3,61 +3,11 @@ defmodule EdgeAdmin.Events.Broker.Adapters.Redis do
   @moduledoc """
   Redis adapter for the event broker.
 
-  Publishes events via Redis Pub/Sub using `PUBLISH`. Channel = event type
-  (e.g. `edge.node.registered`). Fire-and-forget — no durability or replay.
-  Subscribers use `SUBSCRIBE` or `PSUBSCRIBE edge.*` for wildcard matching.
+  Publishes events through Redis Pub/Sub using the event type as the channel.
+  Delivery is transient: Redis Pub/Sub provides no replay or retention.
 
-  Compatible with Redis 2.0+ (Aug 2010, when Pub/Sub was introduced) and any
-  wire-compatible server (Valkey, KeyDB, Dragonfly). The adapter uses only
-  `PING` and `PUBLISH` over RESP2 — no version-gated commands. ACL usernames
-  and native TLS require Redis 6.0+ (Apr 2020).
-
-  ## Auth
-
-  All modes use `EVENT_BROKER_REDIS_USERNAME` and
-  `EVENT_BROKER_REDIS_PASSWORD` for primary connections. Sentinel additionally
-  accepts `EVENT_BROKER_REDIS_SENTINEL_PASSWORD` for Sentinel authentication.
-
-  Cluster mode uses Redix's topology manager only for `PING` and `PUBLISH`.
-  It deliberately does not expose Redix's unsupported Cluster subscription
-  interface: consumers continue using ordinary Redis `SUBSCRIBE` or
-  `PSUBSCRIBE` against the cluster.
-
-  ## TLS
-
-  Set `EVENT_BROKER_REDIS_SSL=true` to enable TLS for every connection.
-
-  ## Configuration (set in runtime.exs from env vars)
-
-      config :edge_admin, :event_broker_redis,
-        mode: :standalone,
-        endpoint: {"redis", 6379},
-        primary_auth: [ssl: false]
-
-      # Sentinel mode:
-      config :edge_admin, :event_broker_redis,
-        mode: :sentinel,
-        sentinel: [
-          sentinels: [[host: "sentinel-a", port: 26379], [host: "sentinel-b", port: 26379]],
-          group: "mymaster"
-        ],
-        primary_auth: [ssl: false]
-
-      # Cluster mode:
-      config :edge_admin, :event_broker_redis,
-        mode: :cluster,
-        nodes: [[host: "redis-a", port: 6379], [host: "redis-b", port: 6379]],
-        primary_auth: [ssl: false]
-
-  Controlled by env vars:
-  - `EVENT_BROKER_REDIS_MODE` — `standalone` (default), `sentinel`, or `cluster`.
-  - `EVENT_BROKER_REDIS_URLS` — comma-separated `host:port` endpoints. Standalone
-    requires exactly one endpoint; Sentinel treats them as Sentinel endpoints;
-    Cluster treats them as topology-discovery seeds.
-  - `EVENT_BROKER_REDIS_SENTINEL_GROUP` — Sentinel primary group name.
-  - `EVENT_BROKER_REDIS_USERNAME` / `EVENT_BROKER_REDIS_PASSWORD` — primary credentials in every mode.
-  - `EVENT_BROKER_REDIS_SENTINEL_PASSWORD` — optional Sentinel authentication password.
-  - `EVENT_BROKER_REDIS_SSL=true` — enable TLS (default: false)
+  Standalone, Sentinel, and Cluster connection modes are selected by
+  deployment configuration. Authentication and TLS apply to every connection.
   """
 
   @behaviour EdgeAdmin.Events.Broker.Adapter

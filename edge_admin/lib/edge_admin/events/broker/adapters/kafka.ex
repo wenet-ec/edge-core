@@ -1,35 +1,10 @@
 # edge_admin/lib/edge_admin/events/broker/adapters/kafka.ex
 defmodule EdgeAdmin.Events.Broker.Adapters.Kafka do
   @moduledoc """
-  Kafka-compatible adapter for the event broker (Redpanda recommended).
+  Kafka-compatible adapter for the event broker.
 
-  Uses `:brod` (Erlang Kafka client) to produce messages.
-  Manages a named brod client `:event_broker_kafka` started in the supervision tree.
-
-  ## Topics
-
-      edge-nodes-events           partition key: node_id (or enrollment_key_id for enrollment events)
-      edge-commands-events        partition key: command_execution_id
-      edge-self-updates-events    partition key: self_update_request_id
-      edge-ssh-events             partition key: node_id (verifications partition by the node attempting auth)
-      edge-core-events            partition key: empty string (operator test events)
-
-  ## Configuration (set in runtime.exs from env vars)
-
-      config :edge_admin, :event_broker_kafka,
-        brokers: [{"edge_event_broker_kafka", 9092}],
-        client_config: [
-          # Optional SASL — omit entirely if auth is disabled
-          sasl: {:plain, "admin", "secret"}
-          # or: sasl: {:scram_sha_256, "admin", "secret"}
-          # or: sasl: {:scram_sha_512, "admin", "secret"}
-        ]
-
-  Controlled by env vars:
-  - `EVENT_BROKER_KAFKA_URLS` — comma-separated `host:port` list
-  - `EVENT_BROKER_KAFKA_USERNAME` — SASL username (optional)
-  - `EVENT_BROKER_KAFKA_PASSWORD` — SASL password (optional)
-  - `EVENT_BROKER_KAFKA_SASL_MECHANISM` — `plain` (default), `scram_sha_256`, `scram_sha_512`
+  Events are routed through the shared topic and partition-key rules. Broker
+  endpoints and optional SASL settings are supplied through deployment config.
   """
 
   @behaviour EdgeAdmin.Events.Broker.Adapter

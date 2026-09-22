@@ -3,12 +3,8 @@ defmodule EdgeAdmin.Events.Catalog do
   @moduledoc """
   Single source of truth for the event catalog.
 
-  The `@events` registry below colocates four facts per event:
-
-    * the **struct module** (e.g. `NodeRegistered`)
-    * the **wire-format event type** string (e.g. `"edge.node.registered"`)
-    * a one-line **description** of when the event fires
-    * a sample **data payload** for documentation and the AsyncAPI spec
+  The `@events` registry below colocates the struct module, wire-format event
+  type, description, and sample data payload for each event.
 
   Everything else is derived from this list at compile time:
   `all_event_types/0`, `event_type/1`, `description/1`, `data_example/1`,
@@ -16,26 +12,8 @@ defmodule EdgeAdmin.Events.Catalog do
   reads through the same accessors. Compile-time assertions reject
   duplicate type strings and missing modules.
 
-  Callers construct the appropriate struct and pass it to
-  `EdgeAdmin.Events.publish/1`:
-
-      Events.publish(%Catalog.NodeRegistered{node: node})
-      Events.publish(%Catalog.NodeStatusChanged{node: node, previous_status: :healthy})
-
-  Field shapes vary per event — see each `defmodule` below for
-  `@enforce_keys`, `defstruct`, and the typespec.
-
-  ## Adding a new event
-
-    1. Define the struct module with `@enforce_keys`, `defstruct`, and a
-       `@type t` typespec.
-    2. Add an entry to `@events` with the module, type string, description,
-       and a sample `data` payload (the wire shape an external subscriber
-       would see).
-    3. Add a `to_data/1` clause that builds the wire payload from the
-       struct (field extraction, atom-to-string conversion, etc.).
-    4. The AsyncAPI spec, MCP tools, and webhook validation pick up the
-       new event automatically.
+  Field shapes vary per event and are defined by each event struct and its
+  typespec.
   """
 
   alias EdgeAdmin.Commands.Schemas.Command

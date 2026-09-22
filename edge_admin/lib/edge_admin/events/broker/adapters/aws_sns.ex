@@ -3,45 +3,10 @@ defmodule EdgeAdmin.Events.Broker.Adapters.AwsSns do
   @moduledoc """
   AWS SNS adapter for the event broker.
 
-  Publishes events to AWS Simple Notification Service via the `ex_aws_sns`
-  client. SNS is a managed service with no on-prem distribution — production
-  always points at real AWS. For local development and CI/staging, the adapter
-  works against [LocalStack](https://localstack.cloud) by setting
-  `EVENT_BROKER_AWS_SNS_ENDPOINT_URL`.
-
-  ## Topics
-
-  Five SNS topics by domain (matches the Kafka adapter convention):
-
-      edge-nodes-events           partition: n/a (SNS does not partition)
-      edge-commands-events
-      edge-self-updates-events
-      edge-ssh-events
-      edge-core-events
-
-  `edge.enrollment_key.*` events also route to `edge-nodes-events` — same
-  domain. Topics must be pre-provisioned in the AWS account (Console / CLI /
-  Terraform); the adapter does not create them. The full topic ARN is
-  constructed from `EVENT_BROKER_AWS_SNS_TOPIC_ARN_PREFIX` + the suffix above.
-
-  ## Routing / filtering — message attributes, not topic patterns
-
-  SNS has no topic-name wildcards. Subscribers filter via *filter policies* on
-  their subscriptions, evaluated against *message attributes* (key/value pairs
-  that travel alongside the body). The adapter publishes two attributes:
-
-      type      = "edge.node.status_changed"
-      corename  = "prod-us"
-
-  Subscribers can write filter policies like:
-
-      {"type":     [{"prefix": "edge.node."}]}              # all node events
-      {"type":     ["edge.command_execution.completed"]}    # specific event type
-      {"corename": ["prod-us"]}                              # filter by core instance
-
-  The body remains the full CloudEvents envelope JSON regardless — body and
-  attributes carry the same routing fields, so consumers reading the body
-  do not need to be aware of attributes.
+  Publishes CloudEvents to pre-provisioned SNS topics. Event type and core name
+  are sent as message attributes for subscription filtering; the body remains
+  the complete CloudEvents envelope. Topic provisioning and AWS credentials are
+  deployment responsibilities.
 
   ## Durability
 
@@ -50,35 +15,8 @@ defmodule EdgeAdmin.Events.Broker.Adapters.AwsSns do
   being SQS queues, Lambda functions, or other receivers with their own
   storage. Edge Core's responsibility ends at the publish call.
 
-  ## Auth — standard AWS credential chain (resolved by ex_aws)
-
-  ex_aws walks the AWS standard credential chain:
-
-  1. Environment variables: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`,
-     optional `AWS_SESSION_TOKEN` (for STS / assumed roles).
-  2. Shared credentials file (`~/.aws/credentials`).
-  3. EC2 instance metadata service / ECS task role / Pod identity (when
-     running on AWS infrastructure).
-
-  No adapter-specific auth env vars — IAM credentials follow AWS conventions.
-
-  ## Configuration (set in runtime.exs from env vars)
-
-      config :ex_aws, :sns,
-        region: "us-east-1"
-        # + optional scheme/host/port overrides for LocalStack
-
-      config :edge_admin, :event_broker_aws_sns,
-        region: "us-east-1",
-        topic_arn_prefix: "arn:aws:sns:us-east-1:123456789012:",
-        endpoint_url: nil   # set only for LocalStack / non-AWS endpoints
-
-  Controlled by env vars:
-  - `EVENT_BROKER_AWS_SNS_REGION` — AWS region (e.g. `us-east-1`)
-  - `EVENT_BROKER_AWS_SNS_TOPIC_ARN_PREFIX` — full ARN prefix up to and
-    including the trailing colon, e.g. `arn:aws:sns:us-east-1:123456789012:`
-  - `EVENT_BROKER_AWS_SNS_ENDPOINT_URL` — override for LocalStack / staging
-    only. Leave unset to hit real AWS.
+  Authentication uses the standard AWS credential chain. Region, topic prefix,
+  and optional endpoint overrides come from deployment configuration.
   """
 
   @behaviour EdgeAdmin.Events.Broker.Adapter

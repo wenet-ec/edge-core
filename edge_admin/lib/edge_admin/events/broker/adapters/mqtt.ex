@@ -3,76 +3,22 @@ defmodule EdgeAdmin.Events.Broker.Adapters.Mqtt do
   @moduledoc """
   MQTT adapter for the event broker.
 
-  Publishes events to an MQTT broker via the `emqtt` Erlang client. The
-  CONNECT uses MQTT 3.1.1 (`proto_ver: :v4`) — the lowest common denominator
-  every modern broker accepts. v5 brokers downgrade our publisher session
-  to 3.1.1 transparently; operators are free to run v5 sessions on their
-  subscribers and broker-side features (session expiry, shared subs,
-  retained-message TTL) independently. We don't use any v5-only publish
-  features (user properties, content-type, response topics), so there's
-  nothing to lose by speaking 3.1.1 on the way out. Topic = event type with
-  `.` rewritten to `/`
-  (e.g. `edge/node/registered`) so MQTT segment-wildcards work naturally —
-  subscribers can use `edge/#`, `edge/node/+`, `edge/command_execution/completed`, etc.
+  Publishes events through MQTT 3.1.1. The event type is converted to an MQTT
+  topic by replacing dots with slashes, allowing standard segment wildcards.
 
   Pub/sub semantics — durability, retention, and replay are the broker's
   concern. MQTT QoS controls only the publisher↔broker↔subscriber delivery
   handshake, not whether the broker stores history. Subscribers wanting
   offline queueing connect with `clean_session=false` on their own.
 
-  ## QoS
-
-  Globally configurable via `EVENT_BROKER_MQTT_QOS=0|1|2`, default 1.
-
-  - QoS 0 — fire and forget, no broker ACK
-  - QoS 1 — at-least-once, broker ACKs receipt (default)
-  - QoS 2 — exactly-once delivery handshake (slowest)
+  QoS is deployment-configurable and defaults to at-least-once delivery.
 
   Consumers should dedup on envelope `id` regardless — multi-admin setups
   already produce duplicate node.status_changed events from independent health
   checkers.
 
-  ## Auth (mutually exclusive)
-
-  - `EVENT_BROKER_MQTT_JWT` — JWT bearer token, sent in the CONNECT password
-    field. Brokers configured for JWT auth (EMQX, HiveMQ, etc.) validate it
-    from there.
-  - `EVENT_BROKER_MQTT_USERNAME` + `EVENT_BROKER_MQTT_PASSWORD` — plain
-    credentials.
-  - Neither — anonymous (matches the bundled broker's allow-all default).
-
-  JWT takes precedence over username/password if both are set.
-
-  ## TLS
-
-  - `EVENT_BROKER_MQTT_SSL=true` — enable TLS for the connection.
-  - `EVENT_BROKER_MQTT_CACERT_FILE` — custom CA bundle / pinning.
-  - `EVENT_BROKER_MQTT_CLIENT_CERT_FILE` + `EVENT_BROKER_MQTT_CLIENT_KEY_FILE`
-    — mTLS (client auth via certificate). Requires SSL=true.
-
-  ## WebSocket
-
-  - `EVENT_BROKER_MQTT_WEBSOCKET=true` — connect using MQTT over WebSocket
-    instead of direct TCP/TLS.
-  - `EVENT_BROKER_MQTT_WEBSOCKET_PATH` — WebSocket path, default `/mqtt`.
-    SSL=true enables secure WebSocket transport (WSS).
-
-  ## Configuration (set in runtime.exs from env vars)
-
-      config :edge_admin, :event_broker_mqtt,
-        hosts: [{"edge_event_broker_mqtt", 1883}],
-        shuffle_hosts: false,
-        websocket: false,
-        websocket_path: "/mqtt",
-        qos: 1,
-        username: nil,
-        password: nil,
-        jwt: nil,
-        ssl: false,
-        cacert_file: nil,
-        client_cert_file: nil,
-        client_key_file: nil,
-        client_id_prefix: "edge_admin"
+  Connection, authentication, TLS, WebSocket, and QoS settings come from
+  deployment configuration.
   """
 
   @behaviour EdgeAdmin.Events.Broker.Adapter

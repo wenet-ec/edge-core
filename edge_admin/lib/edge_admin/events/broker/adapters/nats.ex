@@ -1,37 +1,12 @@
 # edge_admin/lib/edge_admin/events/broker/adapters/nats.ex
 defmodule EdgeAdmin.Events.Broker.Adapters.Nats do
   @moduledoc """
-  NATS adapter for the event broker. Supports two modes:
+  NATS adapter for the event broker.
 
-  - **Pub/sub** (default) — plain `Gnat.pub/3`, fire-and-forget. Messages are
-    lost when no subscriber is connected. Works against any NATS server
-    version; core PUB has been stable since NATS 1.x.
-  - **JetStream** — set `EVENT_BROKER_NATS_JETSTREAM=true`. Same pub call, but
-    JetStream intercepts it and persists the message into a durable stream.
-    On startup, the adapter auto-creates the streams if absent. Requires
-    NATS 2.2+ (released July 2021); we use only baseline stream-create
-    fields (`name`, `subjects`, `storage`), no version-gated extensions.
-
-  ## Subjects
-
-      edge.node.<event>                → captured by EDGE_NODES_EVENTS stream (JetStream only)
-      edge.enrollment_key.<event>      → captured by EDGE_NODES_EVENTS stream (JetStream only)
-      edge.command_execution.<event>   → captured by EDGE_COMMANDS_EVENTS stream (JetStream only)
-      edge.self_update_request.<event> → captured by EDGE_SELF_UPDATES_EVENTS stream (JetStream only)
-      edge.ssh_username.<event>        → captured by EDGE_SSH_EVENTS stream (JetStream only)
-      edge.core.<event>                → captured by EDGE_CORE_EVENTS stream (JetStream only)
-
-  ## Configuration (set in runtime.exs from env vars)
-
-      config :edge_admin, :event_broker_nats,
-        urls: ["nats://edge_event_broker:4222"],   # list — all used for failover/load balancing
-        jetstream: false,   # set via EVENT_BROKER_NATS_JETSTREAM=true to enable durable log
-        # Auth — mutually exclusive, first match wins:
-        token: nil,         # shared token  (EVENT_BROKER_NATS_TOKEN)
-        username: nil,      # username/password  (EVENT_BROKER_NATS_USERNAME / _PASSWORD)
-        password: nil,
-        nkey_seed: nil,     # NKey seed — standalone or paired with jwt  (EVENT_BROKER_NATS_NKEY_SEED)
-        jwt: nil            # JWT credential — used alongside nkey_seed  (EVENT_BROKER_NATS_JWT)
+  Plain pub/sub is fire-and-forget. When JetStream is enabled, the adapter
+  ensures its durable streams exist and publishes through the same subjects.
+  Connection endpoints and authentication are supplied through deployment
+  configuration.
   """
 
   @behaviour EdgeAdmin.Events.Broker.Adapter

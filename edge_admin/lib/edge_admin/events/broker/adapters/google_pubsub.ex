@@ -3,45 +3,10 @@ defmodule EdgeAdmin.Events.Broker.Adapters.GooglePubsub do
   @moduledoc """
   Google Cloud Pub/Sub adapter for the event broker.
 
-  Publishes events to GCP Pub/Sub via the v1 REST API. Pub/Sub is a managed
-  service with no on-prem distribution — production always points at real GCP.
-
-  ## Topics
-
-  Five Pub/Sub topics by domain (matches the AWS SNS adapter convention):
-
-      edge-nodes-events
-      edge-commands-events
-      edge-self-updates-events
-      edge-ssh-events
-      edge-core-events
-
-  `edge.enrollment_key.*` events also route to `edge-nodes-events` — same
-  domain. Topics must be pre-provisioned in the GCP project (Console /
-  `gcloud` / Terraform); the adapter does not create them. The full resource
-  name is built from `EVENT_BROKER_GOOGLE_PUBSUB_PROJECT` + optional
-  `EVENT_BROKER_GOOGLE_PUBSUB_TOPIC_ID_PREFIX` + the suffix above:
-
-      projects/{project}/topics/{prefix}{suffix}
-
-  ## Routing / filtering — message attributes, not topic patterns
-
-  Pub/Sub has no topic-name wildcards. Subscribers filter via *subscription
-  filter expressions* evaluated against `attributes` (key/value pairs that
-  travel alongside the body). The adapter publishes two attributes:
-
-      type      = "edge.node.status_changed"
-      corename  = "prod-us"
-
-  Subscribers can write filter expressions like:
-
-      hasPrefix(attributes.type, "edge.node.")              # all node events
-      attributes.type = "edge.command_execution.completed"   # specific event type
-      attributes.corename = "prod-us"                        # filter by core instance
-
-  The body remains the full CloudEvents envelope JSON regardless — body and
-  attributes carry the same routing fields, so consumers reading the body
-  do not need to be aware of attributes.
+  Publishes CloudEvents through the Pub/Sub REST API. Event type and core name
+  are sent as message attributes for subscription filtering; the body remains
+  the complete CloudEvents envelope. Topics and credentials are deployment
+  responsibilities.
 
   ## Wire format
 
@@ -57,37 +22,8 @@ defmodule EdgeAdmin.Events.Broker.Adapters.GooglePubsub do
   exists when Edge Core publishes, the message is dropped (same as SNS without
   subscribers).
 
-  ## Auth — standard GCP credential chain (resolved by goth)
-
-  Goth walks the standard GCP credential chain:
-
-  1. `GOOGLE_APPLICATION_CREDENTIALS` env var → service-account JSON file path
-     (most common for self-hosted / containerized deployments).
-  2. `~/.config/gcloud/application_default_credentials.json` (developer
-     workstations after `gcloud auth application-default login`).
-  3. GCE / GKE metadata server — Workload Identity on GKE, or the default
-     service account on Compute Engine.
-
-  No adapter-specific auth env vars — credentials follow GCP conventions.
-
-  ## Configuration (set in runtime.exs from env vars)
-
-      config :edge_admin, :event_broker_google_pubsub,
-        project: "my-project-123",
-        topic_id_prefix: "",
-        base_url: "https://pubsub.googleapis.com",
-        auth: :goth   # :goth | :none
-
-  Controlled by env vars:
-  - `EVENT_BROKER_GOOGLE_PUBSUB_PROJECT` — GCP project ID
-  - `EVENT_BROKER_GOOGLE_PUBSUB_TOPIC_ID_PREFIX` — optional, e.g. `"edge-prod-"`
-    for multiple cores per project
-  - `GOOGLE_APPLICATION_CREDENTIALS` — service-account JSON path, used by goth
-
-  `base_url` and `auth` are derived in `runtime.exs` from the deployment
-  shape (production targets real GCP with `:goth` auth; staging/CI may
-  override the base URL and disable auth via the operator-only
-  `EVENT_BROKER_GOOGLE_PUBSUB_EMULATOR_HOST` knob).
+  Authentication uses the configured GCP credential provider. Project, topic
+  naming, endpoint, and authentication mode come from deployment configuration.
   """
 
   @behaviour EdgeAdmin.Events.Broker.Adapter

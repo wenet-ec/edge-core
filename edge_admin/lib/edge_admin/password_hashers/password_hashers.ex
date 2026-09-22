@@ -3,14 +3,13 @@ defmodule EdgeAdmin.PasswordHashers do
   @moduledoc """
   Algorithm-agile password hashing.
 
-  The internal `:password_hashers` list in `config/config.exs` is ordered. Its
-  first algorithm writes new hashes. Every listed algorithm can verify its own
-  self-identifying stored hashes; a valid match from a non-first algorithm is
-  `:legacy` and should be rehashed by the caller.
+  Hashing algorithms are configured in priority order. The first algorithm
+  writes new hashes. Each configured algorithm verifies its own self-identifying
+  hashes; a valid match from a lower-priority algorithm is `:legacy` and should
+  be rehashed by the caller.
 
-  Rotating algorithms is an intentional code change: add the successor at the
-  front of `@hashers`, release it everywhere, then remove the retired hasher
-  only after every remaining hash has been migrated or reset.
+  Retire an algorithm only after every remaining hash has been migrated or
+  reset.
   """
 
   alias EdgeAdmin.PasswordHashers.Algorithms.Argon2

@@ -1,23 +1,9 @@
 # edge_admin/lib/edge_admin/prom_ex/edge_admin_plugin.ex
 defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
   @moduledoc """
-  Custom PromEx plugin for Edge Admin metrics.
+  PromEx plugin for application-specific Edge Admin metrics.
 
-  Provides business-level metrics for:
-  - Membership process (admin-cluster join)
-  - Discovery operations (finding other admins)
-  - Metadata recomputation (cluster assignments)
-  - Proxy server (HTTP/SOCKS5)
-  - Node health checks
-  - Command execution and delivery
-  - Quantum scheduler jobs
-  - VPN zombie admin cleanup
-  - Gateway connections and metrics scraping
-  - SSH credential verification
-  - Cluster reconciliation (Oban worker)
-  - Self-update request processing
-  - Event broker publishing (opt-in — zero events when disabled)
-  - Webhook delivery (fan-out, per-attempt result, duration)
+  Metrics are derived from the application's emitted telemetry events.
   """
 
   use PromEx.Plugin

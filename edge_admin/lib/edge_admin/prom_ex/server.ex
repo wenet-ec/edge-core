@@ -1,11 +1,10 @@
 # edge_admin/lib/edge_admin/prom_ex/server.ex
 defmodule EdgeAdmin.PromEx.Server do
   @moduledoc """
-  Bandit endpoint for Admin PromEx metrics.
+  Dedicated PromEx metrics listener.
 
-  The normal metrics route remains mounted on the Admin API endpoint unless
-  `ADMIN_METRICS_PORT` is configured. In dedicated mode this Plug serves the
-  same path and authentication contract from the dedicated listener.
+  When enabled, this listener serves the same metrics path and authentication
+  contract as the primary Admin endpoint.
   """
 
   @behaviour Plug

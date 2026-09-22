@@ -1,46 +1,12 @@
 # edge_admin/lib/edge_admin_proxy/edge_admin_proxy.ex
 defmodule EdgeAdminProxy do
   @moduledoc """
-  HTTP and SOCKS5 forward proxy servers for admin access to edge nodes.
+  HTTP and SOCKS5 forward proxies for reaching edge networks through Admin.
 
-  Runs two Ranch listeners providing proxy access to the VPN network, allowing
-  users to route traffic through the admin to reach edge nodes.
-
-  ## Routing Modes
-
-  The routing mode is selected per-connection by the proxy username.
-
-  ### Direct (admin as exit)
-  - Username: `_` or empty string
-  - Admin routes traffic through the VPN Gateway directly to the target
-  - Used only for reaching nodes on the VPN mesh from the admin
-  - Non-VPN targets are rejected
-
-  ### Chained (agent as exit)
-  - Username: a node's DNS hostname, e.g. `node-<id>.cluster-<name>.nm.internal`
-  - Admin tunnels through the named agent, which then connects to the target
-  - Client → Admin → Agent → target
-  - Useful for exiting from the agent's network/IP
-
-  ## Listeners
-
-  - **HTTP Forward Proxy**: Port 43128 (configurable via `ADMIN_HTTP_PROXY_PORT`)
-  - **SOCKS5 Proxy**: Port 41080 (configurable via `ADMIN_SOCKS5_PROXY_PORT`)
-
-  Authentication (both listeners):
-  - **Username**: `_` / empty for direct, node DNS hostname for chaining
-  - **Password**: `PROXY_KEY` env (falls back to `MASTER_KEY`)
-
-  ## Architecture
-
-  - **GenServer**: Manages lifecycle of both Ranch listeners
-  - **Ranch Listeners**: One for HTTP, one for SOCKS5
-  - **Protocol Handlers**: `Http.Handler` and `Socks5.Handler`
-  - **Gateway Integration**: VPN-bound traffic routes through cluster Gateway
-    GenServers. In direct mode, both HTTP and SOCKS5 require VPN hostnames.
-    Reaching arbitrary internet/LAN targets is only supported through
-    proxy chaining via an agent.
-
+  The username selects direct routing through the local cluster gateway or
+  proxy chaining through a specific Agent. Both listeners authenticate with
+  the configured proxy key and are supervised independently from the rest of
+  Admin.
   """
 
   use GenServer

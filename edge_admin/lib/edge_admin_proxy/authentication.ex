@@ -1,14 +1,13 @@
 # edge_admin/lib/edge_admin_proxy/authentication.ex
 defmodule EdgeAdminProxy.Authentication do
   @moduledoc """
-  Authentication for admin proxy server.
+  Authenticates proxy credentials and selects the routing mode from the
+  username. Empty usernames and `_` select direct routing; a node DNS name
+  selects proxy chaining through that Agent.
 
-  Determines routing mode based on username:
-  - Username "_" or empty: Direct VPN access to nodes
-  - Username = node DNS hostname: Proxy chaining via agent
-
-  Password is always proxy_key for admin authentication. Comparison is
-  timing-safe to avoid side-channel attacks.
+  Password comparison is timing-safe. When proxy authentication is disabled,
+  password verification is skipped for local development while username
+  routing remains enforced.
 
   When `PROXY_AUTH_ENABLED=false`, password verification is skipped entirely — any
   password (including blank) is accepted. The username branch still runs,

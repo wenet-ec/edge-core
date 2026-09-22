@@ -1,6 +1,10 @@
 # edge_admin/lib/edge_admin_proxy/admin_tunnel/config.ex
 defmodule EdgeAdminProxy.AdminTunnel.Config do
-  @moduledoc false
+  @moduledoc """
+  Provides the private Admin tunnel port, shared secret, and bind addresses.
+
+  Bind addresses are read from the connected local Admin-cluster VPN node.
+  """
 
   alias EdgeAdmin.Vpn
 

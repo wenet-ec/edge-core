@@ -1,6 +1,11 @@
 # edge_admin/lib/edge_admin_proxy/admin_tunnel/listener.ex
 defmodule EdgeAdminProxy.AdminTunnel.Listener do
-  @moduledoc false
+  @moduledoc """
+  Listens on the local Admin-cluster VPN addresses for private Admin tunnels.
+
+  Binding is retried while VPN addresses are unavailable so Admin startup does
+  not depend on the VPN interface being ready first.
+  """
 
   use GenServer
 

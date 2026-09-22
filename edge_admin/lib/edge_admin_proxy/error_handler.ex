@@ -1,14 +1,10 @@
 # edge_admin/lib/edge_admin_proxy/error_handler.ex
 defmodule EdgeAdminProxy.ErrorHandler do
   @moduledoc """
-  Centralized error handling for proxy servers.
+  Translates proxy failures into client responses and operational metadata.
 
-  Three concerns that used to be tangled are now separate:
-
-    * `http_error_response/1` / `socks5_reply_code/1` — what the client sees
-      (response shape)
-    * `categorize_error/1` — how ops/telemetry tags the error (category)
-    * `log_error/2` / `telemetry_metadata/2` — how we log and emit metrics
+  HTTP and SOCKS5 callers use the same error categories while retaining their
+  protocol-specific response codes.
   """
 
   require Logger

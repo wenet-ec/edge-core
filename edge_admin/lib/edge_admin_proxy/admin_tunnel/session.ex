@@ -1,6 +1,11 @@
 # edge_admin/lib/edge_admin_proxy/admin_tunnel/session.ex
 defmodule EdgeAdminProxy.AdminTunnel.Session do
-  @moduledoc false
+  @moduledoc """
+  Handles one accepted Admin-to-Admin tunnel connection.
+
+  It validates the authenticated target request, opens the destination socket,
+  and forwards bytes until either side closes or the tunnel deadline expires.
+  """
 
   alias EdgeAdminProxy.AdminTunnel.Config
   alias EdgeAdminProxy.AdminTunnel.Protocol

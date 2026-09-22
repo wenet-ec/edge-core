@@ -1,6 +1,12 @@
 # edge_admin/lib/edge_admin_proxy/admin_tunnel/client.ex
 defmodule EdgeAdminProxy.AdminTunnel.Client do
-  @moduledoc false
+  @moduledoc """
+  Opens an authenticated Admin-to-Admin TCP tunnel.
+
+  The client resolves both address families, performs the HMAC handshake, and
+  returns the connected socket only after the remote listener accepts the
+  target request.
+  """
 
   alias EdgeAdminProxy.AdminTunnel.Config
   alias EdgeAdminProxy.AdminTunnel.Protocol

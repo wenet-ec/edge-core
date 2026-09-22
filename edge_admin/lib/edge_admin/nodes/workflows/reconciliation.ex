@@ -44,8 +44,8 @@ defmodule EdgeAdmin.Nodes.Workflows.Reconciliation do
   Only processes edge nodes (those belonging to edge agents, identified by having a DB record).
   Admin nodes and staff machines are not touched.
 
-  Processes active clusters in batches of 500. Retired clusters are handled by
-  `DeleteClusterWorker` jobs.
+  Processes active clusters in bounded batches. Retired clusters are handled by
+  durable deletion jobs.
 
   Returns statistics about the reconciliation operation.
   """

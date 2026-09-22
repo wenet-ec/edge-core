@@ -6,88 +6,15 @@ defmodule EdgeAdmin.Nodes do
   Nodes represent edge devices (agents) enrolled in the system. Each node belongs
   to a cluster and can execute commands via SSH or proxy connections.
 
-  ## Architecture
+  The database is the canonical record for cluster and node state. VPN resources
+  are reconciled separately, so operations that touch both systems can have a
+  partial-failure window. Reconciliation restores missing or stale VPN
+  resources from active database records and removes unowned resources.
 
-  Two sources of state must be kept in sync: the Admin database and Edge VPN (the VPN
-  provider). There is no transaction spanning both — every operation that touches both
-  systems has a partial-failure window. Cluster reconciliation is what heals drift.
-  Understand it before changing any
-  create/delete ordering here.
-
-  ### Ordering rules (why they are what they are)
-
-  **Cluster create — DB first, then Edge VPN:**
-  Edge VPN is the authority on IP space (it sees `admin-cluster-*` networks our DB
-  doesn't). To make DB-first safe, `create_cluster/1` fetches all Edge VPN ranges
-  via `Vpn.list_network_ranges/0` up front and merges them with the DB range list
-  before running `SubnetOverlapCheck` and `Vpn.generate_next_subnet/1`. The fetch
-  doubles as a liveness probe — if Edge VPN is unreachable, we fail fast with
-  `:service_unavailable` and never touch the DB. If Edge VPN rejects the create
-  anyway (race with a concurrent admin or admin-mesh write), we rollback the DB
-  insert. A DB insert failure with no Edge VPN call leaves no state to clean.
-
-  **Cluster delete — retire in DB, then delete from Edge VPN:**
-  `deleted_at` is the durable canonical decision that the cluster no longer exists for
-  public reads or new membership. `DeleteClusterWorker` deletes the Edge VPN network
-  after that transaction commits and finally removes the tombstone after verifying the
-  network is absent. This avoids holding a database transaction across external IO.
-
-  **Alias create — read IP from Edge VPN, then DB, then write DNS to Edge VPN:**
-  The node's VPN IP is only known to Edge VPN; we must fetch it. The DB insert anchors
-  the alias record. The DNS write is the final step. If DNS write fails, we rollback the
-  DB insert. If rollback also fails, `cleanup_ghost_aliases/2` in the reconciler will
-  recreate the missing DNS entry from DB. Ghost DNS entries (DNS in Edge VPN, no DB
-  record) are cleaned by the Edge VPN→DB direction of `cleanup_ghost_aliases/2`.
-
-  **Alias delete — Edge VPN first, then DB:**
-  A missing DNS entry is harmless because the DB row still makes the alias repairable.
-
-  ### Reconciler directions (both are needed)
-
-  `ensure_cluster_network/1` — active DB cluster has no Edge VPN network:
-  Recreates the network from the cluster's immutable DB configuration. A retired
-  cluster is never repaired here; its deletion worker owns its network instead.
-
-  `cleanup_ghost_networks/1` — Edge VPN has `cluster-*` network, DB doesn't:
-  Deletes the unowned network. Safety: we only touch networks with the `cluster-`
-  prefix — `admin-cluster-*` networks are admin infrastructure and are never touched
-  here. The prefix contract is enforced by `Vpn.build_network_name/2`.
-
-  `cleanup_ghost_aliases/2` — reconciles alias DNS from DB to Edge VPN, repairs stale
-  IPs, and deletes Edge VPN DNS entries with no matching DB alias.
-
-  ### Subnet pool and scale
-
-  IPv4 cluster subnets are carved from `CLUSTER_AUTO_GENERATED_V4_RANGES` (default: CGNAT
-  `100.64.0.0/10`) at `CLUSTER_V4_SUBNET_PREFIX` (default: `/24`). This gives a hard cap
-  of 16,384 clusters per core (4,194,304 addresses ÷ 256 per /24). If the pool is
-  exhausted, start a new core — do not expand the range or change the prefix on an
-  existing core. `GET /api/networks` in Edge VPN has no pagination (full table scan);
-  at the 16k ceiling the response is ~5-8MB — acceptable for a periodic reconcile call.
-
-  ### Known brittleness / glue code warnings
-
-  This module is the glue between our DB and Edge VPN. It is inherently brittle because:
-
-  - There is no distributed transaction. Every two-phase operation has a failure window.
-    The reconciler heals it eventually but "eventually" can mean up to one reconcile
-    interval (~minutes). Don't assume operations are atomic.
-
-  - `create_alias/2` fetches the node's VPN IP from Edge VPN at call time. If the node
-    re-enrolls and gets a new IP, the reconciler repairs alias DNS by deleting and
-    recreating the Edge VPN DNS entry with the current IP.
-
-  - `cleanup_ghost_networks/1` deletes by prefix convention, not by any Edge VPN-side
-    ownership marker. If something outside this system ever creates a `cluster-*` network
-    in Edge VPN, the reconciler will delete it. The prefix contract must be maintained.
-
-  - `cleanup_ghost_networks/1` runs once per scheduled maintenance sweep. A ghost
-    network created during that sweep may not be cleaned until the next run. This is
-    acceptable — ghost networks are harmless, just wasteful.
-
-  - `reconcile_cluster/1` does NOT run `cleanup_ghost_networks/1`. It only has context
-    for one cluster, not the global Edge VPN state. The maintenance scheduler performs
-    the global sweep once after it queues per-cluster work.
+  Cluster retirement is recorded before external cleanup. Alias records are
+  persisted with their DNS lifecycle coordinated against the VPN provider.
+  Address allocation considers both database ranges and ranges reported by the
+  VPN provider.
 
   """
 
@@ -110,21 +37,8 @@ defmodule EdgeAdmin.Nodes do
 
   Retired clusters are not returned.
 
-  Supports filtering by:
-  - `name` - Exact match or wildcard (`prod*`, `*tion`, `*rod*`)
-  - `name__in` - Exact IN match on cluster names — comma-separated list
-  - `ipv4_range` - Text search (supports wildcards)
-  - `ipv6_range` - Text search (supports wildcards)
-  - `node_limit` - Exact, `__gte`, `__lte` (null = no limit)
-  - `has_node_limit` - Boolean: true returns clusters with a node limit set
-  - `node_id__in` - Exact IN match on node IDs — returns clusters that contain any of those nodes
-  - `inserted_at__gte/lte` - Date range filter
-  - `updated_at__gte/lte` - Date range filter
-  - `node_count` - Range queries (e.g., `node_count__gte=5`, `node_count__lte=10`) — virtual filter computed via join
-
-  Supports sorting by:
-  - `name`, `ipv4_range`, `ipv6_range`, `inserted_at`, `updated_at`
-  - Default: `inserted_at:desc`
+  Supports the cluster filters, sorting, and pagination defined by the Nodes
+  query surface.
 
   Returns `{:ok, {clusters, meta}}` or `{:error, meta}`.
   """
@@ -134,28 +48,8 @@ defmodule EdgeAdmin.Nodes do
   @doc """
   Lists cluster-node mappings.
 
-  ## Options
-  - `:prefix` - Add DNS name prefixes (default: false)
-    - `true`: Returns "cluster-prod", "node-abc123" (for metadata)
-    - `false`: Returns "prod", "abc123" (for discovery endpoints)
-  - `:filter_status` - Filter nodes by status (default: nil, includes all)
-    - `[:healthy, :unhealthy]` excludes unreachable nodes
-
-  Returns maps shaped as:
-
-  ```elixir
-  # With prefix: true
-  [
-    %{name: "cluster-prod-east", nodes: ["node-abc123", "node-def456"]},
-    %{name: "cluster-staging", nodes: ["node-xyz789"]}
-  ]
-
-  # With prefix: false
-  [
-    %{name: "prod-east", nodes: ["abc123", "def456"]},
-    %{name: "staging", nodes: ["xyz789"]}
-  ]
-  ```
+  Options control whether names are prefixed and which node statuses are
+  included. Returns one mapping per cluster with its node identifiers.
   """
   @spec list_cluster_node_mappings(keyword()) :: [map()]
   defdelegate list_cluster_node_mappings(opts \\ []), to: Clusters, as: :list_node_mappings
@@ -175,19 +69,9 @@ defmodule EdgeAdmin.Nodes do
   @doc """
   Creates a cluster and its Edge VPN network.
 
-  Flow:
-  1. Validate input
-  2. Fetch every IPv4 and IPv6 range Edge VPN currently knows about (acts as both a
-     liveness probe and the authoritative overlap set — local DB only tracks
-     `cluster-*` ranges, not admin-mesh networks)
-  3. Merge with DB ranges, then validate or auto-generate both address families
-  4. Create DB record (validates uniqueness constraints)
-  5. Create Edge VPN network (rollback DB on failure)
-  6. Emit event for metadata recomputation
-
-  If Edge VPN is unreachable, returns service unavailable immediately (no DB call).
-  If DB creation fails, returns validation error immediately (no Edge VPN call).
-  If Edge VPN creation fails, deletes DB record and returns service unavailable.
+  Validates and allocates both address families, persists the cluster, provisions
+  its VPN network, and emits the metadata update event. VPN availability and
+  creation failures are returned without leaving an active database row.
 
   A later missing network does not make the active DB cluster disposable: the active
   row is the desired configuration, so reconciliation recreates the network from it.
@@ -417,16 +301,9 @@ defmodule EdgeAdmin.Nodes do
   @doc """
   Creates an enrollment key for a cluster.
 
-  Generates a base64 JSON blob stored in the `key` column and returned to the
-  operator for placement in the agent's ENROLLMENT_KEY env var:
-
-      base64({"admin_urls": [...], "cluster_name": "<cluster>", "nonce": "<random_32_bytes_base64>"})
-
-  The agent decodes the blob to extract `admin_urls` (for routing) and sends
-  the full blob to the verify endpoint. Admin looks up by the blob directly —
-  no inner nonce comparison needed.
-
-  The nonce exists solely to make each key unique and unguessable.
+  Generates a unique enrollment blob, stores it with the cluster association,
+  and returns it for agent enrollment. Verification uses the complete blob and
+  atomically consumes limited-use keys.
   """
   @spec create_enrollment_key(Cluster.t(), map()) ::
           {:ok, EnrollmentKey.t()} | {:error, Ecto.Changeset.t()}

@@ -6,13 +6,8 @@ defmodule EdgeAdmin.Nodes.Schemas.EnrollmentKey do
   Issued per cluster. Agents present the key to verify_enrollment before
   joining the VPN, ensuring the cluster has capacity before a VPN slot is consumed.
 
-  The key is a base64-encoded JSON blob:
-
-      base64({"admin_urls": ["https://admin.example.com"], "nonce": "<random_32_bytes_base64>"})
-
-  Operators copy the full key blob into the agent's ENROLLMENT_KEY env var.
-  The agent decodes it to extract admin_urls (for routing) and sends the full
-  blob to the verify endpoint. Admin looks up by the blob directly.
+  The key is a base64-encoded JSON blob containing the routing data and a
+  unique nonce. Agents submit the complete blob for verification.
   """
   use EdgeAdmin.Schema
 

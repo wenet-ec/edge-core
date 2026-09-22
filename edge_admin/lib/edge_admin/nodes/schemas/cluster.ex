@@ -9,7 +9,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Cluster do
   ## Fields
 
   - `name` - Cluster name (lowercase alphanumeric with hyphens, max 24 chars)
-  - `ipv4_range` - CIDR notation for the cluster's VPN network (e.g., "100.64.1.0/24")
+  - `ipv4_range` - CIDR notation for the cluster's VPN network
   - `ipv6_range` - ULA /64 CIDR for the cluster's VPN network
   - `node_limit` - Maximum nodes allowed in this cluster (null means no limit)
   - `deleted_at` - Internal tombstone marking a cluster retired from the public API

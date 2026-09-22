@@ -1,13 +1,10 @@
 # edge_admin/lib/edge_admin/nodes/workers/schedule_cluster_reconciliation_worker.ex
 defmodule EdgeAdmin.Nodes.Workers.ScheduleClusterReconciliationWorker do
   @moduledoc """
-  Oban worker that fans out per-cluster maintenance jobs on a cron schedule.
+  Oban worker that fans out maintenance jobs for active and retired clusters.
 
-  Runs every 6 hours (configurable via CLUSTER_RECONCILIATION_SCHEDULE) and asks the
-  Nodes context to enqueue one maintenance job per cluster: active clusters receive a
-  ReconcileClusterWorker and retired clusters receive a DeleteClusterWorker.
-
-  Skips enqueueing if the system is in degraded mode or reconciliation is disabled.
+  Enqueueing is skipped while the system is degraded or reconciliation is
+  disabled.
   """
 
   use Oban.Worker,

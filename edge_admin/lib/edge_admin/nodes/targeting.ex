@@ -3,24 +3,13 @@ defmodule EdgeAdmin.Nodes.Targeting do
   @moduledoc """
   Targeting — schema *and* resolver for "which subset of the fleet" selection.
 
-  Used by any operation that addresses one or more nodes via flexible
-  selection — currently `Commands.create_command` and
-  `SelfUpdates.create_self_update_request`. Future fleet-wide operations
-  should reference this module rather than duplicate the shape or the
-  resolution logic.
+  Provides a shared targeting shape and resolver for operations that address
+  one or more nodes.
 
   This module has two responsibilities:
 
-  1. **Input shape** (`peri_schema/0`, `normalize/1`)
-     — the canonical layer-1 (public-API gate) Peri schema. Used by MCP tool
-     definitions and mirrored by the OpenApiSpex schemas on the REST side.
-     `normalize/1` converts the atom-keyed output Peri produces into the
-     string-keyed maps the Form layer expects — call it on the Peri result
-     before passing to any Form changeset.
-     `validate_iso8601_date_or_datetime/1` is kept as a public utility for
-     callers that want to enforce strict ISO 8601 format at layer 1; the
-     schema itself types datetime fields as `:string` so the MCP inspector
-     can render text inputs for them.
+  1. **Input shape** (`peri_schema/0`, `normalize/1`) validates and normalizes
+     boundary input.
   2. **Resolution** (`nodes_for_all/2`, `nodes_for_ids/2`,
      `nodes_for_clusters/3`) — at runtime, turns a validated targeting spec
      into the concrete list of nodes the operation should run against. Pages
@@ -40,22 +29,9 @@ defmodule EdgeAdmin.Nodes.Targeting do
     clusters (AND logic). Only meaningful when `type = "clusters"` or
     `type = "all"`. All keys optional.
 
-  ## Layering
-
-  The schema half is the canonical layer-1 (public-API gate) shape — see
-  `CLAUDE.md` for the defense-in-depth model. It validates *structural*
-  shape including **strict ISO 8601 format** for the datetime range
-  fields. It does **not** enforce conditional rules ("`node_ids` is
-  required when `type = nodes`") — those are layer-2 (Form) checks, kept
-  independent on purpose.
-
-  The MCP layer consumes `peri_schema/0` directly via Anubis's
-  `field :targeting, {:required, EdgeAdmin.Nodes.Targeting.peri_schema()}`.
-  The REST OpenApiSpex schema is currently maintained in parallel
-  (`EdgeAdminWeb.Schemas.Commands.CommandSchemas.CommandCreateRequest`
-  and `EdgeAdminWeb.Schemas.SelfUpdates.SelfUpdateRequestSchemas.SelfUpdateRequestCreateRequest`)
-  with a comment pointing here — auto-generation from this module is a
-  future standardization step.
+  The schema validates structural shape and date formats. Conditional rules,
+  such as requiring IDs for a selected targeting type, remain separate from
+  this schema.
   """
 
   alias EdgeAdmin.Nodes.Enums.NodeStatuses

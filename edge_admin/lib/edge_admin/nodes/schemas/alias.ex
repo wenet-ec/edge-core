@@ -89,7 +89,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Alias do
 
   Edge VPN stores custom DNS entries WITHOUT the default domain and appends
   it in `GetCustomDNS` when serving entries. Sending the full FQDN causes
-  double-suffixing (e.g. `node-web.cluster-prod.nm.internal.nm.internal`).
+  double-suffixing.
 
   Use this when creating or deleting DNS entries via the Edge VPN API.
   Use `vpn_hostname/1` for the user-facing fully qualified hostname.

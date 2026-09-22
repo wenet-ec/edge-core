@@ -59,8 +59,7 @@ defmodule EdgeAdmin.Nodes.Workflows.HealthCheck do
   @doc """
   Performs health check on all nodes assigned to this admin.
 
-  Called by Quantum scheduler periodically. Reads from Metadata ETS to determine
-  which nodes this admin governs, then performs parallel health checks.
+  Reads the nodes governed by this Admin and performs parallel health checks.
 
   Health check logic:
   - 200 response => status: `:healthy`, update last_seen_at
@@ -82,7 +81,7 @@ defmodule EdgeAdmin.Nodes.Workflows.HealthCheck do
       Logger.debug("No nodes assigned to this admin for health check")
       :ok
     else
-      # Extract node IDs from node names (e.g., "node-abc123" => "abc123")
+      # Extract node IDs from the VPN node names.
       node_ids =
         Enum.map(node_names, fn node_name ->
           String.replace_prefix(node_name, "node-", "")

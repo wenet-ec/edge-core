@@ -4,16 +4,6 @@ defmodule EdgeAdmin.Nodes.Policies.EnrollmentKeyPolicies do
   Authorization policy for enrollment key actions.
 
   Reads application config directly so controllers stay clean.
-
-  ## Usage
-
-      with :ok <- EnrollmentKeyPolicies.authorize(:create_for_default) do
-        ...
-      end
-
-      with :ok <- EnrollmentKeyPolicies.authorize(:create_for_public) do
-        ...
-      end
   """
   use EdgeAdmin.Policy
 

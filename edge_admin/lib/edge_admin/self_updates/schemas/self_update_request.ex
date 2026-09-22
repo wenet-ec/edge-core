@@ -3,14 +3,13 @@ defmodule EdgeAdmin.SelfUpdates.Schemas.SelfUpdateRequest do
   @moduledoc """
   Schema for self-update requests.
 
-  A self-update request triggers agent containers to update themselves via their
-  self-update service (e.g., Watchtower). Requests are processed asynchronously
-  by an Oban worker.
+  A self-update request triggers agent containers through their self-update
+  service. Requests are processed asynchronously.
 
   ## Fields
   - `targeting` - JSON targeting configuration (same as commands)
   - `status` - Request status: `:pending`, `:processing`, `:completed`
-  - `summary` - JSON summary of results: %{total, triggered, failed}
+  - `summary` - JSON summary of trigger results
   """
   use EdgeAdmin.Schema
 

@@ -3,8 +3,7 @@ defmodule EdgeAdmin.SelfUpdates do
   @moduledoc """
   Canonical API for self-update requests.
 
-  Persistence is implemented by `Resources.Requests`; delivery processing is
-  implemented by `Workflows.Processing`.
+  Requests are persisted and processed asynchronously.
   """
 
   alias EdgeAdmin.Nodes.Schemas.Node

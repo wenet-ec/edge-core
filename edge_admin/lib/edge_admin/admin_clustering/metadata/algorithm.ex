@@ -46,37 +46,9 @@ defmodule EdgeAdmin.AdminClustering.Metadata.Algorithm do
     total_nodes: integer,           # total nodes across all clusters in the system
     total_edge_capacity: integer,   # sum of edge_node_capacity across all admins
     degraded: boolean,              # true when total_nodes > total_edge_capacity
-    weak_leader: admin_name         # alphabetically first admin ID — used to reduce duplicate Quantum work
+    weak_leader: admin_name         # alphabetically first admin ID — used to reduce duplicate periodic work
   }
 
-  ## Example
-      iex> admins = %{
-      ...>   "admin-1" => %{edge_node_capacity: 199},
-      ...>   "admin-2" => %{edge_node_capacity: 299}
-      ...> }
-      iex> clusters = [
-      ...>   %{name: "cluster-a", nodes: ["node-1", "node-2", "node-3"]},
-      ...>   %{name: "cluster-b", nodes: ["node-4", "node-5"]}
-      ...> ]
-      iex> EdgeAdmin.AdminClustering.Metadata.Algorithm.compute_assignments(admins, clusters)
-      %{
-        edge_clusters: %{
-          "admin-1" => %{"cluster-b" => ["node-4", "node-5"]},
-          "admin-2" => %{"cluster-a" => ["node-1", "node-2", "node-3"]}
-        },
-        node_index: %{
-          "node-1" => {"cluster-a", "admin-2"},
-          "node-2" => {"cluster-a", "admin-2"},
-          "node-3" => {"cluster-a", "admin-2"},
-          "node-4" => {"cluster-b", "admin-1"},
-          "node-5" => {"cluster-b", "admin-1"}
-        },
-        orphaned_clusters: %{},
-        total_nodes: 5,
-        total_edge_capacity: 498,
-        degraded: false,
-        weak_leader: "admin-1"
-      }
   """
   def compute_assignments(admins, clusters) do
     cluster_nodes_map = Map.new(clusters, fn cluster -> {cluster.name, cluster.nodes} end)
@@ -160,11 +132,6 @@ defmodule EdgeAdmin.AdminClustering.Metadata.Algorithm do
   ## Returns
   {:ok, admin_name} | {:error, :no_capacity}
 
-  ## Example
-      iex> admins = %{"admin-1" => %{edge_node_capacity: 199}}
-      iex> current = %{edge_clusters: %{"admin-1" => %{}}}
-      iex> EdgeAdmin.AdminClustering.Metadata.Algorithm.bootstrap_empty_cluster(admins, current, "cluster-new")
-      {:ok, "admin-1"}
   """
   def bootstrap_empty_cluster(admins, current_assignments, cluster_name) do
     existing_owner =

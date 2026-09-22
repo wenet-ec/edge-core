@@ -30,21 +30,12 @@ defmodule EdgeAdmin.AdminClustering.Membership.PeerDiscovery do
   - `false` - Connection failed (DNS ok, node unreachable)
   - `:ignored` - Already connected to this node
 
-  ## Examples
-
-      # Called during membership startup and on the peer-discovery cron
-      iex> PeerDiscovery.scan_and_connect_admins()
-      :ok
-
-      iex> Node.list()
-      [:"admin@admin-def456.admin-cluster-a.nm.internal"]
   """
 
   alias EdgeAdmin.Vpn
 
   require Logger
 
-  @doc "Discovers peer Admins through the Admin VPN and attempts Erlang connections."
   @spec scan_and_connect_admins() :: :ok
   def scan_and_connect_admins do
     network_name = Vpn.admin_cluster_name()

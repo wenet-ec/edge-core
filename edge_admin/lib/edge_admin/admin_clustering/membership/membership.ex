@@ -10,7 +10,6 @@ defmodule EdgeAdmin.AdminClustering.Membership do
 
   alias EdgeAdmin.AdminClustering.Membership.Bootstrap
 
-  @doc "Returns true when the Admin-cluster bootstrap completed successfully."
   @spec initialized?() :: boolean()
   def initialized?, do: Bootstrap.initialized?()
 end

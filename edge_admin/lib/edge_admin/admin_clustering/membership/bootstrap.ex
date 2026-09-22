@@ -11,12 +11,9 @@ defmodule EdgeAdmin.AdminClustering.Membership.Bootstrap do
 
   ## Admin VPN identity reset
 
-  Admin identity is intentionally ephemeral. The Admin start scripts reset
-  Edge VPN CLI state before this module starts so each boot enrolls as a
-  fresh Edge VPN host with the runtime-generated `:admin_id` / `:admin_name`.
-  That reset lives in `deploy/local/compose/edge_admin/start` and
-  `deploy/production/compose/edge_admin/start`; it is part of this membership
-  lifecycle, not incidental deployment cleanup.
+  Admin identity is intentionally ephemeral. Startup resets local Edge VPN CLI
+  state before membership begins, so each boot enrolls as a fresh host with
+  the runtime-generated admin identity.
 
   ## Responsibilities
 
@@ -33,12 +30,12 @@ defmodule EdgeAdmin.AdminClustering.Membership.Bootstrap do
   3. **syn Initialization** (step 3)
      - Add this node to `:admin_scope`
      - Join the admin-cluster syn group with this admin's metadata
-     - Enable cross-admin topology awareness (`:cluster_scope` for gateways
-       is initialized separately by `EdgeAdmin.GatewayRegistry.Coordinator`)
+     - Enable cross-admin topology awareness; gateway registration is initialized
+       separately after metadata startup
 
   4. **Peer Discovery** (step 4)
      - Query Edge VPN for other admins in the cluster
-     - Connect to peer Erlang nodes via `PeerDiscovery.scan_and_connect_admins/0`
+     - Connect to peer Erlang nodes via the peer discovery module
 
   ## Membership Sequence
 
@@ -58,25 +55,9 @@ defmodule EdgeAdmin.AdminClustering.Membership.Bootstrap do
 
   ## Configuration
 
-  All values read from Application config (set in runtime.exs):
-  - `:admin_id` - Random 12-char identifier (e.g., "7k3m9p2nq8r4")
-  - `:admin_name` - Prefixed name (e.g., "admin-7k3m9p2nq8r4")
-  - `:admin_cluster_name` - Shared cluster name (e.g., "admin-cluster-a")
-  - `:admin_max_wireguard_peers` - WireGuard peer budget for this admin (e.g., 250).
-    Counts both admin-mesh peers and edge-node peers. The metadata layer derives
-    `edge_node_capacity = max_wireguard_peers - (total_admins - 1)` from this.
-  - `:admin_cluster_cookie` - Shared secret for Erlang distribution within the Admin cluster
-  - `:admin_cluster_v4_subnet` / `:admin_cluster_v6_subnet` - Required dual-stack CIDRs
-
-  ## Examples
-
-      # Membership runs automatically on application start
-      # Success: Application continues
-      # Failure: Application crashes with detailed error
-
-      # Check if membership has been established
-      iex> Membership.initialized?()
-      true
+  The module reads the admin identity, cluster name, distribution cookie,
+  WireGuard peer budget, WireGuard port, and required dual-stack subnets from
+  application configuration.
   """
 
   use GenServer
@@ -87,17 +68,10 @@ defmodule EdgeAdmin.AdminClustering.Membership.Bootstrap do
 
   require Logger
 
-  @doc """
-  Starts the Membership GenServer.
-  """
   def start_link(opts \\ []) do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)
   end
 
-  @doc """
-  Returns true if admin-cluster membership has been successfully established.
-  Used by health checks.
-  """
   def initialized? do
     case Process.whereis(__MODULE__) do
       nil ->

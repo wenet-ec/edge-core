@@ -37,81 +37,27 @@ defmodule EdgeAdmin.AdminClustering.Metadata do
   contains the following fields. Replacing that one ETS entry means readers
   never combine values from different recomputations.
 
-  ### `admin` - This Admin's Info
-  ```elixir
-  %{
-    id: "abc123",
-    name: "admin-abc123",
-    max_wireguard_peers: 250,   # operator-configured WG peer budget
-    admin_peer_count: 1,        # derived: total_admins - 1 (peers in admin mesh)
-    edge_node_capacity: 249,    # derived: max_wireguard_peers - admin_peer_count
-    erlang_node_name: :"admin@admin-abc123.admin-cluster-1.nm.internal",
-    vpn_hostname: "admin-abc123.admin-cluster-1.nm.internal",
-    admin_cluster_name: "admin-cluster-1",
-    vpn_host_id: "95e2707e-...",
-    last_computed_at: ~U[2025-01-15 12:00:00Z]
-  }
-  ```
+  `admin` contains this admin's identity and derived capacity. The invariant is
+  `max_wireguard_peers == admin_peer_count + edge_node_capacity`.
 
-  Invariant: `max_wireguard_peers == admin_peer_count + edge_node_capacity`.
+  `admin_cluster` contains aggregate counts, degradation state, weak-leader
+  selection, and the current admin topology.
 
-  ### `admin_cluster` - Full Topology
-  ```elixir
-  %{
-    name: "admin-cluster-1",
-    total_admins: 2,
-    total_nodes: 5,             # total nodes across all clusters in the system
-    total_edge_capacity: 498,   # sum of edge_node_capacity across all admins
-    degraded: false,            # true when total_nodes > total_edge_capacity
-    weak_leader: "admin-abc123", # alphabetically first admin name; see am_i_weak_leader?/0
-    topology: [
-      %{name: "admin-abc123",
-        max_wireguard_peers: 250, admin_peer_count: 1, edge_node_capacity: 249,
-        vpn_hostname: ..., erlang_node_name: ..., vpn_host_id: "..."},
-      %{name: "admin-def456",
-        max_wireguard_peers: 350, admin_peer_count: 1, edge_node_capacity: 349, ...}
-    ]
-  }
-  ```
-
-  ### `edge_clusters` - Assignment Map
-  ```elixir
-  %{
-    "admin-abc123" => %{
-      "cluster-a" => ["node-1", "node-2"],
-      "cluster-b" => []
-    },
-    "admin-def456" => %{
-      "cluster-c" => ["node-3"]
-    }
-  }
-  ```
-
-  ### `orphaned_clusters` - Unassigned Clusters
-  ```elixir
-  %{
-    "cluster-orphaned-1" => ["node-5", "node-6"],
-    "cluster-orphaned-2" => ["node-7"]
-  }
-  ```
+  `edge_clusters` maps each admin to its assigned clusters and nodes.
+  `orphaned_clusters` contains clusters that could not be assigned within
+  capacity.
 
   ### `node_index` - Inverted Node Index
   Rebuilt on every recomputation. O(1) lookup for `find_node_cluster/1`.
-  ```elixir
-  %{
-    "node-abc123" => {"cluster-a", "admin-1"},
-    "node-def456" => {"cluster-a", "admin-1"},
-    "node-xyz789" => {"cluster-b", "admin-2"}
-  }
-  ```
+  The `node_index` value maps each node to its cluster and owning admin.
 
   ## Recomputation Triggers
 
-  - Admin joins/leaves (syn event via `SynEventHandler` callback → `{:syn_admin_topology_changed}`)
+  - Admin joins/leaves (syn event → `{:syn_admin_topology_changed}`)
   - Cluster created/deleted (PubSub event)
   - Node created/deleted (PubSub event)
   - Node cluster changed (PubSub event)
-  - Periodic scheduler (every minute via Quantum, safety net)
+  - Periodic scheduler (safety net)
   - Manual call via `recompute_now/0`
 
   ## Anti-Thrashing Pattern
@@ -121,16 +67,6 @@ defmodule EdgeAdmin.AdminClustering.Metadata do
   - When done, check flag and recompute again if needed
   - No locks, timers, or debouncing - just flags
 
-  ## Examples
-
-      # Query metadata (from any process)
-      iex> Metadata.get_my_clusters()
-      %{"cluster-prod" => ["node-1", "node-2"], "cluster-dev" => []}
-
-      # Trigger recomputation (from PubSub event)
-      send(Metadata, :cluster_created)
-
-      # Algorithm runs, assignments update, local subscribers are notified
   """
 
   use GenServer
@@ -298,7 +234,6 @@ defmodule EdgeAdmin.AdminClustering.Metadata do
     snapshot().orphaned_clusters
   end
 
-  @doc "Returns whether the admin cluster currently exceeds its edge capacity."
   @spec degraded?() :: boolean()
   def degraded? do
     snapshot().admin_cluster.degraded
@@ -341,7 +276,6 @@ defmodule EdgeAdmin.AdminClustering.Metadata do
     end
   end
 
-  @doc "Returns whether the Metadata GenServer has completed initial setup."
   @spec initialized?() :: boolean()
   def initialized? do
     case Process.whereis(__MODULE__) do

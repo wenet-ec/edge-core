@@ -22,34 +22,9 @@ defmodule EdgeAdmin.AdminClustering do
   and may include stale entries — callers wanting health-only views should
   filter on `:status`.
 
-  Shape:
-
-      {:ok, [
-        %{
-          name: "admin-cluster-a",
-          ipv4_range: "100.64.0.0/24",
-          ipv6_range: "fd7a:91c2:4e8c:1::/64",
-          admin_count: 3,
-          admins: [
-            %{
-              name: "admin-7k3m9p2nq8r4",
-              vpn_hostname: "admin-7k3m9p2nq8r4.admin-cluster-a.nm.internal",
-              vpn_host_id: "f272e703-...",
-              ipv4_address: "100.64.0.1",
-              ipv6_address: "fd7a:91c2:4e8c:1::1",
-              wireguard_ipv4_address: "10.0.0.7",
-              wireguard_ipv6_address: "2001:db8::7",
-              wireguard_listen_port: 51820,
-              use_static_port: true,
-              status: "online",
-              last_checked_in_at: "2026-04-28T12:34:56Z",
-              last_peer_update_at: "2026-04-28T12:34:50Z"
-            },
-            ...
-          ]
-        },
-        ...
-      ]}
+  Each cluster entry contains its name, address ranges, admin count, and
+  normalized admin entries. Each admin entry contains its identity, VPN and
+  WireGuard addresses, listen-port settings, status, and check-in timestamps.
 
   Returns `{:error, :service_unavailable}` if Edge VPN is unreachable.
   """

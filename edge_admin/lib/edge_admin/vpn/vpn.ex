@@ -3,12 +3,8 @@ defmodule EdgeAdmin.Vpn do
   @moduledoc """
   VPN integration and Netmaker API wrapper for Edge Admin.
 
-  This module provides a centralized interface for all VPN-related operations, including:
-
-  - DNS and hostname construction for nodes and admins
-  - Netmaker network, host, enrollment key, and DNS entry operations
-  - IPv4/IPv6 CIDR parsing, overlap checks, and subnet allocation
-  - Error normalization around Nexmaker responses
+  This module centralizes VPN naming, address allocation, Netmaker operations,
+  and CLI access.
 
   Most Netmaker calls route through `normalize_netmaker_error/1`, collapsing
   outcomes to `{:ok, _} | {:error, :not_found} | {:error, :service_unavailable}`.
@@ -143,8 +139,8 @@ defmodule EdgeAdmin.Vpn do
   host-level (name, endpoint, port) detail.
 
   This is a raw Netmaker proxy: shapes mirror Netmaker's API and may include
-  stale members. Callers in the admin domain should normalise to
-  domain-friendly output (see `EdgeAdmin.AdminClustering.list_admin_clusters/0`).
+  stale members. Domain callers are responsible for converting the result to
+  domain-friendly output.
 
   Returns `{:ok, [%{network: net_map, members: [%{node: node, host: host}, ...]}]}`
   or `{:error, :service_unavailable}`.
@@ -230,9 +226,8 @@ defmodule EdgeAdmin.Vpn do
   collapse to `{:error, :already_exists}`. Anything else at 400 is treated as
   `{:error, :service_unavailable}`.
 
-  Match strings are substring (not full-match) — they survive Netmaker
-  rewording around them, but a major message change will silently fall
-  through to `:service_unavailable`. Lock these down in tests.
+  Matching is based on message substrings because the upstream response does
+  not provide a distinct error code for these conflicts.
   """
   @spec classify_create_network_400(term()) ::
           {:error, :already_exists | :service_unavailable}
@@ -557,14 +552,7 @@ defmodule EdgeAdmin.Vpn do
   end
 
   @doc """
-  Force-deletes a Netmaker node by (network, node_id), routing through Netmaker's
-  per-node delete endpoint instead of the host endpoint.
-
-  Used as a defensive sweep after `delete_host/1` to remove orphan node rows
-  whose `hostid` still references a host that was just deleted. Netmaker's
-  `RemoveHost` iterates a cached `host.Nodes` slice and misses node rows that
-  drifted out of that cache (e.g. enroll racing with delete), leaving them in
-  the nodes table and visible to peer pulls.
+  Force-deletes a Netmaker node by network and node ID.
 
   Returns `{:ok, response}`, `{:error, :not_found}`, or `{:error, :service_unavailable}`.
   """
@@ -632,10 +620,9 @@ defmodule EdgeAdmin.Vpn do
   end
 
   @doc """
-  Pulls latest VPN config from Netmaker as a periodic consistency backstop.
+  Pulls the latest VPN configuration from Netmaker as a consistency backstop.
 
-  Respects the VPN_CONFIG_SYNC_ENABLED flag — no-op if disabled.
-  Called by the Quantum `vpn_config_sync` job (default: every 5 minutes).
+  Respects the VPN configuration sync setting; when disabled, this is a no-op.
   """
   def sync_vpn_config do
     if Application.get_env(:edge_admin, :vpn_config_sync_enabled, true) do

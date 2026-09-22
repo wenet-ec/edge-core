@@ -82,7 +82,6 @@ defmodule EdgeAdmin.Vpn.Addressing do
   @doc """
   Generates the next available IPv4 range from configured pools.
 
-  Uses :cluster_auto_generated_v4_ranges and :cluster_v4_subnet_prefix from config.
   Excludes any ranges in the provided list.
   """
   def generate_next_subnet(existing_ranges \\ []) do
@@ -315,15 +314,10 @@ defmodule EdgeAdmin.Vpn.Addressing do
   @doc """
   Generates candidate subnets within a base range as a lazy stream.
 
-  Works for any `base_prefix <= target_prefix` pair (e.g. `/8 → /24`,
-  `/10 → /24`, `/10 → /28`, `/16 → /24`, `/24 → /24`). The base IP is realigned
-  to its prefix boundary so a misaligned pool entry like `100.64.5.0/10` is
-  treated as `100.64.0.0/10`.
+  Works for any `base_prefix <= target_prefix` pair. The base IP is realigned
+  to its prefix boundary before subnet generation.
 
-  Returns a `Stream` because the enumeration can be large
-  (`/8 → /24` = 65,536 subnets; `/10 → /28` ≈ 1M). Callers consume lazily — the
-  only production caller is `find_available_subnet/3`, which stops at the first
-  non-overlapping match via `Enum.find/2`.
+  Returns a `Stream` so large allocation pools can be consumed lazily.
 
   Raises `ArgumentError` on misconfiguration (operator-fixable, not user input):
     * `target_prefix < base_prefix` — can't carve a wider subnet from a narrower pool

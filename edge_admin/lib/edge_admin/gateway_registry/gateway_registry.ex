@@ -13,11 +13,13 @@ defmodule EdgeAdmin.GatewayRegistry do
   alias EdgeAdminProxy.AdminTunnel.Client, as: AdminTunnelClient
   alias EdgeAdminProxy.Config, as: ProxyConfig
 
+  @doc "Resolves the virtual gateway responsible for a cluster."
   @spec resolve(String.t()) :: {:ok, pid()} | {:error, :no_owner | :gateway_not_found}
   def resolve(cluster_name) when is_binary(cluster_name) do
     VirtualGateway.lookup(cluster_name)
   end
 
+  @doc "Resolves the virtual gateway responsible for a node's loaded cluster."
   @spec resolve_node(struct()) ::
           {:ok, pid()} | {:error, :no_owner | :gateway_not_found | :cluster_not_loaded}
   def resolve_node(%{cluster: %{name: cluster_name}}) when is_binary(cluster_name), do: resolve(cluster_name)
@@ -58,10 +60,12 @@ defmodule EdgeAdmin.GatewayRegistry do
   def deliver_execution(gateway_pid, node, execution_data),
     do: VirtualGateway.deliver_execution(gateway_pid, node, execution_data)
 
+  @doc "Delivers Ingress Tunneling desired state through a resolved virtual gateway."
   @spec deliver_ingress_tunneling(pid(), struct(), map()) :: {:ok, :sent} | {:error, term()}
   def deliver_ingress_tunneling(gateway_pid, node, desired_state),
     do: VirtualGateway.deliver_ingress_tunneling(gateway_pid, node, desired_state)
 
+  @doc "Opens a TCP stream through the cluster owner, locally or through the Admin tunnel."
   @spec open_stream(String.t(), String.t(), 1..65_535) ::
           {:ok, :gen_tcp.socket()} | {:error, term()}
   def open_stream(cluster_name, target_host, target_port) do

@@ -1,6 +1,6 @@
 # edge_admin/lib/edge_admin/gateway_registry/reconciler.ex
 defmodule EdgeAdmin.GatewayRegistry.Reconciler do
-  @moduledoc false
+  @moduledoc "Plans gateway joins, leaves, and retained assignments from two cluster sets."
 
   @type plan :: %{
           to_join: MapSet.t(),
@@ -8,6 +8,7 @@ defmodule EdgeAdmin.GatewayRegistry.Reconciler do
           retained: MapSet.t()
         }
 
+  @doc "Returns the cluster assignments to join, leave, and retain."
   @spec plan(Enumerable.t(), Enumerable.t()) :: plan()
   def plan(current_clusters, assigned_clusters) do
     current = MapSet.new(current_clusters)

@@ -9,8 +9,6 @@ defmodule EdgeAdmin.GatewayRegistry.AgentClient do
   All functions accept a `Node` struct and derive the URL from `vpn_hostname`
   and `http_port`. Authentication uses `node.api_token` where required.
 
-  Covers health checks, command delivery/cancellation, diagnostics,
-  self-update triggers, and the three metrics surfaces.
   """
 
   alias EdgeAdmin.Nodes.Schemas.Node

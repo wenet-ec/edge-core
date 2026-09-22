@@ -1,11 +1,10 @@
 # edge_admin/lib/edge_admin/gateway_registry/supervisor.ex
 defmodule EdgeAdmin.GatewayRegistry.Supervisor do
   @moduledoc """
-  DynamicSupervisor for Gateway processes.
+  Dynamic supervisor for per-cluster Gateway processes.
 
-  Coordination lives in `EdgeAdmin.GatewayRegistry.Coordinator`; this module only supervises
-  per-cluster Gateway processes. Gateway children are started with `:transient`
-  restart so normal assignment removal does not restart them.
+  Gateway children use `:transient` restart so normal assignment removal does
+  not restart them.
   """
 
   use DynamicSupervisor

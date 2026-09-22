@@ -41,7 +41,6 @@ defmodule EdgeAdmin.Sentry do
 
   def before_send(event), do: event
 
-  # Reference: https://github.com/getsentry/sentry-elixir/blob/9.1.0/lib/sentry/plug_context.ex#L232
   defp scrub_map(map, scrubbed_keys) do
     Map.new(map, fn {key, value} ->
       key_name =
@@ -64,7 +63,6 @@ defmodule EdgeAdmin.Sentry do
     end)
   end
 
-  # Reference: https://github.com/getsentry/sentry-elixir/blob/9.1.0/lib/sentry/plug_context.ex#L248
   defp scrub_list(list, scrubbed_keys) do
     Enum.map(list, fn value ->
       cond do

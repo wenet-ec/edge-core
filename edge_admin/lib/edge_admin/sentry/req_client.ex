@@ -1,10 +1,9 @@
 # edge_admin/lib/edge_admin/sentry/req_client.ex
 defmodule EdgeAdmin.Sentry.ReqClient do
   @moduledoc """
-  `Sentry.HTTPClient` implementation backed by `Req`.
+  Sentry HTTP client adapter backed by `Req`.
 
-  Used so the admin doesn't need a second HTTP stack (hackney/finch) just for
-  Sentry envelope delivery. Req is already a top-level dependency.
+  Converts Req responses to the result shape expected by Sentry.
   """
 
   @behaviour Sentry.HTTPClient
@@ -20,7 +19,6 @@ defmodule EdgeAdmin.Sentry.ReqClient do
     end
   end
 
-  # Req returns headers as %{name => [values]}; Sentry expects [{name, value}].
   defp flatten_headers(headers) do
     for {name, values} <- headers, value <- values, do: {name, value}
   end

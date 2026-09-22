@@ -19,7 +19,7 @@ defmodule EdgeAdminHealth.Router do
           json_encoder: EdgeAdminHealth.JsonEncoder,
           checks: EdgeAdminHealth.checks(),
           error_code: EdgeAdminHealth.error_code(),
-          timeout: to_timeout(second: 5),
+          timeout: to_timeout(second: 10),
           pretty: false
         )
     )

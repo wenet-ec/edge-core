@@ -6,10 +6,11 @@ defmodule EdgeAgent.AdminGateway.Client do
   directly. In the bundled deployment, that surface reaches the responsible
   per-cluster VirtualGateway inside the Admin process.
 
-  Bootstrap enrollment uses URLs from the decoded enrollment-key blob. All
+  Bootstrap enrollment uses URLs from the decoded enrollment-key blob. Normal
   post-registration calls use Settings URLs through `Transport`: VPN-discovered
   Admin Gateway URLs are tried first, followed by public fallback URLs on
-  transport failure. Reachable HTTP responses are terminal.
+  transport failure. Enrollment verification additionally fails over on a
+  degraded-mode response because another Admin may still be available.
   """
 
   alias EdgeAgent.AdminGateway.Transport

@@ -1,7 +1,7 @@
 # edge_agent/lib/edge_agent/ingress_tunneling/identity.ex
 defmodule EdgeAgent.IngressTunneling.Identity do
   @moduledoc """
-  Owns the Agent's durable WireGuard identity for future Ingress Tunneling.
+  Owns the Agent's durable WireGuard identity for Ingress Tunneling.
 
   The private key never leaves the Agent. Registration sends only the derived
   public key so Admin can associate it with the existing Node record.

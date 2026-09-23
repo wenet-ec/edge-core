@@ -1,32 +1,13 @@
 # edge_agent/lib/edge_agent/vpn/derp_map_cache.ex
 defmodule EdgeAgent.Vpn.DerpMapCache do
   @moduledoc """
-  Periodic cache for the DERP map fetched from the configured map server.
+  Caches the canonical Core DERP map for the Agent's reflection endpoint.
 
-  Fetches the DERP map JSON from `core_derp_map_urls` (stored in settings) on startup
-  and on a recurring interval (default 5 minutes, configurable via
-  `DERP_MAP_REFRESH_INTERVAL_MS`). Serves the cached result instantly to the
-  reflection endpoint.
-
-  ## Warm-up behaviour
-
-  On startup the cache hasn't fetched yet, so the first refresh interval is kept
-  short (5 s) and doubles on each failed or unconfigured attempt until the
-  configured stable interval is reached. Once the map is successfully fetched the
-  interval jumps straight to the stable value, stopping the acceleration.
-
-  This means:
-  - Fresh agent: retries quickly (5 s → 10 s → 20 s → … → stable)
-  - Already cached: stays at the stable interval without churn
-
-  ## Other behaviour
-
-  If `core_derp_map_urls` is empty (not configured), the cache holds nil and the endpoint
-  returns an empty regions map — the Edge VPN CLI skips the overlay and uses the Tailscale fallback.
-
-  If a fetch fails, the last known good cache is kept. The map server URL is re-read
-  from settings on every fetch cycle, so a refreshed URL list takes effect
-  within one refresh interval without a restart.
+  Sources are read from settings on every refresh. The first source that
+  returns a valid map wins; sources are not merged. A failed refresh keeps the
+  last known map, while an unconfigured or not-yet-fetched cache returns nil.
+  Failed startup fetches use an accelerated retry interval before settling on
+  the configured refresh interval.
   """
 
   use GenServer

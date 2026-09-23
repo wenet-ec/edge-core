@@ -1,53 +1,11 @@
 # edge_agent/lib/edge_agent/bootstrap.ex
 defmodule EdgeAgent.Bootstrap do
   @moduledoc """
-  Bootstrap orchestrator for edge agent startup.
-
-  This GenServer runs exactly once during application startup and performs critical
-  initialization tasks to load or create the agent installation ID, join the VPN network, discover
-  and register with admin servers, and sync unprocessed command executions.
-
-  ## Bootstrap Sequence
-
-  1. Load or generate the node installation ID
-  2. Verify enrollment key with admin
-  3. Join VPN network
-  4. Discover admin URLs and register with admin, using HTTP fallback if needed
-  5. Sync unprocessed command executions
-  6. Register node aliases from `ALIASES` best-effort
-
-  ## Failure Handling
-
-  Bootstrap failures stop the GenServer's `init/1` with the failure reason.
-  Under the application supervisor's `:one_for_one` strategy that triggers
-  a restart; once Bootstrap exhausts its restart intensity the entire
-  application supervisor terminates and the agent exits — i.e. fatal in
-  practice, but with a few retries first. Failure modes:
-
-  - Node-ID persistence failure → Can't identify node
-  - Enrollment / VPN join failure → Can't communicate with admins
-  - Registration failure → Can't authenticate with admin
-
-  Non-fatal conditions (logged as warning, bootstrap continues):
-  - Admin discovery returns empty → Triggers HTTP fallback mode
-  - Command sync failures → Will retry later via `EdgeAgent.BackgroundJobs.Quantum.Tasks.sync_unprocessed_executions/0`
-
-  ## Configuration
-
-  All values read from Application config (set in runtime.exs):
-  - `:enrollment_key` - Admin enrollment key blob (base64)
-  - `:recovery_key` - Optional node recovery key used only when local identity is absent
-  - `:public_enrollment_key_urls` - List of URLs to fetch enrollment key blob (tried in order)
-  - `:run_bootstrap` - Whether to run bootstrap (default: true)
-  - `:agent_api_port` - Agent HTTP API port (sent to admin as `http_port`)
-  - `:agent_metrics_port` - Agent PromEx metrics port (defaults to the API port)
-  - `:agent_ssh_port` - Agent SSH server port
-  - `:agent_host_metrics_port` - Node exporter port
-  - `:agent_wireguard_metrics_port` - WireGuard exporter port
-  - `:agent_http_proxy_port` - HTTP proxy port
-  - `:agent_socks5_proxy_port` - SOCKS5 proxy port
-  - `:vpn_ready_timeout_seconds` - VPN verification timeout in seconds (default: 30)
-  - `:aliases` - List of friendly name aliases to register with admin (default: [])
+  Runs the one-time startup sequence that establishes local identity, verifies
+  enrollment, joins the VPN, registers with Admin, and synchronizes pending
+  command executions. Bootstrap failures are reported to the supervisor for
+  restart; optional discovery and synchronization work can continue in a
+  degraded state.
 
   """
 

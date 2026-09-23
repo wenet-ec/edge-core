@@ -3,12 +3,9 @@ defmodule EdgeAgent.BackgroundJobs.Quantum.Tasks do
   @moduledoc """
   Entry points called by `EdgeAgent.BackgroundJobs.Quantum`.
 
-  Each function below is what a cron tick invokes directly — no Oban job, no
-  DB write for scheduling state. Functions are responsible for their own
-  runtime guards (e.g. "only run when VPN is down and fallback URLs are
-  configured"). The underlying work modules (`Commands`, `Metrics`,
-  `HealthCheck`, etc.) stay unaware of scheduling concerns so they can also
-  be called directly from `Bootstrap`, controllers, and tests.
+  Each function is invoked directly by Quantum; no Oban job or scheduling row
+  is created. Functions apply their own runtime guards, while the underlying
+  work remains callable independently of scheduling.
 
   All functions return `:ok`. Errors are logged inside the work; Quantum's
   telemetry events surface exceptions if they escape.
@@ -150,7 +147,7 @@ defmodule EdgeAgent.BackgroundJobs.Quantum.Tasks do
   end
 
   @doc """
-  Periodic Edge VPN CLI `pull` — daily DNS-recovery backstop.
+  Run the Edge VPN CLI `pull` as a DNS-recovery backstop.
 
   Disabled via `PULL_VPN_CONFIG_ENABLED=false` on resource-starved boxes
   where the pull causes disruptive interface resets.

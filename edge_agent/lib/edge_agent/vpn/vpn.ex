@@ -6,11 +6,6 @@ defmodule EdgeAgent.Vpn do
   Handles joining the Edge VPN network and verifying connection health.
   The vpn_enrollment_key is expected to already be in Settings (written by
   `EdgeAgent.Enrollment.ensure_verified/0` during bootstrap).
-
-  ## Configuration
-
-  - `AGENT_WIREGUARD_PORT` - Static WireGuard port (optional, dynamic if unset)
-  - `VPN_READY_TIMEOUT_SECONDS` - Connection verify timeout in seconds (default: 30)
   """
 
   alias EdgeAgent.Settings

@@ -3,18 +3,9 @@ defmodule EdgeAgentWeb.Router do
   @moduledoc """
   Phoenix router for the agent's REST API.
 
-  Two pipelines:
-
-  - `:public` — JSON-accepting, no auth. Currently only the `/derp_map`
-    reflection endpoint, which the Edge VPN CLI calls without credentials.
-  - `:api` — JSON + `ApiTokenAuth` (bearer token verified against the
-    agent's stored API token from bootstrap registration). All
-    Admin Gateway↔agent endpoints sit here. In the bundled deployment, these
-    endpoints are backed by the responsible per-cluster VirtualGateway.
-
-  Routes mirror what `EdgeAgent.AdminGateway.Client` documents on the
-  admin side; if you add one here, update that moduledoc's endpoint list
-  too.
+  The public pipeline serves unauthenticated JSON endpoints required for VPN
+  reflection. The API pipeline applies bearer-token authentication to
+  Admin-to-Agent operations.
   """
 
   use EdgeAgentWeb, :router

@@ -1,7 +1,11 @@
 # edge_agent/lib/edge_agent/diagnostics/diagnostics.ex
 defmodule EdgeAgent.Diagnostics do
   @moduledoc """
-  Edge Agent self-diagnostics.
+  Collects a bounded diagnostic snapshot for the Edge Agent.
+
+  Checks run concurrently with an individual timeout and are normalized to
+  `pass`, `warn`, or `fail` results. Diagnostic details are converted to
+  JSON-safe values before the snapshot is returned or pushed to Admin.
   """
 
   alias EdgeAgent.AdminGateway.Client
@@ -19,6 +23,7 @@ defmodule EdgeAgent.Diagnostics do
     build_report(local_checks())
   end
 
+  @doc "Collects a local diagnostic snapshot without contacting Admin."
   @spec run() :: map()
   def run do
     build_report(local_checks())

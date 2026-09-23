@@ -19,6 +19,7 @@ defmodule EdgeAgent.Settings.ConfigValueCodec do
   @spec encode_string_list(list()) :: String.t()
   def encode_string_list(values) when is_list(values), do: JSON.encode!(values)
 
+  @doc "Decodes a persisted JSON object, returning nil for invalid input."
   @spec decode_map(String.t() | nil) :: map() | nil
   def decode_map(nil), do: nil
 
@@ -31,6 +32,7 @@ defmodule EdgeAgent.Settings.ConfigValueCodec do
 
   def decode_map(_), do: nil
 
+  @doc "Encodes a map for storage in a settings value."
   @spec encode_map(map()) :: String.t()
   def encode_map(value) when is_map(value), do: JSON.encode!(value)
 
@@ -57,7 +59,7 @@ defmodule EdgeAgent.Settings.ConfigValueCodec do
 
   def decode_datetime(_), do: nil
 
-  @doc "Formats a datetime for storage in a settings value."
+  @doc "Formats a datetime as ISO 8601 for storage in a settings value."
   @spec encode_datetime(DateTime.t()) :: String.t()
   def encode_datetime(%DateTime{} = datetime), do: DateTime.to_iso8601(datetime)
 end

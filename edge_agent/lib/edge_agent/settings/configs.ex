@@ -4,8 +4,9 @@ defmodule EdgeAgent.Settings.Configs do
   SQLite-backed engine for durable configuration values.
 
   Values written here survive process restarts. Used for identity and discovery
-  state that the agent reloads on boot (node_id, admin_urls, enrollment_key_id,
-  etc.). Secrets do not belong here — see `EdgeAgent.Settings.Secrets`.
+  state that the agent reloads on boot, including node identity, Admin URLs,
+  and enrollment state. Secrets do not belong here — see
+  `EdgeAgent.Settings.Secrets`.
 
   Direct callers should be limited to `EdgeAgent.Settings` (the facade) and
   tests. Other modules go through the facade.

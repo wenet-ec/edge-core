@@ -68,8 +68,8 @@ defmodule EdgeAgent.Commands do
   @doc """
   Enqueues all recoverable command executions as Oban jobs.
 
-  Called periodically to ensure pending commands are processed and to recover
-  commands that were running when the Agent previously stopped.
+  Ensures pending commands are processed and recovers commands that were
+  running when the Agent previously stopped.
   Oban's unique constraints prevent duplicate job creation.
   """
   @spec enqueue_pending_executions() :: :ok
@@ -416,7 +416,7 @@ defmodule EdgeAgent.Commands do
 
   Fetches already acknowledged `sent` executions and unacknowledged `pending`
   executions from Admin, stores missing local rows, and leaves failed items for
-  the next periodic sync.
+  a later synchronization attempt.
   """
   @spec sync_unprocessed_command_executions() :: :ok | {:error, term()}
   def sync_unprocessed_command_executions do

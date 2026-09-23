@@ -69,9 +69,9 @@ defmodule EdgeAgent.Commands.Workers.ExecuteCommandWorker do
           :ok
 
         :running ->
-          # A running row only reaches a fresh worker after Oban recovery or the
-          # periodic re-enqueue pass. The Agent deliberately retries it after a
-          # crash, so command delivery remains at-least-once.
+          # A running row can reach a fresh worker after Oban recovery or a
+          # re-enqueue pass. Retrying it after a crash keeps command delivery
+          # at least once.
           Commands.execute_single_command(execution)
 
           Commands.enqueue_worker(

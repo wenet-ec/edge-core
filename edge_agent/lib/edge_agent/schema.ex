@@ -1,6 +1,10 @@
 # edge_agent/lib/edge_agent/schema.ex
 defmodule EdgeAgent.Schema do
-  @moduledoc false
+  @moduledoc """
+  Shared Ecto schema defaults for Agent persistence models.
+
+  Models use UUIDv7 binary IDs, binary foreign keys, and UTC timestamps.
+  """
   defmacro __using__(_) do
     quote do
       use Ecto.Schema

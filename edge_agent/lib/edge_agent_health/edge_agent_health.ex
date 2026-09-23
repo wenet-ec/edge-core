@@ -1,25 +1,19 @@
 # edge_agent/lib/edge_agent_health/edge_agent_health.ex
 defmodule EdgeAgentHealth do
   @moduledoc """
-  Health check configuration for EdgeAgent.
+  Defines the Agent's readiness checks and their HTTP failure status.
 
-  Verifies that all critical runtime dependencies are available and healthy:
-  - Database connection (`SELECT 1` on the SQLite repo)
-  - Bootstrap completion (identity, VPN join, admin registration)
-  - Edge VPN CLI WireGuard interface health (per the VPN adapter health check)
-  - SSH server GenServer status
-  - Metrics exporter pair (node_exporter + wireguard_exporter) liveness
-  - Proxy server Ranch listeners
-
-  Returns 503 Service Unavailable if any check fails. Used by the `/health`,
-  `/healthz`, and `/readyz` routes in `EdgeAgentHealth.Router`; `/livez`
-  intentionally does not run this check list.
+  The checks cover persistent state, bootstrap completion, VPN connectivity,
+  and the local service dependencies required for normal operation. Any failed
+  check produces a 503 response from the readiness router. Liveness is kept
+  separate and does not run this dependency check list.
   """
 
   require Logger
 
   @health_check_error_code 503
 
+  @doc "Returns the checks used by the Agent readiness endpoints."
   @spec checks() :: [map()]
   def checks do
     [
@@ -32,6 +26,7 @@ defmodule EdgeAgentHealth do
     ]
   end
 
+  @doc "Returns the HTTP status used when a readiness check fails."
   @spec error_code() :: pos_integer()
   def error_code, do: @health_check_error_code
 

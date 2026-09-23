@@ -1,19 +1,12 @@
 # edge_agent/lib/edge_agent_proxy/authentication.ex
 defmodule EdgeAgentProxy.Authentication do
   @moduledoc """
-  Authentication for proxy server.
+  Authenticates Agent proxy credentials.
 
-  Agent proxy uses simple username/password authentication:
-  - Username: "_" (underscore, always)
-  - Password: proxy_password from settings table
-
-  Comparison is timing-safe via `:crypto.hash_equals/2`. Mismatched lengths
-  still consume a same-length compare so the rejection path doesn't leak
-  length via timing.
-
-  When `AGENT_PROXY_AUTH_ENABLED=false` (default `true`), credential
-  verification is skipped — any username/password is accepted. Intended for
-  local dev only.
+  The username must be `_` and the password must match the value stored in
+  session settings. Comparison is timing-safe. Authentication can be disabled
+  for local development, in which case username and password checks are
+  bypassed.
   """
 
   alias EdgeAgent.Settings

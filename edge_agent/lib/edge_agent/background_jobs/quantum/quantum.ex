@@ -1,17 +1,13 @@
 # edge_agent/lib/edge_agent/background_jobs/quantum/quantum.ex
 defmodule EdgeAgent.BackgroundJobs.Quantum do
   @moduledoc """
-  Quantum scheduler for the agent's recurring, in-process, stateless tasks.
+  Quantum scheduler for the Agent's recurring, in-process tasks.
 
-  Jobs here run **in-process** with no `oban_jobs` row written. They are
-  fire-and-forget on a clock and idempotent — if a tick fails, the next tick
-  redoes it. Anything that needs durable lifecycle (claim-once, retry,
-  per-execution record) belongs on Oban, not here. See
-  `EdgeAgent.BackgroundJobs.Oban.Queues` for the current command-worker
-  manifest.
+  Quantum jobs are fire-and-forget and do not create an Oban job record. They
+  are expected to be safe to repeat after a failed tick. Work that requires a
+  durable lifecycle, retries, or per-execution state belongs on Oban.
 
-  The job entry points live in `EdgeAgent.BackgroundJobs.Quantum.Tasks` — that module
-  is the only thing this scheduler calls into.
+  The scheduler calls only `EdgeAgent.BackgroundJobs.Quantum.Tasks`.
   """
 
   use Quantum, otp_app: :edge_agent

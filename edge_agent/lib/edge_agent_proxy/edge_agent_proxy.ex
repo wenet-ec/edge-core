@@ -1,22 +1,12 @@
 # edge_agent/lib/edge_agent_proxy/edge_agent_proxy.ex
 defmodule EdgeAgentProxy do
   @moduledoc """
-  Proxy servers supervisor managing HTTP and SOCKS5 forward proxies.
+  Supervises the Agent's HTTP and SOCKS5 forward proxy listeners.
 
-  Runs two separate Ranch listeners:
-  - HTTP forward proxy on port 43128 (configurable via `AGENT_HTTP_PROXY_PORT`)
-  - SOCKS5 proxy on port 41080 (configurable via `AGENT_SOCKS5_PROXY_PORT`)
-
-  Both proxies use simple authentication:
-  - Username: "_" (underscore)
-  - Password: `proxy_password` from Agent settings
-
-  When `AGENT_PROXY_AUTH_ENABLED=false` (default `true`), credentials are
-  not verified and any client is accepted. Intended for local dev only.
-
-  No cluster awareness: the agent proxies any destination accepted by the
-  SSRF/destination allowlist (see `Transport.DestinationValidator`). It does
-  not resolve cluster membership or route based on it.
+  Both protocols authenticate with the Agent proxy password and apply the
+  destination security policy before connecting. Listener failures are retried
+  without taking down unrelated Agent services, and active tunnels are drained
+  during shutdown.
   """
 
   use GenServer

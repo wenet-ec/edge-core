@@ -40,7 +40,6 @@ defmodule EdgeAdminWeb.Controllers.Nodes.AliasController do
         QueryParams.datetime_range_filter(:updated_at),
     responses: %{
       200 => {"Paginated list of aliases", "application/json", AliasSchemas.AliasPaginatedResponse},
-      400 => {"Invalid query parameters", "application/json", CommonSchemas.BadRequestResponse},
       400 => {"Invalid query parameters", "application/json", CommonSchemas.BadRequestResponse}
     }
   )

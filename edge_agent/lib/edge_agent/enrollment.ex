@@ -1,30 +1,12 @@
 # edge_agent/lib/edge_agent/enrollment.ex
 defmodule EdgeAgent.Enrollment do
   @moduledoc """
-  Handles admin enrollment key verification for the edge agent.
+  Verifies the Admin enrollment key and persists the credentials needed for
+  Agent registration and Admin failover.
 
-  The enrollment key is a base64-encoded JSON blob issued by admin:
-
-      base64({"admin_urls": ["https://admin.example.com"], "cluster_name": "production", "nonce": "<random_32_bytes_base64>"})
-
-  It can be provided directly via `ENROLLMENT_KEY` or fetched from one of
-  the URLs in `PUBLIC_ENROLLMENT_KEY_URLS` (comma-separated, tried in order).
-  Any admin can mint a key — admins share the same Postgres — so the list
-  is a pure availability fallback, not a routing decision.
-
-  ## Flow
-
-      ensure_verified(recovery_key)
-        ├── enrollment_key_id is present and no recovery key? → :ok (skip)
-        └── enrollment_key_id is absent:
-              1. Get enrollment key (ENROLLMENT_KEY env, or fetch by trying
-                 PUBLIC_ENROLLMENT_KEY_URLS in order until one succeeds)
-              2. Decode → extract admin_urls and cluster_name (nonce only makes the blob unique)
-              3. If recovering, verify the recovery key belongs to cluster_name
-              4. POST the full key blob to admin verify endpoint
-              5. Require a non-empty VPN enrollment key
-              6. On success: store admin_fallback_urls, vpn_enrollment_key,
-                 then write enrollment_key_id last as the durable commit marker
+  A configured enrollment key takes precedence over public enrollment URLs.
+  URL failover is used for transport failures; an HTTP rejection is returned
+  immediately because another Admin would reject the same enrollment request.
 
   ## Multi-URL failover semantics
 
@@ -35,32 +17,9 @@ defmodule EdgeAgent.Enrollment do
   wrong cluster name, etc.) that another admin would reject identically.
   Failing over on those would hide the real problem.
 
-  ## Crash Safety
-
-  Settings writes are ordered so `enrollment_key_id` is the last one.
-  If the agent crashes after `ensure_verified/0` returns `:ok`, the next
-  bootstrap sees the key ID and skips re-verification, preserving
-  the enrollment key's use count.
-
-  A crash *during* the write sequence — between the
-  `set_admin_fallback_urls/1` / `set_vpn_enrollment_key/1` writes and the final
-  `set_enrollment_key_id/1` — leaves the key ID absent. The
-  next bootstrap will re-verify and consume another key use. Limited-use
-  keys with very narrow crash windows could deplete this way, but in
-  practice the writes are SQLite upserts and complete in microseconds.
-
-  ## Configuration
-
-  - `ENROLLMENT_KEY` — base64 enrollment key (highest priority)
-  - `PUBLIC_ENROLLMENT_KEY_URLS` — comma-separated URLs to POST to receive
-    the enrollment key (fallback; tried in order)
-  - `PUBLIC_ENROLLMENT_KEY_PATHS` — comma-separated list of dotted JSON paths
-    for extracting the key from the response body (e.g.
-    `data.key,result.token,payload.enrollment_key`). Each path is tried in
-    order *first*, then the built-in patterns fall through. Set this when
-    integrating with a third-party admin whose response shape doesn't match
-    any of the built-in patterns; the fall-through ensures other URLs in
-    `PUBLIC_ENROLLMENT_KEY_URLS` with standard shapes still work.
+  Enrollment settings are written with `enrollment_key_id` last. A completed
+  verification is therefore recognized on the next bootstrap only after the
+  supporting VPN and Admin credentials have been persisted.
   """
 
   alias EdgeAgent.AdminGateway.Client

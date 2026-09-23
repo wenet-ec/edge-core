@@ -1,23 +1,12 @@
 # edge_agent/lib/edge_agent/application.ex
 defmodule EdgeAgent.Application do
   @moduledoc """
-  Application entry point and supervision tree builder for the edge agent.
+  Application entry point and supervision tree builder for the Edge Agent.
 
-  ## Supervision profiles
-
-  The supervision tree is selected by the `:supervision_profile` application
-  setting:
-
-  - `:test` — minimal tree: `Repo`, `PubSub`, `Oban`, `ExecutionRegistry`,
-    `Endpoint`. No `Bootstrap`, `EdgeAgentSsh`, `EdgeAgentMetrics`, `EdgeAgentProxy`,
-    `PromEx`, `DerpMapCache`, or `Mdns` — keeps tests free of external
-    side effects (VPN join, port binds, OpenSSL host-key generation).
-  - `:server` (default) — full server tree.
-
-  Strategy is `:one_for_one`: each child supervises independently, so a
-  Bootstrap failure restarts only Bootstrap (eventually crashing the
-  application supervisor if it exhausts restart intensity — see
-  `EdgeAgent.Bootstrap` moduledoc for details).
+  The `:supervision_profile` setting selects the minimal test tree or the full
+  server tree. Both profiles validate the Oban queue manifest before startup.
+  Children use `:one_for_one`, so a failed subsystem is restarted independently
+  of its siblings.
   """
 
   use Application

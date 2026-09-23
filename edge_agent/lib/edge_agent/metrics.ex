@@ -1,30 +1,10 @@
 # edge_agent/lib/edge_agent/metrics.ex
 defmodule EdgeAgent.Metrics do
   @moduledoc """
-  The Metrics context handles metrics operations for Edge Agent.
-
-  This module provides functionality for pushing metrics to admin when using
-  HTTP fallback mode (VPN unavailable).
-
-  ## HTTP Fallback Metrics Push
-
-  When VPN is unavailable, agents scrape local metrics exporters and push
-  to admin for temporary caching. This allows collectors to continue scraping
-  metrics through admin's proxy endpoints even when VPN is down.
-
-  ## Metrics Sources
-
-  - **Host metrics** - node_exporter at `localhost:AGENT_HOST_METRICS_PORT` (default 49100)
-  - **Agent metrics** - agent PromEx module (direct call, no HTTP)
-  - **WireGuard metrics** - wireguard_exporter at `localhost:AGENT_WIREGUARD_METRICS_PORT` (default 49586)
-
-  ## Push Strategy
-
-  - Best-effort: Push whatever metrics scrape successfully
-  - Validate: Skip empty metrics text
-  - Continue on failures: One failed scrape doesn't stop others
-  - `push_metrics/0` always returns `{:ok, summary}` — partial failure is
-    surfaced via the `failed` count, never as `{:error, _}`
+  Scrapes the Agent's local metrics sources and pushes them to Admin when the
+  normal VPN path is unavailable. Each source is independent: a failed or
+  empty scrape does not prevent the remaining sources from being attempted,
+  and `push_metrics/0` reports partial failure in its summary.
 
   """
 

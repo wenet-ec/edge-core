@@ -3,20 +3,15 @@ defmodule EdgeAgent.Settings.Secrets do
   @moduledoc """
   In-memory engine for session-scoped secrets.
 
-  Values live in `:persistent_term` for the lifetime of the BEAM. Written once
-  by bootstrap after (re)registration with admin; reread on every hot-path
-  call (proxy credential checks). The proxy password is refreshed after each
-  successful registration. There is no in-process invalidation API.
+  Values live in `:persistent_term` for the lifetime of the BEAM. They are
+  repopulated by bootstrap after registration and read directly by hot paths.
+  There is no in-process invalidation API beyond deleting a named value.
 
   Direct callers should be limited to `EdgeAgent.Settings` (the facade) and
   tests. Other modules go through the facade.
 
-  ## Why `:persistent_term`
-
-  Reads are a single VM term load — faster than ETS and without a copy. The
-  global GC sweep on write is a non-issue here because writes happen at most
-  a handful of times across the BEAM's lifetime (one per successful bootstrap
-  attempt). See `Bootstrap` for the write call site.
+  Reads are direct VM term loads. This engine is reserved for values that are
+  safe to keep only for the current BEAM lifetime.
   """
 
   @namespace __MODULE__

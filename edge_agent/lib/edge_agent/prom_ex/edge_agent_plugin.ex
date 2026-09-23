@@ -1,27 +1,19 @@
 # edge_agent/lib/edge_agent/prom_ex/edge_agent_plugin.ex
 defmodule EdgeAgent.PromEx.EdgeAgentPlugin do
   @moduledoc """
-  Custom PromEx plugin for edge_agent specific metrics.
+  PromEx plugin for Edge Agent operational metrics.
 
-  Provides business-level metrics for:
-  - Bootstrap process (agent registration)
-  - Command execution (syncing, running, reporting)
-  - Admin discovery (probing VPN peers for admins)
-  - Proxy server (HTTP/SOCKS5 connections, blocks, tunnel close, bytes,
-    duration)
-  - SSH server (connection, authentication, session duration)
-  - VPN config pull (periodic Edge VPN CLI pull as DNS-recovery backstop)
-  - Health check (agent → admin status reports in HTTP-fallback mode)
-  - Diagnostics push (agent → admin reports in HTTP-fallback mode)
-  - Settings Config refresh (Admin URLs and Core DERP map sources)
+  The plugin converts the Agent's telemetry events into counters, gauges, and
+  distributions for bootstrap, command, proxy, SSH, VPN, health, diagnostics,
+  discovery, and settings-refresh activity.
 
   ## Operator notes
 
   Two metrics carry caveats worth flagging when authoring alerts:
 
-  - `[:edge_agent, :commands, :execution, :exit_code]` is a `last_value` —
-    under concurrent command execution, the value reflects whichever event
-    fired last. Useful as a spot indicator, **not** as a per-command tracker.
+  - `[:edge_agent, :commands, :execution, :exit_code]` is a `last_value`.
+    Under concurrent execution it reflects the most recent event, not a
+    per-command value.
   - SSH authentication metrics deliberately tag only bounded `:auth_method`
     and `:result` values. Usernames belong in audit logs, not Prometheus labels.
   """

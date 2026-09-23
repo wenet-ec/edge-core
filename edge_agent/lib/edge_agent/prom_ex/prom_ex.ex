@@ -1,14 +1,10 @@
 # edge_agent/lib/edge_agent/prom_ex/prom_ex.ex
 defmodule EdgeAgent.PromEx do
   @moduledoc """
-  PromEx configuration for EdgeAgent application.
+  PromEx configuration for the Edge Agent.
 
-  Wires up the upstream PromEx plugins (Application, Beam, Phoenix, Ecto, Oban)
-  plus our custom `EdgeAgent.PromEx.EdgeAgentPlugin` that emits agent-specific
-  business metrics. The corresponding agent Grafana dashboard
-  (`edge_agent.json`) lives under `edge_admin/priv/grafana_dashboards/` so
-  operators import it once at the admin tier; the agent itself does not serve
-  custom dashboards.
+  Combines the standard application, Phoenix, Ecto, BEAM, and Oban plugins
+  with `EdgeAgent.PromEx.EdgeAgentPlugin` for Agent-specific telemetry.
   """
 
   use PromEx, otp_app: :edge_agent

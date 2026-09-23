@@ -24,7 +24,7 @@ defmodule EdgeAgentHealth.Router do
           json_encoder: EdgeAgentHealth.JsonEncoder,
           checks: EdgeAgentHealth.checks(),
           error_code: EdgeAgentHealth.error_code(),
-          timeout: to_timeout(second: 5),
+          timeout: to_timeout(second: 10),
           pretty: false
         )
     )

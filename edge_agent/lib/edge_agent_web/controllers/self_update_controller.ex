@@ -8,14 +8,11 @@ defmodule EdgeAgentWeb.Controllers.SelfUpdateController do
   action_fallback(EdgeAgentWeb.Controllers.FallbackController)
 
   @doc """
-  Triggers a self-update by requesting the self-update service to update this agent container.
+  Requests an asynchronous self-update.
 
-  - If SELF_UPDATE_ENABLED=false: Returns 403 Forbidden
-  - If SELF_UPDATE_ENABLED=true: Spawns an unsupervised Task that calls
-    Watchtower asynchronously and returns 202 immediately. Failures
-    inside the Task are logged but never surface as HTTP errors here —
-    the agent expects to be restarted by Watchtower mid-call, so we
-    can't reliably wait for a result.
+  Returns 403 when self-updates are disabled and 202 after the request is
+  accepted. Watchtower failures are logged by the background task rather than
+  returned to this HTTP request.
   """
   def trigger(conn, _params) do
     with :ok <- SelfUpdates.check_enabled() do

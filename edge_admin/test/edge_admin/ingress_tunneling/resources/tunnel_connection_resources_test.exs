@@ -1,9 +1,9 @@
-# edge_admin/test/edge_admin/ingress_tunneling/resources/tunnel_connections_test.exs
-defmodule EdgeAdmin.IngressTunneling.Resources.TunnelConnectionsTest do
+# edge_admin/test/edge_admin/ingress_tunneling/resources/tunnel_connection_resources_test.exs
+defmodule EdgeAdmin.IngressTunneling.Resources.TunnelConnectionResourcesTest do
   use EdgeAdmin.DataCase, async: false
 
-  alias EdgeAdmin.IngressTunneling.Resources.TunnelClients
-  alias EdgeAdmin.IngressTunneling.Resources.TunnelConnections
+  alias EdgeAdmin.IngressTunneling.Resources.TunnelClientResources
+  alias EdgeAdmin.IngressTunneling.Resources.TunnelConnectionResources
   alias EdgeAdmin.Nodes.Schemas.Cluster
   alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.Repo
@@ -40,11 +40,14 @@ defmodule EdgeAdmin.IngressTunneling.Resources.TunnelConnectionsTest do
 
   test "allocates distinct addresses for connections on one Ingress" do
     ingress = then(insert_cluster(), &insert_ingress(&1.id))
-    {:ok, first_tunnel_client} = TunnelClients.create()
-    {:ok, second_tunnel_client} = TunnelClients.create()
+    {:ok, first_tunnel_client} = TunnelClientResources.create_generated()
+    {:ok, second_tunnel_client} = TunnelClientResources.create_generated()
 
-    assert {:ok, first_connection} = TunnelConnections.create(first_tunnel_client.id, ingress.id)
-    assert {:ok, second_connection} = TunnelConnections.create(second_tunnel_client.id, ingress.id)
+    assert {:ok, first_connection} =
+             TunnelConnectionResources.create_for_ingress(first_tunnel_client.id, ingress.id)
+
+    assert {:ok, second_connection} =
+             TunnelConnectionResources.create_for_ingress(second_tunnel_client.id, ingress.id)
 
     assert first_connection.ingress_ipv4_address == "10.240.0.1/32"
     assert second_connection.ingress_ipv4_address == "10.240.0.1/32"
@@ -60,11 +63,14 @@ defmodule EdgeAdmin.IngressTunneling.Resources.TunnelConnectionsTest do
     cluster = insert_cluster()
     first_ingress = insert_ingress(cluster.id)
     second_ingress = insert_ingress(cluster.id)
-    {:ok, first_tunnel_client} = TunnelClients.create()
-    {:ok, second_tunnel_client} = TunnelClients.create()
+    {:ok, first_tunnel_client} = TunnelClientResources.create_generated()
+    {:ok, second_tunnel_client} = TunnelClientResources.create_generated()
 
-    assert {:ok, first_connection} = TunnelConnections.create(first_tunnel_client.id, first_ingress.id)
-    assert {:ok, second_connection} = TunnelConnections.create(second_tunnel_client.id, second_ingress.id)
+    assert {:ok, first_connection} =
+             TunnelConnectionResources.create_for_ingress(first_tunnel_client.id, first_ingress.id)
+
+    assert {:ok, second_connection} =
+             TunnelConnectionResources.create_for_ingress(second_tunnel_client.id, second_ingress.id)
 
     assert {
              first_connection.ingress_ipv4_address,
@@ -82,18 +88,38 @@ defmodule EdgeAdmin.IngressTunneling.Resources.TunnelConnectionsTest do
 
   test "rejects a duplicate Tunnel Client and Ingress pairing" do
     ingress = then(insert_cluster(), &insert_ingress(&1.id))
-    {:ok, tunnel_client} = TunnelClients.create()
+    {:ok, tunnel_client} = TunnelClientResources.create_generated()
 
-    assert {:ok, _connection} = TunnelConnections.create(tunnel_client.id, ingress.id)
-    assert {:error, {:conflict, reason}} = TunnelConnections.create(tunnel_client.id, ingress.id)
+    assert {:ok, _connection} =
+             TunnelConnectionResources.create_for_ingress(tunnel_client.id, ingress.id)
+
+    assert {:error, {:conflict, reason}} =
+             TunnelConnectionResources.create_for_ingress(tunnel_client.id, ingress.id)
+
     assert reason =~ "tunnel_client_id has already been taken"
   end
 
   test "returns not found when the Tunnel Client or Ingress does not exist" do
     ingress = then(insert_cluster(), &insert_ingress(&1.id))
-    {:ok, tunnel_client} = TunnelClients.create()
+    {:ok, tunnel_client} = TunnelClientResources.create_generated()
 
-    assert {:error, :not_found} = TunnelConnections.create(Ecto.UUID.generate(), ingress.id)
-    assert {:error, :not_found} = TunnelConnections.create(tunnel_client.id, Ecto.UUID.generate())
+    assert {:error, :not_found} =
+             TunnelConnectionResources.create_for_ingress(Ecto.UUID.generate(), ingress.id)
+
+    assert {:error, :not_found} =
+             TunnelConnectionResources.create_for_ingress(tunnel_client.id, Ecto.UUID.generate())
+  end
+
+  test "deleting a Tunnel Client returns affected Ingress IDs and cascades its connections" do
+    ingress = then(insert_cluster(), &insert_ingress(&1.id))
+    {:ok, tunnel_client} = TunnelClientResources.create_generated()
+    {:ok, connection} = TunnelConnectionResources.create_for_ingress(tunnel_client.id, ingress.id)
+
+    assert {:ok, {deleted_client, [ingress_id]}} =
+             TunnelClientResources.delete_with_connections(tunnel_client)
+
+    assert deleted_client.id == tunnel_client.id
+    assert ingress_id == ingress.id
+    assert Repo.get(EdgeAdmin.IngressTunneling.Schemas.TunnelConnection, connection.id) == nil
   end
 end

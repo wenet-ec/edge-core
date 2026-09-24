@@ -19,6 +19,7 @@ defmodule EdgeAdmin.Nodes do
   """
 
   alias EdgeAdmin.Nodes.Forms.PushNodeDiagnosticForm
+  alias EdgeAdmin.Nodes.Persistence
   alias EdgeAdmin.Nodes.Resources.AliasResources
   alias EdgeAdmin.Nodes.Resources.ClusterResources
   alias EdgeAdmin.Nodes.Resources.DiagnosticResources
@@ -128,6 +129,10 @@ defmodule EdgeAdmin.Nodes do
   """
   @spec get_node(String.t()) :: {:ok, Node.t()} | {:error, :not_found}
   defdelegate get_node(id), to: NodeResources, as: :get
+
+  @doc "Returns and locks a node by ID when the database adapter supports row locks."
+  @spec lock_node(String.t()) :: Node.t() | nil
+  defdelegate lock_node(node_id), to: Persistence
 
   @doc """
   Creates or replaces a node's one-use recovery key.

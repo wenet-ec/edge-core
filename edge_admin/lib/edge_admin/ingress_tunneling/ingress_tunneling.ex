@@ -11,8 +11,8 @@ defmodule EdgeAdmin.IngressTunneling do
   alias EdgeAdmin.IngressTunneling.DesiredState
   alias EdgeAdmin.IngressTunneling.Forms.CreateTunnelClientForm
   alias EdgeAdmin.IngressTunneling.Forms.CreateTunnelConnectionForm
-  alias EdgeAdmin.IngressTunneling.Resources.TunnelClients
-  alias EdgeAdmin.IngressTunneling.Resources.TunnelConnections
+  alias EdgeAdmin.IngressTunneling.Resources.TunnelClientResources
+  alias EdgeAdmin.IngressTunneling.Resources.TunnelConnectionResources
   alias EdgeAdmin.IngressTunneling.Schemas.TunnelClient
   alias EdgeAdmin.IngressTunneling.Schemas.TunnelConnection
   alias EdgeAdmin.IngressTunneling.Workers.DeliverIngressTunnelingWorker
@@ -23,21 +23,17 @@ defmodule EdgeAdmin.IngressTunneling do
 
   @doc "Lists Tunnel Clients."
   @spec list_tunnel_clients(map()) :: {:ok, {[TunnelClient.t()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
-  defdelegate list_tunnel_clients(params \\ %{}), to: TunnelClients, as: :list
+  defdelegate list_tunnel_clients(params \\ %{}), to: TunnelClientResources, as: :list
 
   @doc "Gets a Tunnel Client by ID."
   @spec get_tunnel_client(String.t()) :: {:ok, TunnelClient.t()} | {:error, :not_found}
-  defdelegate get_tunnel_client(id), to: TunnelClients, as: :get
-
-  @doc "Creates an Admin-generated Tunnel Client identity."
-  @spec create_tunnel_client() :: {:ok, TunnelClient.t()} | {:error, Ecto.Changeset.t()}
-  defdelegate create_tunnel_client(), to: TunnelClients, as: :create
+  defdelegate get_tunnel_client(id), to: TunnelClientResources, as: :get
 
   @doc "Creates a Tunnel Client and its requested connections atomically."
   @spec create_tunnel_client_with_connections(map()) :: {:ok, TunnelClient.t()} | {:error, term()}
   def create_tunnel_client_with_connections(attrs \\ %{}) do
     with {:ok, params} <- CreateTunnelClientForm.changeset(attrs) do
-      case TunnelClients.create_with_connections(params["node_ids"]) do
+      case TunnelClientResources.create_with_connections(params["node_ids"]) do
         {:ok, tunnel_client} = result ->
           tunnel_client.tunnel_connections
           |> Enum.map(& &1.node_id)
@@ -51,17 +47,27 @@ defmodule EdgeAdmin.IngressTunneling do
     end
   end
 
-  @doc "Deletes a Tunnel Client and its dependent Tunnel Connections."
-  @spec delete_tunnel_client(TunnelClient.t()) :: {:ok, TunnelClient.t()} | {:error, Ecto.Changeset.t()}
-  defdelegate delete_tunnel_client(tunnel_client), to: TunnelClients, as: :delete
+  @doc "Deletes a Tunnel Client and enqueues desired-state updates for its Ingress nodes."
+  @spec delete_tunnel_client(TunnelClient.t()) ::
+          {:ok, TunnelClient.t()} | {:error, :not_found | Ecto.Changeset.t()}
+  def delete_tunnel_client(%TunnelClient{} = tunnel_client) do
+    case TunnelClientResources.delete_with_connections(tunnel_client) do
+      {:ok, {deleted, node_ids}} ->
+        enqueue_deliveries(node_ids)
+        {:ok, deleted}
+
+      error ->
+        error
+    end
+  end
 
   @doc "Lists Tunnel Connections."
   @spec list_tunnel_connections(map()) :: {:ok, {[TunnelConnection.t()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
-  defdelegate list_tunnel_connections(params \\ %{}), to: TunnelConnections, as: :list
+  defdelegate list_tunnel_connections(params \\ %{}), to: TunnelConnectionResources, as: :list
 
   @doc "Gets a Tunnel Connection by ID."
   @spec get_tunnel_connection(String.t()) :: {:ok, TunnelConnection.t()} | {:error, :not_found}
-  defdelegate get_tunnel_connection(id), to: TunnelConnections, as: :get
+  defdelegate get_tunnel_connection(id), to: TunnelConnectionResources, as: :get
 
   @doc "Validates and creates one Tunnel Connection for a Tunnel Client."
   @spec create_tunnel_connection(String.t(), map()) ::
@@ -69,7 +75,7 @@ defmodule EdgeAdmin.IngressTunneling do
           | {:error, :not_found | {:conflict, String.t()} | Ecto.Changeset.t()}
   def create_tunnel_connection(tunnel_client_id, attrs) when is_map(attrs) do
     with {:ok, params} <- CreateTunnelConnectionForm.changeset(attrs) do
-      case TunnelConnections.create(tunnel_client_id, params["node_id"]) do
+      case TunnelConnectionResources.create_for_ingress(tunnel_client_id, params["node_id"]) do
         {:ok, tunnel_connection} = result ->
           enqueue_deliveries([tunnel_connection.node_id])
           result
@@ -84,7 +90,7 @@ defmodule EdgeAdmin.IngressTunneling do
   @spec delete_tunnel_connection(TunnelConnection.t()) ::
           {:ok, TunnelConnection.t()} | {:error, Ecto.Changeset.t()}
   def delete_tunnel_connection(%TunnelConnection{} = tunnel_connection) do
-    case TunnelConnections.delete(tunnel_connection) do
+    case TunnelConnectionResources.delete(tunnel_connection) do
       {:ok, deleted} = result ->
         enqueue_deliveries([deleted.node_id])
         result

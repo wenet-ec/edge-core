@@ -9,7 +9,7 @@ defmodule EdgeAdmin.SelfUpdates.Workflows.Processing do
   alias EdgeAdmin.Nodes.Schemas.Cluster
   alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.Nodes.Targeting
-  alias EdgeAdmin.SelfUpdates.Resources.Requests
+  alias EdgeAdmin.SelfUpdates.Resources.SelfUpdateRequestResources
 
   require Logger
 
@@ -41,8 +41,8 @@ defmodule EdgeAdmin.SelfUpdates.Workflows.Processing do
 
   @spec process_self_update_request(String.t()) :: :ok
   def process_self_update_request(request_id) do
-    {:ok, request} = Requests.get(request_id)
-    {:ok, request} = Requests.update(request, %{status: :processing})
+    {:ok, request} = SelfUpdateRequestResources.get(request_id)
+    {:ok, request} = SelfUpdateRequestResources.update(request, %{status: :processing})
     nodes = resolve_targeting_and_filter(request.targeting)
     type = request.targeting["type"]
 
@@ -57,7 +57,7 @@ defmodule EdgeAdmin.SelfUpdates.Workflows.Processing do
       failed: Enum.count(results, &(&1 != :ok))
     }
 
-    {:ok, completed} = Requests.update(request, %{status: :completed, summary: summary})
+    {:ok, completed} = SelfUpdateRequestResources.update(request, %{status: :completed, summary: summary})
     Events.publish(%Catalog.SelfUpdateCompleted{request: completed})
     :telemetry.execute([:edge_admin, :self_updates, :request_completed], summary, %{targeting_type: type})
     :ok

@@ -77,10 +77,10 @@ defmodule EdgeAdminWeb.Controllers.Agents.CommandExecutionController do
     }
   )
 
-  def acknowledge(conn, %{id: id} = params) do
+  def acknowledge(conn, %{id: id}) do
     with {:ok, execution} <- Commands.get_command_execution(id),
          :ok <- CommandExecutionPolicies.authorize({:update, conn.assigns.current_node, execution}),
-         {:ok, updated_execution} <- Commands.acknowledge_command_execution(execution, params) do
+         {:ok, updated_execution} <- Commands.acknowledge_command_execution(execution) do
       render(conn, :show, conn: conn, command_execution: updated_execution)
     end
   end

@@ -1,5 +1,5 @@
-# edge_admin/lib/edge_admin/commands/resources/command_executions.ex
-defmodule EdgeAdmin.Commands.Resources.CommandExecutions do
+# edge_admin/lib/edge_admin/commands/resources/command_execution_resources.ex
+defmodule EdgeAdmin.Commands.Resources.CommandExecutionResources do
   @moduledoc false
 
   import Ecto.Query, warn: false
@@ -21,27 +21,6 @@ defmodule EdgeAdmin.Commands.Resources.CommandExecutions do
   rescue
     CastError -> {:error, :not_found}
   end
-
-  @spec create(map()) :: {:ok, CommandExecution.t()} | {:error, Ecto.Changeset.t()}
-  def create(attrs \\ %{}) do
-    %CommandExecution{} |> CommandExecution.changeset(attrs) |> Repo.insert()
-  end
-
-  @spec update(CommandExecution.t(), map()) ::
-          {:ok, CommandExecution.t()} | {:error, Ecto.Changeset.t()}
-  def update(%CommandExecution{} = execution, attrs) do
-    execution |> CommandExecution.changeset(attrs) |> Repo.update()
-  end
-
-  @doc "Deletes a command execution when it is terminal."
-  @spec delete(CommandExecution.t()) ::
-          {:ok, CommandExecution.t()} | {:error, {:conflict, String.t()}}
-  def delete(%CommandExecution{} = execution) do
-    with :ok <- CommandExecutionTerminalCheck.check(execution), do: Repo.delete(execution)
-  end
-
-  @spec change(CommandExecution.t(), map()) :: Ecto.Changeset.t()
-  def change(%CommandExecution{} = execution, attrs \\ %{}), do: CommandExecution.changeset(execution, attrs)
 
   @doc "Lists command executions with filtering, sorting, and pagination."
   @spec list(map()) :: {:ok, {[CommandExecution.t()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
@@ -78,5 +57,16 @@ defmodule EdgeAdmin.Commands.Resources.CommandExecutions do
     custom = Map.new(custom_fields, fn field -> {field, Enum.filter(custom_filters, &(&1.field == field))} end)
     {ilike_filters, flop_params} = RequestParser.split_ilike_filters(Map.put(flop_params, :filters, rest), [:output])
     {custom, ilike_filters, flop_params}
+  end
+
+  @spec delete(CommandExecution.t()) ::
+          {:ok, CommandExecution.t()} | {:error, Ecto.Changeset.t()}
+  def delete(%CommandExecution{} = execution), do: Repo.delete(execution)
+
+  @doc "Deletes an execution only when it is in a terminal state."
+  @spec delete_if_terminal(CommandExecution.t()) ::
+          {:ok, CommandExecution.t()} | {:error, {:conflict, String.t()} | Ecto.Changeset.t()}
+  def delete_if_terminal(%CommandExecution{} = execution) do
+    with :ok <- CommandExecutionTerminalCheck.check(execution), do: delete(execution)
   end
 end

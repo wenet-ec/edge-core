@@ -1,5 +1,5 @@
-# edge_admin/lib/edge_admin/commands/resources/commands.ex
-defmodule EdgeAdmin.Commands.Resources.Commands do
+# edge_admin/lib/edge_admin/commands/resources/command_resources.ex
+defmodule EdgeAdmin.Commands.Resources.CommandResources do
   @moduledoc false
 
   import Ecto.Query, warn: false
@@ -21,25 +21,6 @@ defmodule EdgeAdmin.Commands.Resources.Commands do
   rescue
     CastError -> {:error, :not_found}
   end
-
-  @spec create(map()) :: {:ok, Command.t()} | {:error, Ecto.Changeset.t()}
-  def create(attrs \\ %{}) do
-    %Command{} |> Command.changeset(attrs) |> Repo.insert()
-  end
-
-  @spec update(Command.t(), map()) :: {:ok, Command.t()} | {:error, Ecto.Changeset.t()}
-  def update(%Command{} = command, attrs) do
-    command |> Command.changeset(attrs) |> Repo.update()
-  end
-
-  @doc "Deletes a command when it has no pending executions."
-  @spec delete(Command.t()) :: {:ok, Command.t()} | {:error, {:conflict, String.t()}}
-  def delete(%Command{} = command) do
-    with :ok <- PendingCommandExecutionsCheck.check(command), do: Repo.delete(command)
-  end
-
-  @spec change(Command.t(), map()) :: Ecto.Changeset.t()
-  def change(%Command{} = command, attrs \\ %{}), do: Command.changeset(command, attrs)
 
   @doc "Lists commands with filtering, sorting, and pagination."
   @spec list(map()) :: {:ok, {[Command.t()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
@@ -66,5 +47,18 @@ defmodule EdgeAdmin.Commands.Resources.Commands do
       |> CommandFilters.apply_has_expires_at(has_expires_at_filters)
 
     Flop.validate_and_run(query, flop_params, for: Command, replace_invalid_params: true)
+  end
+
+  @spec create(map()) :: {:ok, Command.t()} | {:error, Ecto.Changeset.t()}
+  def create(attrs), do: %Command{} |> Command.changeset(attrs) |> Repo.insert()
+
+  @spec delete(Command.t()) :: {:ok, Command.t()} | {:error, Ecto.Changeset.t()}
+  def delete(%Command{} = command), do: Repo.delete(command)
+
+  @doc "Deletes a command only when none of its executions are in flight."
+  @spec delete_if_no_in_flight_executions(Command.t()) ::
+          {:ok, Command.t()} | {:error, {:conflict, String.t()} | Ecto.Changeset.t()}
+  def delete_if_no_in_flight_executions(%Command{} = command) do
+    with :ok <- PendingCommandExecutionsCheck.check(command), do: delete(command)
   end
 end

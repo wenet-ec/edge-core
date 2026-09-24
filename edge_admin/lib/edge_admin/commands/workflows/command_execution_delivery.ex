@@ -1,5 +1,5 @@
-# edge_admin/lib/edge_admin/commands/workflows/delivery.ex
-defmodule EdgeAdmin.Commands.Workflows.Delivery do
+# edge_admin/lib/edge_admin/commands/workflows/command_execution_delivery.ex
+defmodule EdgeAdmin.Commands.Workflows.CommandExecutionDelivery do
   @moduledoc """
   Owns command fan-out and delivery.
 
@@ -9,9 +9,10 @@ defmodule EdgeAdmin.Commands.Workflows.Delivery do
 
   import Ecto.Query, warn: false
 
+  alias Ecto.Changeset
   alias EdgeAdmin.AdminClustering.Metadata
   alias EdgeAdmin.Commands.Forms
-  alias EdgeAdmin.Commands.Resources.Commands, as: CommandResource
+  alias EdgeAdmin.Commands.Resources.CommandResources
   alias EdgeAdmin.Commands.Schemas.Command
   alias EdgeAdmin.Commands.Schemas.CommandExecution
   alias EdgeAdmin.Commands.Workers.CreateCommandExecutionsWorker
@@ -24,30 +25,39 @@ defmodule EdgeAdmin.Commands.Workflows.Delivery do
 
   require Logger
 
-  @doc """
-  Creates a command and enqueues execution creation job.
+  @doc "Creates a command and atomically enqueues asynchronous execution creation."
+  @spec create_command_and_enqueue_executions(map()) ::
+          {:ok, Command.t()} | {:error, Changeset.t()}
+  def create_command_and_enqueue_executions(params) do
+    case Forms.CreateCommandForm.changeset(params) do
+      {:ok, attrs} ->
+        case Repo.transaction(fn ->
+               case CommandResources.create(attrs) do
+                 {:ok, command} ->
+                   enqueue_execution_creation!(command, attrs["targeting"])
+                   command
 
-  The request is persisted first; per-node execution rows are created
-  asynchronously by `CreateCommandExecutionsWorker`.
-  """
-  @spec create_command_and_executions(map()) :: {:ok, Command.t()} | {:error, Ecto.Changeset.t()}
-  def create_command_and_executions(params) do
-    with {:ok, attrs} <- Forms.CreateCommandForm.changeset(params),
-         {:ok, command} <- CommandResource.create(attrs) do
-      enqueue_execution_creation(command, attrs)
-      {:ok, command}
-    else
-      {:error, changeset} ->
+                 {:error, %Changeset{} = changeset} ->
+                   Repo.rollback(changeset)
+               end
+             end) do
+          {:ok, command} ->
+            {:ok, command}
+
+          {:error, %Changeset{} = changeset} ->
+            Logger.error("Failed to create command: #{inspect(changeset.errors)}")
+            {:error, changeset}
+        end
+
+      {:error, %Changeset{} = changeset} ->
         Logger.error("Failed to create command: #{inspect(changeset.errors)}")
         {:error, changeset}
     end
   end
 
-  defp enqueue_execution_creation(command, %{"targeting" => targeting}) do
-    targeting_type = targeting["type"]
-
+  defp enqueue_execution_creation!(command, targeting) do
     args =
-      case targeting_type do
+      case targeting["type"] do
         "all" ->
           %{
             command_id: command.id,
@@ -72,33 +82,11 @@ defmodule EdgeAdmin.Commands.Workflows.Delivery do
             node_filters: Map.get(targeting, "node_filters", %{}),
             cluster_filters: Map.get(targeting, "cluster_filters", %{})
           }
-
-        _ ->
-          Logger.warning("Invalid targeting type for command #{command.id}: #{inspect(targeting)}")
-
-          nil
       end
 
-    if args do
-      args
-      |> CreateCommandExecutionsWorker.new()
-      |> Oban.insert()
-      |> case do
-        {:ok, _job} ->
-          :ok
-
-        {:error, reason} ->
-          Logger.error("Failed to enqueue CreateCommandExecutionsWorker: #{inspect(reason)}")
-      end
-    else
-      :ok
-    end
-  end
-
-  defp enqueue_execution_creation(command, attrs) do
-    Logger.warning("No targeting specification found for command #{command.id}, attrs: #{inspect(attrs)}")
-
-    :ok
+    args
+    |> CreateCommandExecutionsWorker.new()
+    |> Oban.insert!()
   end
 
   @doc """
@@ -114,7 +102,7 @@ defmodule EdgeAdmin.Commands.Workflows.Delivery do
     node_filters = args["node_filters"] || %{}
     cluster_filters = args["cluster_filters"] || %{}
 
-    case CommandResource.get(command_id) do
+    case CommandResources.get(command_id) do
       {:ok, command} ->
         {nodes, cluster_id} =
           case targeting_type do

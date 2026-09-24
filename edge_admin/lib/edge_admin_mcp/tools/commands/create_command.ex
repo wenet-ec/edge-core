@@ -68,7 +68,7 @@ defmodule EdgeAdminMcp.Tools.Commands.CreateCommand do
       |> put_if("timeout", params[:timeout])
       |> put_if("expires_at", params[:expires_at])
 
-    case Commands.create_command_and_executions(attrs) do
+    case Commands.create_command_and_enqueue_executions(attrs) do
       {:ok, command} ->
         {:reply, Response.json(Response.tool(), CommandView.render(command)), frame}
 

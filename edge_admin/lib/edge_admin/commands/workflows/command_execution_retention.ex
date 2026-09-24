@@ -1,5 +1,5 @@
-# edge_admin/lib/edge_admin/commands/workflows/retention.ex
-defmodule EdgeAdmin.Commands.Workflows.Retention do
+# edge_admin/lib/edge_admin/commands/workflows/command_execution_retention.ex
+defmodule EdgeAdmin.Commands.Workflows.CommandExecutionRetention do
   @moduledoc """
   Owns time-based command-execution retention.
 
@@ -61,7 +61,7 @@ defmodule EdgeAdmin.Commands.Workflows.Retention do
       Enum.each(stale_executions, fn execution ->
         case execution.status do
           :pending ->
-            expire_execution(execution, now)
+            expire_execution(execution)
 
           :sent ->
             # Best-effort cancel signal to agent — do not block on result
@@ -75,7 +75,7 @@ defmodule EdgeAdmin.Commands.Workflows.Retention do
                 )
             end
 
-            expire_execution(execution, now)
+            expire_execution(execution)
         end
       end)
 
@@ -106,7 +106,7 @@ defmodule EdgeAdmin.Commands.Workflows.Retention do
     )
   end
 
-  defp expire_execution(execution, _now) do
+  defp expire_execution(execution) do
     # Conditional transition: only expire rows still in :pending or :sent. If
     # the agent has already reported back (row is now :completed/:cancelled/
     # :expired with exit_code), do not overwrite — the agent is the source of

@@ -27,82 +27,53 @@ defmodule EdgeAdmin.Commands do
   owned by each Admin.
   """
 
-  alias EdgeAdmin.Commands.Resources.CommandExecutions, as: CommandExecutionResource
-  alias EdgeAdmin.Commands.Resources.Commands, as: CommandResource
+  alias EdgeAdmin.Commands.Resources.CommandExecutionResources
+  alias EdgeAdmin.Commands.Resources.CommandResources
   alias EdgeAdmin.Commands.Schemas.Command
   alias EdgeAdmin.Commands.Schemas.CommandExecution
+  alias EdgeAdmin.Commands.Workflows.CommandExecutionDelivery
   alias EdgeAdmin.Commands.Workflows.CommandExecutionLifecycle
-  alias EdgeAdmin.Commands.Workflows.Delivery
-  alias EdgeAdmin.Commands.Workflows.Retention
+  alias EdgeAdmin.Commands.Workflows.CommandExecutionRetention
 
   @spec get_command(String.t()) :: {:ok, Command.t()} | {:error, :not_found}
-  defdelegate get_command(id), to: CommandResource, as: :get
+  defdelegate get_command(id), to: CommandResources, as: :get
 
-  @spec create_command(map()) :: {:ok, Command.t()} | {:error, Ecto.Changeset.t()}
-  defdelegate create_command(attrs \\ %{}), to: CommandResource, as: :create
-
-  @spec update_command(Command.t(), map()) :: {:ok, Command.t()} | {:error, Ecto.Changeset.t()}
-  defdelegate update_command(command, attrs), to: CommandResource, as: :update
+  @doc "Lists commands with filtering, sorting, and pagination."
+  @spec list_commands(map()) :: {:ok, {[Command.t()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
+  defdelegate list_commands(params \\ %{}), to: CommandResources, as: :list
 
   @doc "Deletes a command after checking that it has no pending or in-flight executions."
-  @spec delete_command(Command.t()) :: {:ok, Command.t()} | {:error, {:conflict, String.t()}}
-  defdelegate delete_command(command), to: CommandResource, as: :delete
+  @spec delete_command(Command.t()) ::
+          {:ok, Command.t()} | {:error, {:conflict, String.t()} | Ecto.Changeset.t()}
+  defdelegate delete_command(command),
+    to: CommandResources,
+    as: :delete_if_no_in_flight_executions
 
-  @spec change_command(Command.t(), map()) :: Ecto.Changeset.t()
-  defdelegate change_command(command, attrs \\ %{}), to: CommandResource, as: :change
-
-  @doc """
-  Lists commands with filtering, sorting, and pagination.
-
-  Supports command filters, sorting, and pagination.
-
-  ## Returns
-  - `{:ok, {commands, meta}}` - List of commands with Flop.Meta pagination info
-  - `{:error, meta}` - Validation errors (when replace_invalid_params: false)
-  """
-  @spec list_commands(map()) :: {:ok, {[Command.t()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
-  defdelegate list_commands(params \\ %{}), to: CommandResource, as: :list
+  @doc "Creates a command and atomically enqueues asynchronous execution creation."
+  @spec create_command_and_enqueue_executions(map()) ::
+          {:ok, Command.t()} | {:error, Ecto.Changeset.t()}
+  defdelegate create_command_and_enqueue_executions(params), to: CommandExecutionDelivery
 
   @spec get_command_execution(String.t()) :: {:ok, CommandExecution.t()} | {:error, :not_found}
-  defdelegate get_command_execution(id), to: CommandExecutionResource, as: :get
+  defdelegate get_command_execution(id), to: CommandExecutionResources, as: :get
 
-  @spec create_command_execution(map()) :: {:ok, CommandExecution.t()} | {:error, Ecto.Changeset.t()}
-  defdelegate create_command_execution(attrs \\ %{}), to: CommandExecutionResource, as: :create
-
-  @spec update_command_execution(CommandExecution.t(), map()) ::
-          {:ok, CommandExecution.t()} | {:error, Ecto.Changeset.t()}
-  defdelegate update_command_execution(command_execution, attrs), to: CommandExecutionResource, as: :update
+  @doc "Lists command executions with filtering, sorting, and pagination."
+  @spec list_command_executions(map()) :: {:ok, {[CommandExecution.t()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
+  defdelegate list_command_executions(params \\ %{}), to: CommandExecutionResources, as: :list
 
   @doc "Deletes a command execution after checking that it is terminal."
   @spec delete_command_execution(CommandExecution.t()) ::
-          {:ok, CommandExecution.t()} | {:error, {:conflict, String.t()}}
-  defdelegate delete_command_execution(command_execution), to: CommandExecutionResource, as: :delete
-
-  @spec change_command_execution(CommandExecution.t(), map()) :: Ecto.Changeset.t()
-  defdelegate change_command_execution(command_execution, attrs \\ %{}), to: CommandExecutionResource, as: :change
-
-  @doc """
-  Lists command executions with filtering, sorting, and pagination.
-
-  Supports execution filters, sorting, and pagination.
-
-  ## Returns
-  - `{:ok, {command_executions, meta}}` - List of command executions with Flop.Meta pagination info
-  - `{:error, meta}` - Validation errors (when replace_invalid_params: false)
-  """
-  @spec list_command_executions(map()) :: {:ok, {[CommandExecution.t()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
-  defdelegate list_command_executions(params \\ %{}), to: CommandExecutionResource, as: :list
-
-  @doc "Creates a command and enqueues execution creation."
-  @spec create_command_and_executions(map()) :: {:ok, Command.t()} | {:error, Ecto.Changeset.t()}
-  defdelegate create_command_and_executions(params), to: Delivery
+          {:ok, CommandExecution.t()} | {:error, {:conflict, String.t()} | Ecto.Changeset.t()}
+  defdelegate delete_command_execution(command_execution),
+    to: CommandExecutionResources,
+    as: :delete_if_terminal
 
   @spec create_command_executions(map()) :: {:ok, [CommandExecution.t()]} | {:error, String.t()}
-  defdelegate create_command_executions(args), to: Delivery
+  defdelegate create_command_executions(args), to: CommandExecutionDelivery
 
   @doc "Delivers pending executions for clusters owned by this Admin."
   @spec deliver_local_command_executions() :: :ok
-  defdelegate deliver_local_command_executions(), to: Delivery
+  defdelegate deliver_local_command_executions(), to: CommandExecutionDelivery
 
   @type dropped_command_execution :: CommandExecutionLifecycle.dropped_command_execution()
 
@@ -115,15 +86,17 @@ defmodule EdgeAdmin.Commands do
   defdelegate publish_dropped_command_executions(dropped_command_executions), to: CommandExecutionLifecycle
 
   @doc "Acknowledges command execution receipt from an agent."
-  @spec acknowledge_command_execution(CommandExecution.t(), map()) ::
+  @spec acknowledge_command_execution(CommandExecution.t()) ::
           {:ok, CommandExecution.t()}
           | {:error, {:conflict, String.t()}}
           | {:error, Ecto.Changeset.t()}
-  defdelegate acknowledge_command_execution(execution, params), to: CommandExecutionLifecycle
+  defdelegate acknowledge_command_execution(execution), to: CommandExecutionLifecycle
 
   @doc "Updates a command execution with an agent-reported result."
   @spec update_command_execution_result(CommandExecution.t(), map()) ::
-          {:ok, CommandExecution.t()} | {:error, Ecto.Changeset.t()}
+          {:ok, CommandExecution.t()}
+          | {:error, {:conflict, String.t()}}
+          | {:error, Ecto.Changeset.t()}
   defdelegate update_command_execution_result(execution, params), to: CommandExecutionLifecycle
 
   @doc "Cancels a command execution."
@@ -135,9 +108,9 @@ defmodule EdgeAdmin.Commands do
 
   @doc "Expires stale command executions owned by this Admin."
   @spec expire_stale_command_executions() :: :ok
-  defdelegate expire_stale_command_executions(), to: Retention
+  defdelegate expire_stale_command_executions(), to: CommandExecutionRetention
 
   @doc "Deletes finalized command executions older than the retention period."
   @spec prune_command_executions(pos_integer()) :: {:ok, non_neg_integer()}
-  defdelegate prune_command_executions(retention_days), to: Retention
+  defdelegate prune_command_executions(retention_days), to: CommandExecutionRetention
 end

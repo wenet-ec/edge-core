@@ -50,10 +50,34 @@ defmodule EdgeAdmin.Nodes.TargetingTest do
       assert :string = schema.cluster_filters.name
     end
 
-    test "datetime filter fields emit a string type for MCP inspector form rendering" do
+    test "datetime filter fields use the ISO 8601 validator and format metadata" do
       schema = Targeting.peri_schema()
-      assert {:meta, :string, [format: "date-time"]} = schema.node_filters.last_seen_at__gte
-      assert {:meta, :string, [format: "date-time"]} = schema.cluster_filters.inserted_at__gte
+
+      assert {:meta, {:custom, {Targeting, :validate_iso8601_date_or_datetime}}, [format: "date-time"]} =
+               schema.node_filters.last_seen_at__gte
+
+      assert {:meta, {:custom, {Targeting, :validate_iso8601_date_or_datetime}}, [format: "date-time"]} =
+               schema.cluster_filters.inserted_at__gte
+    end
+
+    test "validates date filters through the Peri schema" do
+      assert {:ok, %{node_filters: %{last_seen_at__gte: "2025-01-15"}}} =
+               Peri.validate(Targeting.peri_schema(), %{
+                 "type" => "all",
+                 "node_filters" => %{"last_seen_at__gte" => "2025-01-15"}
+               })
+
+      assert {:ok, %{node_filters: %{last_seen_at__gte: "2025-01-15T12:34:56Z"}}} =
+               Peri.validate(Targeting.peri_schema(), %{
+                 "type" => "all",
+                 "node_filters" => %{"last_seen_at__gte" => "2025-01-15T12:34:56Z"}
+               })
+
+      assert {:error, _errors} =
+               Peri.validate(Targeting.peri_schema(), %{
+                 "type" => "all",
+                 "node_filters" => %{"last_seen_at__gte" => "not-a-date"}
+               })
     end
   end
 

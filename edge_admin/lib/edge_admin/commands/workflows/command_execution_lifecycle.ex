@@ -6,7 +6,7 @@ defmodule EdgeAdmin.Commands.Workflows.CommandExecutionLifecycle do
   This includes agent acknowledgements and results, cancellation, dropping
   executions when a node is removed, and the atomic status-transition backstop
   used by distributed Admin instances. Time-based expiration and pruning live
-  in EdgeAdmin.Commands.Workflows.Retention.
+  in `EdgeAdmin.Commands.Workflows.CommandExecutionRetention`.
   """
 
   import Ecto.Query, warn: false
@@ -87,22 +87,17 @@ defmodule EdgeAdmin.Commands.Workflows.CommandExecutionLifecycle do
   Validates execution is in `:pending` status and transitions it to `:sent`.
   Called when agent receives and stores a pending command execution.
 
-  ## Parameters
-  - `execution` - The execution struct
-  - `params` - Currently unused; accepted for symmetry with the controller surface.
-    Pass `%{}` from new call sites.
-
   ## Returns
   - `{:ok, execution}` - Acknowledgment succeeded
   - `{:error, {:conflict, reason}}` - Execution not in `:pending` status
   - `{:error, changeset}` - Status update failed validation
 
   """
-  @spec acknowledge_command_execution(CommandExecution.t(), map()) ::
+  @spec acknowledge_command_execution(CommandExecution.t()) ::
           {:ok, CommandExecution.t()}
           | {:error, {:conflict, String.t()}}
           | {:error, Ecto.Changeset.t()}
-  def acknowledge_command_execution(execution, _params) do
+  def acknowledge_command_execution(execution) do
     with :ok <- Checks.CommandExecutionPendingCheck.check(execution),
          {:ok, updated} <-
            transition_status(execution, [:pending],
@@ -148,7 +143,9 @@ defmodule EdgeAdmin.Commands.Workflows.CommandExecutionLifecycle do
   - `{:error, {:conflict, reason}}` - Execution not in a state that accepts a result
   """
   @spec update_command_execution_result(CommandExecution.t(), map()) ::
-          {:ok, CommandExecution.t()} | {:error, Ecto.Changeset.t()}
+          {:ok, CommandExecution.t()}
+          | {:error, {:conflict, String.t()}}
+          | {:error, Ecto.Changeset.t()}
   def update_command_execution_result(execution, params) do
     with :ok <- Checks.CommandExecutionAcceptsResultCheck.check(execution),
          {:ok, attrs} <- Forms.UpdateCommandExecutionResultForm.changeset(params) do

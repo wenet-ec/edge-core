@@ -18,11 +18,12 @@ defmodule EdgeAdmin.Commands.Checks.CommandExecutionAcceptsResultCheck do
   ## Paired predicate
 
   This is the layer-3 early-409 gate against the struct in hand. The same
-  predicate is encoded in SQL inside `EdgeAdmin.Commands.transition_to_result/2`
-  as the WHERE clause of a conditional UPDATE, where it defends against
-  concurrent writers (peer admin races, agent retries hitting a different
-  admin) that the struct-level check cannot see. If you change the predicate
-  here, change the dynamic there too — the two layers must agree.
+  predicate is encoded in the conditional SQL update in
+  `EdgeAdmin.Commands.Workflows.CommandExecutionLifecycle`, where it defends
+  against concurrent writers (peer admin races, agent retries hitting a
+  different admin) that the struct-level check cannot see. If you change the
+  predicate here, change the SQL condition there too — the two layers must
+  agree.
   """
 
   alias EdgeAdmin.Commands.Schemas.CommandExecution

@@ -5,8 +5,8 @@ defmodule EdgeAdmin.Ssh.Resources.SshQueriesTest do
   alias EdgeAdmin.Nodes.Schemas.Cluster
   alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.Repo
-  alias EdgeAdmin.Ssh.Resources.SshPublicKeys
-  alias EdgeAdmin.Ssh.Resources.SshUsernames
+  alias EdgeAdmin.Ssh.Resources.SshPublicKeyResources
+  alias EdgeAdmin.Ssh.Resources.SshUsernameResources
   alias EdgeAdmin.Ssh.Schemas.SshPublicKey
   alias EdgeAdmin.Ssh.Schemas.SshUsername
 
@@ -87,7 +87,7 @@ defmodule EdgeAdmin.Ssh.Resources.SshQueriesTest do
       user_bravo = bravo.id |> insert_node() |> then(&insert_ssh_username(&1.id))
       charlie.id |> insert_node() |> then(&insert_ssh_username(&1.id))
 
-      assert {:ok, {users, _meta}} = SshUsernames.list(%{"cluster_name__in" => "alpha,bravo"})
+      assert {:ok, {users, _meta}} = SshUsernameResources.list(%{"cluster_name__in" => "alpha,bravo"})
       assert ids(users) == ids([user_alpha, user_bravo])
     end
 
@@ -103,7 +103,7 @@ defmodule EdgeAdmin.Ssh.Resources.SshQueriesTest do
       insert_public_key(server_user.id, key_name: "server")
       insert_public_key(tablet_user.id, key_name: "tablet")
 
-      assert {:ok, {users, _meta}} = SshUsernames.list(%{"key_name__in" => "laptop,server"})
+      assert {:ok, {users, _meta}} = SshUsernameResources.list(%{"key_name__in" => "laptop,server"})
       assert ids(users) == ids([laptop_user, server_user])
     end
   end
@@ -121,7 +121,7 @@ defmodule EdgeAdmin.Ssh.Resources.SshQueriesTest do
       bob_key = insert_public_key(bob.id)
       insert_public_key(carol.id)
 
-      assert {:ok, {keys, _meta}} = SshPublicKeys.list(%{"username__in" => "alice,bob"})
+      assert {:ok, {keys, _meta}} = SshPublicKeyResources.list(%{"username__in" => "alice,bob"})
       assert ids(keys) == ids([alice_key, bob_key])
     end
 
@@ -138,7 +138,7 @@ defmodule EdgeAdmin.Ssh.Resources.SshQueriesTest do
       bravo_key = insert_public_key(bravo_user.id)
       insert_public_key(charlie_user.id)
 
-      assert {:ok, {keys, _meta}} = SshPublicKeys.list(%{"cluster_name__in" => "alpha,bravo"})
+      assert {:ok, {keys, _meta}} = SshPublicKeyResources.list(%{"cluster_name__in" => "alpha,bravo"})
       assert ids(keys) == ids([alpha_key, bravo_key])
     end
 
@@ -151,7 +151,7 @@ defmodule EdgeAdmin.Ssh.Resources.SshQueriesTest do
       server = insert_public_key(user.id, key_name: "server")
       insert_public_key(user.id, key_name: "tablet")
 
-      assert {:ok, {keys, _meta}} = SshPublicKeys.list(%{"key_name__in" => "laptop,server"})
+      assert {:ok, {keys, _meta}} = SshPublicKeyResources.list(%{"key_name__in" => "laptop,server"})
       assert ids(keys) == ids([laptop, server])
     end
   end

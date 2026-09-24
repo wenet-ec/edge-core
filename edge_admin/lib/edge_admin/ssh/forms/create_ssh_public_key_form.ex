@@ -17,9 +17,8 @@ defmodule EdgeAdmin.Ssh.Forms.CreateSshPublicKeyForm do
   @doc """
   Validates and normalizes SSH public key creation parameters.
 
-  Accepts both shapes:
-  - Nested in SSH username creation: `%{"key_name" => ..., "public_key" => ...}`
-  - Standalone endpoint: `%{"ssh_public_key" => %{"key_name" => ..., "public_key" => ...}}`
+  Accepts the key fields directly. For username creation, the caller applies
+  this form to each item in the nested `public_keys` list.
   """
   def changeset(attrs) when is_map(attrs) do
     %__MODULE__{}

@@ -1,5 +1,5 @@
-# edge_admin/lib/edge_admin/ssh/resources/ssh_usernames.ex
-defmodule EdgeAdmin.Ssh.Resources.SshUsernames do
+# edge_admin/lib/edge_admin/ssh/resources/ssh_username_resources.ex
+defmodule EdgeAdmin.Ssh.Resources.SshUsernameResources do
   @moduledoc false
 
   import Ecto.Query, warn: false
@@ -11,7 +11,7 @@ defmodule EdgeAdmin.Ssh.Resources.SshUsernames do
   alias EdgeAdmin.Repo
   alias EdgeAdmin.Ssh.Filters.SshUsernameFilters
   alias EdgeAdmin.Ssh.Forms
-  alias EdgeAdmin.Ssh.Resources.SshPublicKeys
+  alias EdgeAdmin.Ssh.Resources.SshPublicKeyResources
   alias EdgeAdmin.Ssh.Schemas.SshUsername
 
   @doc "Gets an SSH username by ID, preloading its public keys."
@@ -25,14 +25,19 @@ defmodule EdgeAdmin.Ssh.Resources.SshUsernames do
     CastError -> {:error, :not_found}
   end
 
-  defp create(attrs),
+  @spec create(map()) ::
+          {:ok, SshUsername.t()}
+          | {:error, Ecto.Changeset.t()}
+          | {:error, {:conflict, String.t()}}
+  def create(attrs),
     do: %SshUsername{} |> SshUsername.changeset(attrs) |> Repo.insert() |> Repo.normalize_conflict([:username])
 
-  def delete(%SshUsername{} = username), do: Repo.delete(username)
-
+  @doc "Creates an SSH username and its nested public keys atomically."
+  @spec create_with_keys(Node.t(), map()) ::
+          {:ok, SshUsername.t()} | {:error, Ecto.Changeset.t()} | {:error, {:conflict, String.t()}}
   def create_with_keys(%Node{} = node, params) do
     with {:ok, attrs} <- Forms.CreateSshUsernameForm.changeset(params) do
-      {keys, username_attrs} = Map.pop(attrs, "public_keys", [])
+      {keys_attrs, username_attrs} = Map.pop(attrs, "public_keys", [])
 
       username_attrs =
         case Map.pop(username_attrs, "password") do
@@ -40,18 +45,30 @@ defmodule EdgeAdmin.Ssh.Resources.SshUsernames do
           {password, attrs} -> Map.put(attrs, "password_hash", PasswordHashers.hash(password))
         end
 
-      case create(Map.put(username_attrs, "node_id", node.id)) do
-        {:ok, username} ->
-          results = Enum.map(keys, &SshPublicKeys.insert(Map.put(&1, "ssh_username_id", username.id)))
+      Repo.transaction_with_write_lock(fn ->
+        with {:ok, username} <- create(Map.put(username_attrs, "node_id", node.id)),
+             {:ok, keys} <- create_public_keys(username.id, keys_attrs) do
+          %{username | ssh_public_keys: keys}
+        else
+          {:error, reason} -> Repo.rollback(reason)
+        end
+      end)
+    end
+  end
 
-          case Enum.find(results, &match?({:error, _}, &1)) do
-            nil -> {:ok, %{username | ssh_public_keys: Enum.map(results, fn {:ok, key} -> key end)}}
-            {:error, reason} -> {:error, reason}
-          end
+  def delete(%SshUsername{} = username), do: Repo.delete(username)
 
-        error ->
-          error
+  defp create_public_keys(ssh_username_id, keys_attrs) do
+    keys_attrs
+    |> Enum.reduce_while({:ok, []}, fn attrs, {:ok, keys} ->
+      case SshPublicKeyResources.create(Map.put(attrs, "ssh_username_id", ssh_username_id)) do
+        {:ok, key} -> {:cont, {:ok, [key | keys]}}
+        {:error, reason} -> {:halt, {:error, reason}}
       end
+    end)
+    |> case do
+      {:ok, keys} -> {:ok, Enum.reverse(keys)}
+      error -> error
     end
   end
 

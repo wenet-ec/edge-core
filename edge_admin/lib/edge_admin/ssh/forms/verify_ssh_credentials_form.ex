@@ -21,9 +21,7 @@ defmodule EdgeAdmin.Ssh.Forms.VerifySshCredentialsForm do
 
   Exactly one credential field must be present.
   """
-  def changeset(attrs, opts \\ [])
-
-  def changeset(attrs, _opts) when is_map(attrs) do
+  def changeset(attrs) when is_map(attrs) do
     %__MODULE__{}
     |> cast(attrs, [:username, :password, :public_key])
     |> validate_required([:username])
@@ -35,7 +33,7 @@ defmodule EdgeAdmin.Ssh.Forms.VerifySshCredentialsForm do
     end
   end
 
-  def changeset(_params, _opts) do
+  def changeset(_params) do
     changeset =
       %__MODULE__{}
       |> cast(%{}, [])

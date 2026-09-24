@@ -69,12 +69,4 @@ defmodule EdgeAdmin.Ssh.Schemas.SshPublicKey do
       end
     end)
   end
-
-  @doc "Returns the list of supported SSH key algorithms."
-  @spec supported_algorithms() :: [String.t()]
-  def supported_algorithms, do: SshPublicKeyValidators.supported_algorithms()
-
-  @doc "Validates a public key string's format, algorithm, and base64 data."
-  @spec validate_key_format(String.t()) :: {:ok, String.t()} | {:error, String.t()}
-  def validate_key_format(public_key), do: SshPublicKeyValidators.validate_key_format(public_key)
 end

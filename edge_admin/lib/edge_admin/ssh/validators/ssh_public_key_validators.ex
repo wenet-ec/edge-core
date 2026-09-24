@@ -7,9 +7,6 @@ defmodule EdgeAdmin.Ssh.Validators.SshPublicKeyValidators do
   @supported_algorithms Naming.ssh_public_key_algorithms()
   @ssh_key_regex Naming.ssh_public_key_regex()
 
-  @spec supported_algorithms() :: [String.t()]
-  def supported_algorithms, do: @supported_algorithms
-
   @spec key_name_error(term()) :: :ok | {:error, String.t()}
   def key_name_error(name) when is_binary(name) do
     cond do

@@ -8,7 +8,7 @@ defmodule EdgeAdmin.Ssh.Credentials.Verification do
   alias EdgeAdmin.Repo
   alias EdgeAdmin.Ssh.Credentials.Matcher
   alias EdgeAdmin.Ssh.Forms
-  alias EdgeAdmin.Ssh.Resources.SshUsernames
+  alias EdgeAdmin.Ssh.Resources.SshUsernameResources
   alias EdgeAdmin.Ssh.Schemas.SshUsername
 
   require Logger
@@ -20,7 +20,7 @@ defmodule EdgeAdmin.Ssh.Credentials.Verification do
       public_key = Map.get(attrs, "public_key")
 
       ssh_username =
-        case SshUsernames.list(%{"node_id" => node_id, "username" => username, "page_size" => "1"}) do
+        case SshUsernameResources.list(%{"node_id" => node_id, "username" => username, "page_size" => "1"}) do
           {:ok, {[value | _], _}} -> value
           _ -> nil
         end

@@ -1,5 +1,5 @@
-# edge_admin/lib/edge_admin/ssh/resources/ssh_public_keys.ex
-defmodule EdgeAdmin.Ssh.Resources.SshPublicKeys do
+# edge_admin/lib/edge_admin/ssh/resources/ssh_public_key_resources.ex
+defmodule EdgeAdmin.Ssh.Resources.SshPublicKeyResources do
   @moduledoc false
 
   import Ecto.Query, warn: false
@@ -22,20 +22,24 @@ defmodule EdgeAdmin.Ssh.Resources.SshPublicKeys do
     CastError -> {:error, :not_found}
   end
 
-  @spec create(SshUsername.t(), map()) ::
-          {:ok, SshPublicKey.t()} | {:error, Ecto.Changeset.t()} | {:error, {:conflict, String.t()}}
-  def create(%SshUsername{} = username, params) do
-    with {:ok, attrs} <- Forms.CreateSshPublicKeyForm.changeset(params) do
-      attrs |> Map.put("ssh_username_id", username.id) |> insert()
-    end
-  end
-
-  @spec insert(map()) :: {:ok, SshPublicKey.t()} | {:error, Ecto.Changeset.t()} | {:error, {:conflict, String.t()}}
-  def insert(attrs) do
+  @spec create(map()) ::
+          {:ok, SshPublicKey.t()}
+          | {:error, Ecto.Changeset.t()}
+          | {:error, {:conflict, String.t()}}
+  def create(attrs) do
     %SshPublicKey{}
     |> SshPublicKey.changeset(attrs)
     |> Repo.insert()
     |> Repo.normalize_conflict([:key_name])
+  end
+
+  @doc "Validates and creates an SSH public key for an existing username."
+  @spec create_for_username(SshUsername.t(), map()) ::
+          {:ok, SshPublicKey.t()} | {:error, Ecto.Changeset.t()} | {:error, {:conflict, String.t()}}
+  def create_for_username(%SshUsername{} = username, params) do
+    with {:ok, attrs} <- Forms.CreateSshPublicKeyForm.changeset(params) do
+      create(Map.put(attrs, "ssh_username_id", username.id))
+    end
   end
 
   def delete(%SshPublicKey{} = key), do: Repo.delete(key)

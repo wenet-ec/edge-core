@@ -3,7 +3,7 @@ defmodule EdgeAdmin.Ssh.Forms.CreateSshUsernameForm do
   @moduledoc """
   Form for validating SSH username creation inputs.
 
-  Validates external API input before passing it to the domain layer.
+  Validates SSH username creation input before persistence.
   """
   use EdgeAdmin.Form
 

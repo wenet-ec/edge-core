@@ -47,13 +47,10 @@ defmodule EdgeAdmin.Nodes.Resources.NodeResources do
     flop_params = RequestParser.parse(params)
     {query, flop_params} = build_list_query(flop_params)
 
-    case Flop.validate_and_run(query, flop_params,
-           for: Node,
-           replace_invalid_params: true
-         ) do
-      {:ok, {nodes, meta}} -> {:ok, {nodes, meta}}
-      {:error, meta} -> {:error, meta}
-    end
+    Flop.validate_and_run(query, flop_params,
+      for: Node,
+      replace_invalid_params: true
+    )
   end
 
   @doc "Lists all matching nodes for complete discovery snapshots without pagination."

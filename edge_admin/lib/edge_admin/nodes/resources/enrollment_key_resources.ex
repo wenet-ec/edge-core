@@ -46,13 +46,10 @@ defmodule EdgeAdmin.Nodes.Resources.EnrollmentKeyResources do
     flop_params = RequestParser.parse(params)
     {query, flop_params} = build_list_query(flop_params)
 
-    case Flop.validate_and_run(query, flop_params,
-           for: EnrollmentKey,
-           replace_invalid_params: true
-         ) do
-      {:ok, {keys, meta}} -> {:ok, {keys, meta}}
-      {:error, meta} -> {:error, meta}
-    end
+    Flop.validate_and_run(query, flop_params,
+      for: EnrollmentKey,
+      replace_invalid_params: true
+    )
   end
 
   @doc """

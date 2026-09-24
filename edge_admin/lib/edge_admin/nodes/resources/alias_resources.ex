@@ -71,16 +71,10 @@ defmodule EdgeAdmin.Nodes.Resources.AliasResources do
         from(a in acc, where: case_insensitive_like(field(a, ^field), ^value))
       end)
 
-    case Flop.validate_and_run(query, flop_params,
-           for: Alias,
-           replace_invalid_params: true
-         ) do
-      {:ok, {aliases, meta}} ->
-        {:ok, {aliases, meta}}
-
-      {:error, meta} ->
-        {:error, meta}
-    end
+    Flop.validate_and_run(query, flop_params,
+      for: Alias,
+      replace_invalid_params: true
+    )
   end
 
   @doc "Gets an alias by ID with its cluster preloaded."

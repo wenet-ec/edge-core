@@ -5,8 +5,8 @@ defmodule EdgeAdmin.Nodes.Workflows.Registration do
 
   This module owns registration forms, VPN host lookup, cluster matching,
   recovery authorization, node locking, credential rotation, and transactional
-  persistence. Post-registration events and alias repair remain in
-  `EdgeAdmin.Nodes`.
+  persistence. `EdgeAdmin.Nodes.Resources.NodeResources` publishes registration
+  events and repairs alias DNS after persistence succeeds.
   """
 
   alias EdgeAdmin.Nodes.Checks
@@ -21,7 +21,7 @@ defmodule EdgeAdmin.Nodes.Workflows.Registration do
   alias EdgeAdmin.Vpn
 
   @doc """
-  Persists an initial registration or recovery attempt.
+  Validates and persists an initial registration or recovery attempt.
   """
   @spec register(map()) ::
           {:ok, map()}
@@ -33,26 +33,11 @@ defmodule EdgeAdmin.Nodes.Workflows.Registration do
       %{"node_id" => node_id, "network_name" => network_name} = attrs
       cluster_name = String.replace_prefix(network_name, "cluster-", "")
 
-      with :ok <- active_cluster_exists?(cluster_name),
-           {:ok, vpn_host_id} <-
-             Vpn.get_host_id(Node.node_name(node_id), network_name: network_name),
-           {:ok, registration} <- persist_registration(node_id, cluster_name, vpn_host_id, attrs) do
-        {:ok, registration}
-      else
-        {:error, :unauthorized} ->
-          {:error, :unauthorized}
-
-        {:error, :not_found} ->
-          {:error, :unauthorized}
-
-        {:error, :host_not_found} ->
-          {:error, {:conflict, "node not found in Edge VPN network"}}
-
-        {:error, :service_unavailable} ->
-          {:error, :service_unavailable}
-
-        {:error, _reason} ->
-          {:error, :service_unavailable}
+      with {:ok, vpn_host_id} <- resolve_vpn_host_id(node_id, cluster_name, network_name) do
+        case persist_registration(node_id, cluster_name, vpn_host_id, attrs) do
+          {:ok, registration} -> {:ok, registration}
+          error -> normalize_registration_error(error)
+        end
       end
     end
   end
@@ -70,29 +55,32 @@ defmodule EdgeAdmin.Nodes.Workflows.Registration do
       %{"network_name" => network_name} = attrs
       cluster_name = String.replace_prefix(network_name, "cluster-", "")
 
-      with :ok <- active_cluster_exists?(cluster_name),
-           {:ok, vpn_host_id} <-
-             Vpn.get_host_id(Node.node_name(node_id), network_name: network_name),
-           {:ok, registration} <- persist_reregistration(node_id, cluster_name, vpn_host_id, attrs) do
-        {:ok, registration}
-      else
-        {:error, :unauthorized} ->
-          {:error, :unauthorized}
-
-        {:error, :not_found} ->
-          {:error, :unauthorized}
-
-        {:error, :host_not_found} ->
-          {:error, {:conflict, "node not found in Edge VPN network"}}
-
-        {:error, :service_unavailable} ->
-          {:error, :service_unavailable}
-
-        {:error, _reason} ->
-          {:error, :service_unavailable}
+      with {:ok, vpn_host_id} <- resolve_vpn_host_id(node_id, cluster_name, network_name) do
+        case persist_reregistration(node_id, cluster_name, vpn_host_id, attrs) do
+          {:ok, registration} -> {:ok, registration}
+          error -> normalize_registration_error(error)
+        end
       end
     end
   end
+
+  defp resolve_vpn_host_id(node_id, cluster_name, network_name) do
+    with :ok <- active_cluster_exists?(cluster_name),
+         {:ok, vpn_host_id} <- Vpn.get_host_id(Node.node_name(node_id), network_name: network_name) do
+      {:ok, vpn_host_id}
+    else
+      error -> normalize_registration_error(error)
+    end
+  end
+
+  defp normalize_registration_error({:error, :unauthorized}), do: {:error, :unauthorized}
+  defp normalize_registration_error({:error, :not_found}), do: {:error, :unauthorized}
+
+  defp normalize_registration_error({:error, :host_not_found}),
+    do: {:error, {:conflict, "node not found in Edge VPN network"}}
+
+  defp normalize_registration_error({:error, :service_unavailable}), do: {:error, :service_unavailable}
+  defp normalize_registration_error({:error, _reason}), do: {:error, :service_unavailable}
 
   defp persist_registration(node_id, reported_cluster_name, vpn_host_id, attrs) do
     Repo.transaction_with_write_lock(fn ->

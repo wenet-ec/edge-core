@@ -1,5 +1,5 @@
-# edge_admin/lib/edge_admin/nodes/resources/enrollment_keys.ex
-defmodule EdgeAdmin.Nodes.Resources.EnrollmentKeys do
+# edge_admin/lib/edge_admin/nodes/resources/enrollment_key_resources.ex
+defmodule EdgeAdmin.Nodes.Resources.EnrollmentKeyResources do
   @moduledoc """
   Enrollment-key management and verification for edge-node provisioning.
 
@@ -44,7 +44,7 @@ defmodule EdgeAdmin.Nodes.Resources.EnrollmentKeys do
   @spec list(map()) :: {:ok, {[EnrollmentKey.t()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
   def list(params \\ %{}) do
     flop_params = RequestParser.parse(params)
-    {query, flop_params} = build_query(flop_params)
+    {query, flop_params} = build_list_query(flop_params)
 
     case Flop.validate_and_run(query, flop_params,
            for: EnrollmentKey,
@@ -68,54 +68,64 @@ defmodule EdgeAdmin.Nodes.Resources.EnrollmentKeys do
     CastError -> {:error, :not_found}
   end
 
-  @doc """
-  Creates an enrollment key for a cluster.
+  @doc "Inserts an enrollment key from validated attributes."
+  @spec create(map()) :: {:ok, EnrollmentKey.t()} | {:error, Ecto.Changeset.t()}
+  def create(attrs) do
+    %EnrollmentKey{}
+    |> EnrollmentKey.changeset(attrs)
+    |> Repo.insert()
+  end
 
-  The stored and returned value is a base64 JSON blob containing the Admin
-  URLs, cluster name, and a nonce. The complete blob is later presented to the
-  verification endpoint.
-  """
-  @spec create(Cluster.t(), map()) ::
+  @doc "Updates an enrollment key from validated attributes."
+  @spec update(EnrollmentKey.t(), map()) :: {:ok, EnrollmentKey.t()} | {:error, Ecto.Changeset.t()}
+  def update(%EnrollmentKey{} = key, attrs) do
+    key
+    |> EnrollmentKey.changeset(attrs)
+    |> Repo.update()
+  end
+
+  @doc "Deletes an enrollment key from the database."
+  @spec delete(EnrollmentKey.t()) :: {:ok, EnrollmentKey.t()} | {:error, Ecto.Changeset.t()}
+  def delete(%EnrollmentKey{} = key), do: Repo.delete(key)
+
+  @doc "Validates attributes, generates the enrollment blob, and creates a cluster-bound key."
+  @spec create_for_cluster(Cluster.t(), map()) ::
           {:ok, EnrollmentKey.t()} | {:error, Ecto.Changeset.t()}
-  def create(%Cluster{} = cluster, params \\ %{}) do
-    with {:ok, attrs} <- Forms.CreateEnrollmentKeyForm.changeset(params) do
+  def create_for_cluster(%Cluster{} = cluster, attrs) do
+    with {:ok, attrs} <- Forms.CreateEnrollmentKeyForm.changeset(attrs) do
       admin_urls = Application.fetch_env!(:edge_admin, :admin_urls)
       nonce = Random.token()
 
-      key =
-        %{"admin_urls" => admin_urls, "cluster_name" => cluster.name, "nonce" => nonce}
-        |> JSON.encode!()
-        |> Base.encode64(padding: false)
+      key = build_key_blob(admin_urls, cluster.name, nonce)
 
       key_attrs =
         attrs
         |> Map.put("key", key)
         |> Map.put("cluster_id", cluster.id)
 
-      case %EnrollmentKey{} |> EnrollmentKey.changeset(key_attrs) |> Repo.insert() do
-        {:ok, enrollment_key} -> {:ok, Repo.preload(enrollment_key, :cluster)}
-        {:error, changeset} -> {:error, changeset}
+      with {:ok, enrollment_key} <- create(key_attrs) do
+        {:ok, Repo.preload(enrollment_key, :cluster)}
       end
     end
   end
 
-  @doc """
-  Updates an enrollment key's uses limit or expiry.
-  """
-  @spec update(EnrollmentKey.t(), map()) ::
+  @doc false
+  @spec build_key_blob([String.t()], String.t(), String.t()) :: String.t()
+  def build_key_blob(admin_urls, cluster_name, nonce) do
+    %{"admin_urls" => admin_urls, "cluster_name" => cluster_name, "nonce" => nonce}
+    |> JSON.encode!()
+    |> Base.encode64(padding: false)
+  end
+
+  @doc "Validates and updates an enrollment key's uses limit or expiry."
+  @spec update_enrollment_key(EnrollmentKey.t(), map()) ::
           {:ok, EnrollmentKey.t()} | {:error, Ecto.Changeset.t()}
-  def update(%EnrollmentKey{} = key, params) do
-    with {:ok, attrs} <- Forms.UpdateEnrollmentKeyForm.changeset(params) do
-      case key |> EnrollmentKey.changeset(attrs) |> Repo.update() do
-        {:ok, updated_key} -> {:ok, Repo.preload(updated_key, :cluster)}
-        {:error, changeset} -> {:error, changeset}
-      end
+  def update_enrollment_key(%EnrollmentKey{} = key, params) do
+    with {:ok, attrs} <- Forms.UpdateEnrollmentKeyForm.changeset(params),
+         {:ok, updated_key} <- __MODULE__.update(key, attrs) do
+      {:ok, Repo.preload(updated_key, :cluster)}
     end
   end
-
-  @doc "Deletes an enrollment key."
-  @spec delete(EnrollmentKey.t()) :: {:ok, EnrollmentKey.t()} | {:error, Ecto.Changeset.t()}
-  def delete(%EnrollmentKey{} = key), do: Repo.delete(key)
 
   @doc """
   Verifies an enrollment-key blob presented by an Agent before VPN enrollment.
@@ -143,7 +153,7 @@ defmodule EdgeAdmin.Nodes.Resources.EnrollmentKeys do
     end
   end
 
-  defp build_query(flop_params) do
+  defp build_list_query(flop_params) do
     custom_fields = Keyword.keys(@enrollment_key_custom_filters)
 
     {custom, other_filters} =

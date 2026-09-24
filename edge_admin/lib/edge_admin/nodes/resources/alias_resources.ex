@@ -1,11 +1,10 @@
-# edge_admin/lib/edge_admin/nodes/resources/aliases.ex
-defmodule EdgeAdmin.Nodes.Resources.Aliases do
+# edge_admin/lib/edge_admin/nodes/resources/alias_resources.ex
+defmodule EdgeAdmin.Nodes.Resources.AliasResources do
   @moduledoc """
   Owns node alias records and their Edge VPN DNS lifecycle.
 
-  Alias records are persisted in the Admin database, while their DNS entries
-  live in Edge VPN. This module handles CRUD, cleanup, and repair of that
-  cross-system state.
+  Provides alias persistence and query operations alongside the Edge VPN DNS
+  workflows that create, delete, and reconcile alias entries.
   """
 
   import Ecto.Query, warn: false
@@ -25,17 +24,103 @@ defmodule EdgeAdmin.Nodes.Resources.Aliases do
 
   require Logger
 
-  defp active_cluster?(cluster_id) do
-    Repo.exists?(ClusterQueries.active_by_id(cluster_id))
+  @doc """
+  Lists aliases with filtering and pagination.
+
+  Supports filtering by:
+  - `name` - Text search with wildcard support
+  - `node_id__in` - Exact IN match on node IDs — comma-separated UUIDs
+  - `cluster_name` - Exact match or wildcard (`prod*`) on cluster name (requires join)
+  - `cluster_name__in` - IN match on cluster name — comma-separated list (requires join)
+  - `inserted_at__gte/lte` - Date range filter
+  - `updated_at__gte/lte` - Date range filter
+  """
+  @spec list(map()) :: {:ok, {[Alias.t()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
+  def list(params \\ %{}) do
+    flop_params = RequestParser.parse(params)
+
+    {cluster_name_filters, other_filters} =
+      Enum.split_with(flop_params[:filters] || [], fn filter ->
+        filter.field == :cluster_name
+      end)
+
+    {node_ids_filters, other_filters} =
+      Enum.split_with(other_filters, fn filter -> filter.field == :node_id end)
+
+    {ilike_filters, flop_params} =
+      RequestParser.split_ilike_filters(
+        Map.put(flop_params, :filters, other_filters),
+        [:name]
+      )
+
+    base_query = ClusterQueries.active_joined(from(a in Alias, join: c in assoc(a, :cluster), preload: [cluster: c]))
+
+    query = ClusterFilters.apply_name(base_query, cluster_name_filters)
+
+    query =
+      Enum.reduce(node_ids_filters, query, fn filter, acc ->
+        case filter do
+          %{op: :in, value: values} when is_list(values) -> from(a in acc, where: a.node_id in ^values)
+          %{op: :==, value: value} when is_binary(value) -> from(a in acc, where: a.node_id == ^value)
+          _ -> acc
+        end
+      end)
+
+    query =
+      Enum.reduce(ilike_filters, query, fn %{field: field, value: value}, acc ->
+        from(a in acc, where: case_insensitive_like(field(a, ^field), ^value))
+      end)
+
+    case Flop.validate_and_run(query, flop_params,
+           for: Alias,
+           replace_invalid_params: true
+         ) do
+      {:ok, {aliases, meta}} ->
+        {:ok, {aliases, meta}}
+
+      {:error, meta} ->
+        {:error, meta}
+    end
   end
 
-  @doc """
-  Repairs DNS entries for aliases belonging to a node after registration.
+  @doc "Gets an alias by ID with its cluster preloaded."
+  @spec get(String.t()) :: {:ok, Alias.t()} | {:error, :not_found}
+  def get(id) do
+    case Repo.get(Alias, id) do
+      nil -> {:error, :not_found}
+      alias_record -> {:ok, Repo.preload(alias_record, :cluster)}
+    end
+  rescue
+    CastError -> {:error, :not_found}
+  end
 
-  Missing or stale Edge VPN DNS records are recreated from the node's current
-  IPv4 and IPv6 VPN addresses. External DNS failures are logged and left for
-  reconciliation.
-  """
+  @doc "Creates an alias record from validated attributes."
+  @spec create(map()) ::
+          {:ok, Alias.t()}
+          | {:error, Ecto.Changeset.t()}
+          | {:error, {:conflict, String.t()}}
+  def create(attrs) do
+    %Alias{}
+    |> Alias.changeset(attrs)
+    |> Repo.insert()
+    |> Repo.normalize_conflict([:name, :cluster_id])
+  end
+
+  @doc "Updates an alias record from validated attributes."
+  @spec update(Alias.t(), map()) ::
+          {:ok, Alias.t()} | {:error, Ecto.Changeset.t()} | {:error, {:conflict, String.t()}}
+  def update(%Alias{} = alias_record, attrs) do
+    alias_record
+    |> Alias.changeset(attrs)
+    |> Repo.update()
+    |> Repo.normalize_conflict([:name, :cluster_id])
+  end
+
+  @doc "Deletes an alias record without changing its Edge VPN DNS entry."
+  @spec delete(Alias.t()) :: {:ok, Alias.t()} | {:error, Ecto.Changeset.t()}
+  def delete(%Alias{} = alias_record), do: Repo.delete(alias_record)
+
+  @doc "Repairs DNS entries for aliases belonging to a node after registration."
   @spec repair_node_dns(Node.t()) :: :ok
   def repair_node_dns(%Node{} = node) do
     node = Repo.preload(node, :cluster)
@@ -65,20 +150,12 @@ defmodule EdgeAdmin.Nodes.Resources.Aliases do
 
         {:error, reason} ->
           Logger.warning("Registration: failed to list alias DNS entries for node #{node.id}: #{inspect(reason)}")
-
           :ok
       end
     end
   end
 
-  @doc """
-  Cleans up all aliases for a single node.
-
-  Deletes DNS entries from Edge VPN and removes alias records from DB.
-  Best-effort - logs warnings on failures but continues cleanup.
-
-  Used when a node changes clusters (all aliases become invalid).
-  """
+  @doc "Deletes a node's aliases and corresponding Edge VPN DNS entries on a best-effort basis."
   @spec cleanup_node_aliases(Node.t()) :: :ok
   def cleanup_node_aliases(%Node{} = node) do
     node = Repo.preload(node, [:cluster, aliases: :cluster])
@@ -88,15 +165,7 @@ defmodule EdgeAdmin.Nodes.Resources.Aliases do
     end)
   end
 
-  @doc """
-  Cleans up orphaned aliases for multiple nodes.
-
-  Used by reconciliation worker to clean up aliases for nodes that:
-  - No longer exist in Edge VPN (left network, deleted)
-  - Exist in DB but not in the current network
-
-  Returns count of cleaned aliases.
-  """
+  @doc "Deletes alias records and DNS entries for orphaned nodes, returning the alias count."
   @spec cleanup_orphaned_aliases([Node.t()]) :: non_neg_integer()
   def cleanup_orphaned_aliases(nodes) do
     Enum.reduce(nodes, 0, fn node, count ->
@@ -118,7 +187,6 @@ defmodule EdgeAdmin.Nodes.Resources.Aliases do
     vpn_hostname = Alias.vpn_hostname(alias_record)
     vpn_dns_name = Alias.vpn_dns_name(alias_record)
 
-    # 1. Try to delete DNS entry (best-effort)
     case Vpn.delete_dns_entry(network_name, vpn_dns_name) do
       {:ok, _} ->
         Logger.info("Deleted DNS entry for alias #{alias_record.name}: #{vpn_hostname}")
@@ -130,119 +198,27 @@ defmodule EdgeAdmin.Nodes.Resources.Aliases do
         Logger.warning("Failed to delete DNS entry for alias #{alias_record.name}: service unavailable")
     end
 
-    # 2. Delete from DB
-    case Repo.delete(alias_record) do
-      {:ok, _} ->
-        Logger.debug("Deleted alias record: #{alias_record.name}")
-
-      {:error, reason} ->
-        Logger.error("Failed to delete alias record #{alias_record.name}: #{inspect(reason)}")
+    case delete(alias_record) do
+      {:ok, _} -> Logger.debug("Deleted alias record: #{alias_record.name}")
+      {:error, reason} -> Logger.error("Failed to delete alias record #{alias_record.name}: #{inspect(reason)}")
     end
   end
 
   @doc """
-  Lists aliases with filtering and pagination.
+  Validates the alias, checks that its node belongs to the cluster, reads the
+  node's VPN addresses, then creates the alias record and DNS entry. DNS creation
+  failure triggers deletion of the new database record. Reconciliation repairs
+  the DNS entry if that deletion fails.
 
-  Supports filtering by:
-  - `name` - Text search with wildcard support
-  - `node_id__in` - Exact IN match on node IDs — comma-separated UUIDs
-  - `cluster_name` - Exact match or wildcard (`prod*`) on cluster name (requires join)
-  - `cluster_name__in` - IN match on cluster name — comma-separated list (requires join)
-  - `inserted_at__gte/lte` - Date range filter
-  - `updated_at__gte/lte` - Date range filter
+  Returns a conflict if the node is absent from the VPN network or has no
+  assigned address, and `:service_unavailable` for VPN request failures.
   """
-  @spec list(map()) :: {:ok, {[Alias.t()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
-  def list(params \\ %{}) do
-    # Parse params into Flop format
-    flop_params = RequestParser.parse(params)
-
-    # Extract join-based filters (handle separately from Flop)
-    {cluster_name_filters, other_filters} =
-      Enum.split_with(flop_params[:filters] || [], fn filter ->
-        filter.field == :cluster_name
-      end)
-
-    {node_ids_filters, other_filters} =
-      Enum.split_with(other_filters, fn filter -> filter.field == :node_id end)
-
-    {ilike_filters, flop_params} =
-      RequestParser.split_ilike_filters(
-        Map.put(flop_params, :filters, other_filters),
-        [:name]
-      )
-
-    # Build base query with cluster preload
-    base_query = ClusterQueries.active_joined(from(a in Alias, join: c in assoc(a, :cluster), preload: [cluster: c]))
-
-    query = ClusterFilters.apply_name(base_query, cluster_name_filters)
-
-    # node_id__in filter — node_id is a direct column on aliases
-    query =
-      Enum.reduce(node_ids_filters, query, fn filter, acc ->
-        case filter do
-          %{op: :in, value: values} when is_list(values) -> from(a in acc, where: a.node_id in ^values)
-          %{op: :==, value: value} when is_binary(value) -> from(a in acc, where: a.node_id == ^value)
-          _ -> acc
-        end
-      end)
-
-    query =
-      Enum.reduce(ilike_filters, query, fn %{field: field, value: value}, acc ->
-        from(a in acc, where: case_insensitive_like(field(a, ^field), ^value))
-      end)
-
-    case Flop.validate_and_run(query, flop_params,
-           for: Alias,
-           replace_invalid_params: true
-         ) do
-      {:ok, {aliases, meta}} ->
-        {:ok, {aliases, meta}}
-
-      {:error, meta} ->
-        {:error, meta}
-    end
-  end
-
-  @doc """
-  Gets a single alias by ID.
-
-  Returns the alias with its cluster preloaded, or `{:error, :not_found}`.
-  """
-  @spec get(String.t()) :: {:ok, Alias.t()} | {:error, :not_found}
-  def get(id) do
-    case Repo.get(Alias, id) do
-      nil -> {:error, :not_found}
-      alias_record -> {:ok, Repo.preload(alias_record, :cluster)}
-    end
-  rescue
-    CastError -> {:error, :not_found}
-  end
-
-  @doc """
-  Creates an alias for a node and its DNS entry.
-
-  Flow:
-  1. Check Edge VPN health (fail fast if service unavailable)
-  2. Validate input
-  3. Query node IPv4/IPv6 addresses from Edge VPN (at least one required for DNS entry)
-  4. Create DB record
-  5. Create DNS entry in Edge VPN (rollback DB on failure)
-
-  If health check fails, returns service unavailable immediately.
-  If node not found in Edge VPN or has no VPN address, returns a conflict.
-  If DB creation fails, returns validation error.
-  If DNS creation fails, rolls back the DB record and returns service unavailable.
-  If that rollback ever fails and the alias row remains, reconciliation treats the
-  DB row as source of truth and recreates the DNS entry.
-
-  Returns `:service_unavailable` when Edge VPN health or DNS creation fails.
-  """
-  @spec create(Node.t(), map()) ::
+  @spec create_with_dns(Node.t(), map()) ::
           {:ok, Alias.t()}
           | {:error, Ecto.Changeset.t()}
           | {:error, {:conflict, String.t()}}
           | {:error, :service_unavailable}
-  def create(%Node{} = node, params) do
+  def create_with_dns(%Node{} = node, params) do
     with {:ok, attrs} <- Forms.CreateAliasForm.changeset(params) do
       alias_attrs = Map.merge(attrs, %{"node_id" => node.id, "cluster_id" => node.cluster_id})
       changeset = Alias.changeset(%Alias{}, alias_attrs)
@@ -252,7 +228,6 @@ defmodule EdgeAdmin.Nodes.Resources.Aliases do
           error
 
         :ok ->
-          # Query Edge VPN only after local/schema and DB-state checks pass.
           network_name = Cluster.network_name(node.cluster)
 
           case Vpn.find_node_by_host(network_name, node.vpn_host_id) do
@@ -260,13 +235,12 @@ defmodule EdgeAdmin.Nodes.Resources.Aliases do
               addresses = node_dns_addresses(vpn_node)
 
               if addresses do
-                insert_alias(changeset, network_name, addresses)
+                create_alias_and_dns_entry(alias_attrs, network_name, addresses)
               else
                 node_without_vpn_address(network_name, node.vpn_host_id)
               end
 
             {:error, :not_found} ->
-              # Node is not enrolled in Edge VPN at all
               Logger.warning("Cannot create alias: node #{node.vpn_host_id} is not enrolled in network #{network_name}")
 
               {:error,
@@ -289,12 +263,11 @@ defmodule EdgeAdmin.Nodes.Resources.Aliases do
      {:conflict, "Node has not been assigned an IPv4 or IPv6 address yet. It may still be enrolling in the VPN."}}
   end
 
-  defp insert_alias(changeset, network_name, addresses) do
-    case Repo.insert(changeset) do
+  defp create_alias_and_dns_entry(attrs, network_name, addresses) do
+    case create(attrs) do
       {:ok, alias_record} ->
         alias_record = Repo.preload(alias_record, :cluster)
 
-        # Create DNS entry in Edge VPN (rollback DB on failure)
         vpn_hostname = Alias.vpn_hostname(alias_record)
         vpn_dns_name = Alias.vpn_dns_name(alias_record)
         dns_attrs = Map.merge(%{name: vpn_dns_name}, addresses)
@@ -308,14 +281,13 @@ defmodule EdgeAdmin.Nodes.Resources.Aliases do
             {:ok, alias_record}
 
           {:error, :service_unavailable} = error ->
-            # Edge VPN DNS creation failed - rollback DB insert
             Logger.warning("Edge VPN DNS creation failed, rolling back DB alias: #{alias_record.name}")
-            Repo.delete(alias_record)
+            delete(alias_record)
             error
         end
 
-      {:error, changeset} ->
-        Repo.normalize_conflict({:error, changeset}, [:name, :cluster_id])
+      error ->
+        error
     end
   end
 
@@ -334,44 +306,27 @@ defmodule EdgeAdmin.Nodes.Resources.Aliases do
 
   Returns `{:ok, alias}`, `{:error, changeset}` (DB failure), or `{:error, :service_unavailable}` (Edge VPN failure).
   """
-  @spec delete(Alias.t()) :: {:ok, Alias.t()} | {:error, Ecto.Changeset.t()} | {:error, :service_unavailable}
-  def delete(%Alias{} = alias_record) do
+  @spec delete_with_dns(Alias.t()) ::
+          {:ok, Alias.t()} | {:error, Ecto.Changeset.t()} | {:error, :service_unavailable}
+  def delete_with_dns(%Alias{} = alias_record) do
     alias_record = Repo.preload(alias_record, :cluster)
     network_name = Cluster.network_name(alias_record.cluster)
     vpn_hostname = Alias.vpn_hostname(alias_record)
     vpn_dns_name = Alias.vpn_dns_name(alias_record)
 
-    # 1. Delete DNS entry from Edge VPN FIRST
     case Vpn.delete_dns_entry(network_name, vpn_dns_name) do
       {:ok, _} ->
         Logger.info("Deleted DNS entry for alias #{alias_record.name}: #{vpn_hostname}")
-        delete_alias_from_db(alias_record)
+        delete(alias_record)
 
       {:error, :not_found} ->
-        # DNS already gone - continue with DB deletion
         Logger.info("DNS entry already deleted for alias #{alias_record.name}: #{vpn_hostname}")
-        delete_alias_from_db(alias_record)
+        delete(alias_record)
 
       {:error, :service_unavailable} = error ->
-        # Edge VPN failed - stop operation
         Logger.error("Failed to delete DNS entry for alias #{alias_record.name}, aborting alias deletion")
         error
     end
-  end
-
-  defp delete_alias_from_db(%Alias{} = alias_record) do
-    case Repo.delete(alias_record) do
-      {:ok, deleted_alias} ->
-        {:ok, deleted_alias}
-
-      {:error, changeset} ->
-        {:error, changeset}
-    end
-  end
-
-  @spec change(Alias.t(), map()) :: Ecto.Changeset.t()
-  def change(%Alias{} = alias_record, attrs \\ %{}) do
-    Alias.changeset(alias_record, attrs)
   end
 
   @doc """
@@ -578,5 +533,9 @@ defmodule EdgeAdmin.Nodes.Resources.Aliases do
         end
       end
     end)
+  end
+
+  defp active_cluster?(cluster_id) do
+    Repo.exists?(ClusterQueries.active_by_id(cluster_id))
   end
 end

@@ -1,10 +1,9 @@
-# edge_admin/lib/edge_admin/nodes/resources/nodes.ex
-defmodule EdgeAdmin.Nodes.Resources.Nodes do
+# edge_admin/lib/edge_admin/nodes/resources/node_resources.ex
+defmodule EdgeAdmin.Nodes.Resources.NodeResources do
   @moduledoc """
-  Owns node persistence, lookup, filtering, registration finalization, cluster
-  movement, deletion, and node-local changesets. Dependencies on aliases,
-  commands, events, and Edge VPN are explicit; this module never calls back
-  through `EdgeAdmin.Nodes`.
+  Provides node CRUD and filtered queries, plus node workflows that coordinate
+  registration, recovery keys, cluster movement, and Edge VPN cleanup. It does
+  not call back through `EdgeAdmin.Nodes`.
   """
 
   import Ecto.Query, warn: false
@@ -20,7 +19,7 @@ defmodule EdgeAdmin.Nodes.Resources.Nodes do
   alias EdgeAdmin.Nodes.Forms
   alias EdgeAdmin.Nodes.Persistence
   alias EdgeAdmin.Nodes.Queries.ClusterQueries
-  alias EdgeAdmin.Nodes.Resources.Aliases
+  alias EdgeAdmin.Nodes.Resources.AliasResources
   alias EdgeAdmin.Nodes.Schemas.Cluster
   alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.Nodes.Workflows.Registration
@@ -42,6 +41,56 @@ defmodule EdgeAdmin.Nodes.Resources.Nodes do
     CastError -> {:error, :not_found}
   end
 
+  @doc "Lists active nodes with filtering, sorting, and pagination."
+  @spec list(map()) :: {:ok, {[Node.t()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
+  def list(params \\ %{}) do
+    flop_params = RequestParser.parse(params)
+    {query, flop_params} = build_list_query(flop_params)
+
+    case Flop.validate_and_run(query, flop_params,
+           for: Node,
+           replace_invalid_params: true
+         ) do
+      {:ok, {nodes, meta}} -> {:ok, {nodes, meta}}
+      {:error, meta} -> {:error, meta}
+    end
+  end
+
+  @doc "Lists all matching nodes for complete discovery snapshots without pagination."
+  @spec list_for_discovery(map()) :: {:ok, [Node.t()]} | {:error, Flop.Meta.t()}
+  def list_for_discovery(params \\ %{}) do
+    flop_params =
+      params
+      |> RequestParser.parse()
+      |> Map.drop([:page, :page_size, :order_by, :order_directions])
+
+    {query, flop_params} = build_list_query(flop_params)
+
+    discovery_opts = [
+      for: Node,
+      replace_invalid_params: true,
+      default_limit: false,
+      default_order: false,
+      default_pagination_type: false
+    ]
+
+    case Flop.validate(flop_params, discovery_opts) do
+      {:ok, flop} -> {:ok, Flop.all(query, flop, discovery_opts)}
+      {:error, meta} -> {:error, meta}
+    end
+  end
+
+  @doc "Gets a result for each requested node ID, preserving the input order."
+  @spec get_by_ids([String.t()]) :: [{:ok, Node.t()} | {:error, String.t()}]
+  def get_by_ids(node_ids) do
+    Enum.map(node_ids, fn node_id ->
+      case get(node_id) do
+        {:ok, node} -> {:ok, node}
+        {:error, :not_found} -> {:error, "Node #{node_id} not found"}
+      end
+    end)
+  end
+
   @doc "Creates a node from validated node attributes."
   @spec create(map()) :: {:ok, Node.t()} | {:error, Ecto.Changeset.t()}
   def create(attrs \\ %{}) do
@@ -58,29 +107,33 @@ defmodule EdgeAdmin.Nodes.Resources.Nodes do
     |> Repo.update()
   end
 
+  @doc "Deletes a node from the database without external cleanup."
+  @spec delete(Node.t()) :: {:ok, Node.t()} | {:error, Ecto.Changeset.t()}
+  def delete(%Node{} = node), do: Repo.delete(node)
+
   @doc "Creates and persists a one-use recovery key for a node."
   @spec create_recovery_key(Node.t()) :: {:ok, String.t()} | {:error, Ecto.Changeset.t()}
   def create_recovery_key(%Node{} = node) do
     node = Repo.preload(node, :cluster)
 
-    recovery_key =
-      %{"node_id" => node.id, "cluster_name" => node.cluster.name, "nonce" => Random.token()}
-      |> JSON.encode!()
-      |> Base.encode64()
+    recovery_key = build_recovery_key(node.id, node.cluster.name, Random.token())
 
-    case persist_update(node, %{recovery_key: recovery_key}) do
-      {:ok, _node} -> {:ok, recovery_key}
-      {:error, changeset} -> {:error, changeset}
+    with {:ok, _node} <- __MODULE__.update(node, %{recovery_key: recovery_key}) do
+      {:ok, recovery_key}
     end
+  end
+
+  @doc false
+  @spec build_recovery_key(String.t(), String.t(), String.t()) :: String.t()
+  def build_recovery_key(node_id, cluster_name, nonce) do
+    %{"node_id" => node_id, "cluster_name" => cluster_name, "nonce" => nonce}
+    |> JSON.encode!()
+    |> Base.encode64()
   end
 
   @doc "Deletes a node's active recovery key."
   @spec delete_recovery_key(Node.t()) :: {:ok, Node.t()} | {:error, Ecto.Changeset.t()}
-  def delete_recovery_key(%Node{} = node), do: persist_update(node, %{recovery_key: nil})
-
-  @doc "Builds a node changeset without persisting it."
-  @spec change(Node.t(), map()) :: Ecto.Changeset.t()
-  def change(%Node{} = node, attrs \\ %{}), do: Node.changeset(node, attrs)
+  def delete_recovery_key(%Node{} = node), do: __MODULE__.update(node, %{recovery_key: nil})
 
   @doc "Moves a node to an active cluster and best-effort syncs Edge VPN membership."
   @spec change_cluster(Node.t(), map()) ::
@@ -92,7 +145,7 @@ defmodule EdgeAdmin.Nodes.Resources.Nodes do
     with {:ok, %{"cluster_name" => new_cluster_name}} <- Forms.ChangeNodeClusterForm.changeset(params),
          {:ok, %{node: current_node, new_cluster: new_cluster, updated_node: updated_node}} <-
            move_to_active_cluster(node.id, new_cluster_name) do
-      Aliases.cleanup_node_aliases(current_node)
+      AliasResources.cleanup_node_aliases(current_node)
       updated_node = Repo.preload(updated_node, [:cluster, aliases: :cluster], force: true)
       Metadata.Events.publish(:node_updated)
       sync_cluster_networks(current_node, new_cluster)
@@ -105,18 +158,18 @@ defmodule EdgeAdmin.Nodes.Resources.Nodes do
           {:ok, Node.t()} | {:error, Ecto.Changeset.t()} | {:error, :service_unavailable}
   def delete_node(%Node{} = node) do
     node = Repo.preload(node, :cluster)
-    Aliases.cleanup_node_aliases(node)
+    AliasResources.cleanup_node_aliases(node)
 
     case Vpn.delete_host(node.vpn_host_id) do
       {:ok, _} ->
         Logger.info("Deleted host #{node.vpn_host_id} from Edge VPN")
         sweep_orphan_vpn_nodes(node)
-        delete_node_from_db(node)
+        delete_node_and_related_records(node)
 
       {:error, :not_found} ->
         Logger.info("VPN host #{node.vpn_host_id} already deleted")
         sweep_orphan_vpn_nodes(node)
-        delete_node_from_db(node)
+        delete_node_and_related_records(node)
 
       {:error, :service_unavailable} = error ->
         Logger.error("Failed to delete VPN host #{node.vpn_host_id}, aborting node deletion")
@@ -154,9 +207,7 @@ defmodule EdgeAdmin.Nodes.Resources.Nodes do
            :ok <- Checks.SameClusterCheck.check(current_node, new_cluster),
            :ok <- Checks.NodeLimitCheck.check(new_cluster),
            {:ok, updated_node} <-
-             current_node
-             |> Ecto.Changeset.change(cluster_id: new_cluster.id, recovery_key: nil)
-             |> Repo.update() do
+             __MODULE__.update(current_node, %{cluster_id: new_cluster.id, recovery_key: nil}) do
         %{node: current_node, new_cluster: new_cluster, updated_node: updated_node}
       else
         nil -> Repo.rollback(:not_found)
@@ -224,11 +275,11 @@ defmodule EdgeAdmin.Nodes.Resources.Nodes do
     end
   end
 
-  defp delete_node_from_db(%Node{} = node) do
+  defp delete_node_and_related_records(%Node{} = node) do
     case Repo.transaction(fn ->
            dropped_executions = Commands.drop_node_command_executions(node.id, node.cluster.name)
 
-           case Repo.delete(node) do
+           case delete(node) do
              {:ok, deleted_node} -> {deleted_node, dropped_executions}
              {:error, changeset} -> Repo.rollback(changeset)
            end
@@ -257,67 +308,11 @@ defmodule EdgeAdmin.Nodes.Resources.Nodes do
       end
     end
 
-    Aliases.repair_node_dns(node)
+    AliasResources.repair_node_dns(node)
     {:ok, node}
   end
 
-  @doc "Lists active nodes with filtering, sorting, and pagination."
-  @spec list(map()) :: {:ok, {[Node.t()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
-  def list(params \\ %{}) do
-    flop_params = RequestParser.parse(params)
-    {query, flop_params} = node_filter_query(flop_params)
-
-    case Flop.validate_and_run(query, flop_params,
-           for: Node,
-           replace_invalid_params: true
-         ) do
-      {:ok, {nodes, meta}} -> {:ok, {nodes, meta}}
-      {:error, meta} -> {:error, meta}
-    end
-  end
-
-  @doc "Lists all matching nodes for complete discovery snapshots without pagination."
-  @spec list_for_discovery(map()) :: {:ok, [Node.t()]} | {:error, Flop.Meta.t()}
-  def list_for_discovery(params \\ %{}) do
-    flop_params =
-      params
-      |> RequestParser.parse()
-      |> Map.drop([:page, :page_size, :order_by, :order_directions])
-
-    {query, flop_params} = node_filter_query(flop_params)
-
-    discovery_opts = [
-      for: Node,
-      replace_invalid_params: true,
-      default_limit: false,
-      default_order: false,
-      default_pagination_type: false
-    ]
-
-    case Flop.validate(flop_params, discovery_opts) do
-      {:ok, flop} -> {:ok, Flop.all(query, flop, discovery_opts)}
-      {:error, meta} -> {:error, meta}
-    end
-  end
-
-  @doc "Gets multiple nodes by ID, preserving one result per requested ID."
-  @spec get_by_ids([String.t()]) :: [{:ok, Node.t()} | {:error, String.t()}]
-  def get_by_ids(node_ids) do
-    Enum.map(node_ids, fn node_id ->
-      case get(node_id) do
-        {:ok, node} -> {:ok, node}
-        {:error, :not_found} -> {:error, "Node #{node_id} not found"}
-      end
-    end)
-  end
-
-  defp persist_update(%Node{} = node, attrs) do
-    node
-    |> Node.changeset(attrs)
-    |> Repo.update()
-  end
-
-  defp node_filter_query(flop_params) do
+  defp build_list_query(flop_params) do
     {cluster_name_filters, other_filters} =
       Enum.split_with(flop_params[:filters] || [], &(&1.field == :cluster_name))
 

@@ -1,21 +1,20 @@
-# edge_admin/lib/edge_admin/nodes/workflows/reconciliation.ex
-defmodule EdgeAdmin.Nodes.Workflows.Reconciliation do
+# edge_admin/lib/edge_admin/nodes/workflows/cluster_reconciliation.ex
+defmodule EdgeAdmin.Nodes.Workflows.ClusterReconciliation do
   @moduledoc """
   Reconciles the Admin database with Edge VPN cluster and node state.
 
   The database remains the source of truth. Reconciliation repairs missing
   Edge VPN networks and memberships, removes unmanaged drift, and delegates
-  alias DNS repair to EdgeAdmin.Nodes.Resources.Aliases.
+  alias DNS repair to `EdgeAdmin.Nodes.Resources.AliasResources`.
   """
 
   import Ecto.Query, warn: false
 
-  alias Ecto.Query.CastError
   alias EdgeAdmin.AdminClustering.Metadata
   alias EdgeAdmin.Commands
   alias EdgeAdmin.Nodes.Queries.ClusterQueries
-  alias EdgeAdmin.Nodes.Resources.Aliases
-  alias EdgeAdmin.Nodes.Resources.Clusters
+  alias EdgeAdmin.Nodes.Resources.AliasResources
+  alias EdgeAdmin.Nodes.Resources.ClusterResources
   alias EdgeAdmin.Nodes.Schemas.Cluster
   alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.Nodes.Workers.DeleteClusterWorker
@@ -30,63 +29,14 @@ defmodule EdgeAdmin.Nodes.Workflows.Reconciliation do
   end
 
   @doc """
-  Reconciles all active clusters and their node membership between database (source of truth) and Edge VPN.
-
-  For each cluster:
-  1. Gets nodes that SHOULD be in the network (from DB)
-  2. Gets nodes that ARE in the network (from Edge VPN)
-  3. Cleans up orphaned aliases (nodes not in DB or not in Edge VPN)
-  4. Adds missing nodes (DB says yes, Edge VPN says no)
-  5. Removes extra nodes (Edge VPN says yes, DB says no)
-  6. Recreates missing Edge VPN networks from active DB cluster configuration
-  7. Repairs missing/stale alias DNS and deletes ghost alias DNS
-
-  Only processes edge nodes (those belonging to edge agents, identified by having a DB record).
-  Admin nodes and staff machines are not touched.
-
-  Processes active clusters in bounded batches. Retired clusters are handled by
-  durable deletion jobs.
-
-  Returns statistics about the reconciliation operation.
-  """
-  @spec reconcile_clusters() :: map()
-  def reconcile_clusters do
-    reconcile_clusters_paginated(1, empty_reconcile_stats())
-  end
-
-  @doc """
   Reconciles one active cluster with the VPN control plane.
   """
   @spec reconcile_cluster(String.t()) :: {:ok, map()} | {:error, :not_found}
   def reconcile_cluster(cluster_name) do
-    case Clusters.get(cluster_name) do
+    case ClusterResources.get(cluster_name) do
       {:ok, cluster} -> {:ok, reconcile_active_cluster(cluster)}
       {:error, :not_found} = error -> error
     end
-  end
-
-  @doc """
-  Completes the deletion of a retired cluster.
-
-  The cluster name addresses the cluster throughout the deletion workflow. The ID is
-  an identity fence, so a stale job cannot affect a later cluster with the same name.
-  """
-  @spec complete_cluster_deletion(String.t(), String.t()) :: :ok | {:error, :not_retired | term()}
-  def complete_cluster_deletion(cluster_name, cluster_id) do
-    query = from(c in Cluster, where: c.name == ^cluster_name and c.id == ^cluster_id)
-
-    case Repo.one(query) do
-      nil ->
-        :ok
-
-      %Cluster{deleted_at: nil} ->
-        {:error, :not_retired}
-
-      cluster ->
-        delete_retired_cluster(cluster)
-    end
-  rescue
-    CastError -> :ok
   end
 
   @doc """
@@ -101,11 +51,9 @@ defmodule EdgeAdmin.Nodes.Workflows.Reconciliation do
 
   defp empty_reconcile_stats do
     %{
-      clusters_processed: 0,
       nodes_added: 0,
       nodes_removed: 0,
       nodes_deleted: 0,
-      ghost_networks_deleted: 0,
       aliases_cleaned: 0,
       aliases_repaired: 0,
       ghost_aliases_cleaned: 0,
@@ -119,40 +67,12 @@ defmodule EdgeAdmin.Nodes.Workflows.Reconciliation do
     db_nodes = Repo.all(from(n in Node, where: n.cluster_id == ^cluster.id, preload: [:cluster]))
 
     result = reconcile_single_cluster(cluster, db_nodes, acc)
-    Aliases.cleanup_ghost_aliases([cluster], result)
-  end
-
-  defp delete_retired_cluster(cluster) do
-    network_name = Cluster.network_name(cluster)
-
-    case Vpn.delete_network(network_name) do
-      {:ok, _} ->
-        remove_retired_cluster(cluster, network_name)
-
-      {:error, :not_found} ->
-        remove_retired_cluster(cluster, network_name)
-
-      {:error, reason} ->
-        Logger.warning("Failed to delete retired Edge VPN network #{network_name}: #{inspect(reason)}")
-        {:error, reason}
-    end
-  end
-
-  defp remove_retired_cluster(cluster, network_name) do
-    case Repo.delete(cluster) do
-      {:ok, _} ->
-        Logger.info("Finished cleanup for retired cluster #{cluster.name} (network: #{network_name})")
-        :ok
-
-      {:error, changeset} ->
-        Logger.error("Failed to remove retired cluster #{cluster.name}: #{inspect(changeset)}")
-        {:error, changeset}
-    end
+    AliasResources.cleanup_ghost_aliases([cluster], result)
   end
 
   defp enqueue_cluster_reconciliation_page(page, total) do
     {:ok, {clusters, meta}} =
-      Clusters.list_for_reconciliation(%{"page_size" => "500", "page" => to_string(page)})
+      ClusterResources.list_for_reconciliation(%{"page_size" => "500", "page" => to_string(page)})
 
     count =
       Enum.reduce(clusters, 0, fn cluster, acc ->
@@ -182,46 +102,6 @@ defmodule EdgeAdmin.Nodes.Workflows.Reconciliation do
     else
       Logger.info("Enqueued #{total + count} cluster maintenance jobs")
       :ok
-    end
-  end
-
-  defp reconcile_clusters_paginated(page, acc) do
-    {:ok, {clusters, meta}} = Clusters.list(%{"page_size" => "500", "page" => to_string(page)})
-
-    if Enum.empty?(clusters) do
-      # No more clusters to process
-      Logger.info("Cluster reconciliation completed: #{inspect(acc)}")
-      acc
-    else
-      # Get all DB nodes for this batch of clusters
-      cluster_ids = Enum.map(clusters, & &1.id)
-
-      db_nodes_by_cluster =
-        from(n in Node, where: n.cluster_id in ^cluster_ids, preload: [:cluster])
-        |> Repo.all()
-        |> Enum.group_by(& &1.cluster_id)
-
-      Logger.info("Processing page #{page}: #{length(clusters)} clusters")
-
-      # Process this batch of active clusters.
-      result =
-        Enum.reduce(clusters, acc, fn cluster, cluster_acc ->
-          reconcile_single_cluster(cluster, db_nodes_by_cluster[cluster.id] || [], cluster_acc)
-        end)
-
-      # Clean up ghost aliases for this batch
-      result_with_ghost_aliases = Aliases.cleanup_ghost_aliases(clusters, result)
-
-      # Check if there are more pages
-      if meta.has_next_page? do
-        # Process next page
-        reconcile_clusters_paginated(page + 1, result_with_ghost_aliases)
-      else
-        # All pages processed — run the Edge VPN→DB ghost network sweep once at the end
-        final_result = cleanup_ghost_networks(result_with_ghost_aliases)
-        Logger.info("Cluster reconciliation completed: #{inspect(final_result)}")
-        final_result
-      end
     end
   end
 
@@ -269,7 +149,7 @@ defmodule EdgeAdmin.Nodes.Workflows.Reconciliation do
 
     orphaned_nodes = orphaned_db_nodes(db_nodes, expected_host_ids, actual_host_ids)
 
-    aliases_cleaned = Aliases.cleanup_orphaned_aliases(orphaned_nodes)
+    aliases_cleaned = AliasResources.cleanup_orphaned_aliases(orphaned_nodes)
     {deleted, unenrolled_host_ids} = delete_orphaned_nodes(orphaned_nodes)
     added = add_missing_nodes(unenrolled_host_ids, network_name, cluster.name)
 
@@ -297,11 +177,9 @@ defmodule EdgeAdmin.Nodes.Workflows.Reconciliation do
 
   defp merge_cluster_reconcile_counts(acc, counts) do
     %{
-      clusters_processed: acc.clusters_processed + 1,
       nodes_added: acc.nodes_added + counts.added,
       nodes_removed: acc.nodes_removed + counts.removed,
       nodes_deleted: acc.nodes_deleted + counts.deleted,
-      ghost_networks_deleted: acc.ghost_networks_deleted,
       aliases_cleaned: acc.aliases_cleaned + counts.aliases_cleaned,
       aliases_repaired: acc.aliases_repaired,
       ghost_aliases_cleaned: acc.ghost_aliases_cleaned,
@@ -607,23 +485,6 @@ defmodule EdgeAdmin.Nodes.Workflows.Reconciliation do
 
       {:error, _reason} = error ->
         error
-    end
-  end
-
-  # Cleans up ghost networks: Edge VPN has a "cluster-*" network that has no matching
-  # DB cluster record. This is the failure path for external Edge VPN changes or a
-  # failed cleanup after the DB row is gone.
-  #
-  # Safety contract: we only ever touch networks with the "cluster-" prefix. Networks
-  # with "admin-cluster-" prefix are admin infrastructure and must never be touched here.
-  defp cleanup_ghost_networks(acc) do
-    case delete_ghost_cluster_networks() do
-      {:ok, deleted} ->
-        %{acc | ghost_networks_deleted: acc.ghost_networks_deleted + deleted}
-
-      {:error, reason} ->
-        Logger.warning("Reconciliation: Failed to list Edge VPN networks for ghost cleanup: #{inspect(reason)}")
-        %{acc | errors: acc.errors + 1}
     end
   end
 

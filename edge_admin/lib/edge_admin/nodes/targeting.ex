@@ -35,8 +35,8 @@ defmodule EdgeAdmin.Nodes.Targeting do
   """
 
   alias EdgeAdmin.Nodes.Enums.NodeStatuses
-  alias EdgeAdmin.Nodes.Resources.Clusters
-  alias EdgeAdmin.Nodes.Resources.Nodes
+  alias EdgeAdmin.Nodes.Resources.ClusterResources
+  alias EdgeAdmin.Nodes.Resources.NodeResources
   alias EdgeAdmin.Nodes.Schemas.Node
 
   require Logger
@@ -51,15 +51,10 @@ defmodule EdgeAdmin.Nodes.Targeting do
   # into JSONB and read back as strings; keeping them as strings end-to-end
   # avoids round-trip surprises.
   #
-  # Peri's JSON Schema generator emits `{}` (true schema) for `:custom`
-  # validators, which causes MCP inspector form fields to be invisible (no
-  # `type` → no input rendered). We use `:string` as the Peri type so the
-  # JSON Schema gets `{"type": "string"}` and the inspector shows a text
-  # input. The custom validator is still called by Peri at runtime via the
-  # separate `validate_iso8601_date_or_datetime/1` function — callers that
-  # want strict layer-1 ISO 8601 enforcement can compose it themselves (the
-  # REST OpenApiSpex side enforces format via `format: "date"/"date-time"`).
-  @datetime_or_date {:meta, :string, [format: "date-time"]}
+  # Peri's JSON Schema generator cannot represent custom validators. The MCP
+  # schema normalizer restores a visible string type from this format metadata;
+  # Peri still uses the custom validator when it validates tool input.
+  @datetime_or_date {:meta, {:custom, {__MODULE__, :validate_iso8601_date_or_datetime}}, [format: "date-time"]}
 
   # `{:either, {a, b}}` emits `{"oneOf": [...]}` in JSON Schema. The MCP
   # inspector's DynamicJsonForm can't render a field with no top-level `type`,
@@ -137,9 +132,8 @@ defmodule EdgeAdmin.Nodes.Targeting do
   Validates an ISO 8601 date or datetime string. Returns the original
   string on success (no promotion to `%DateTime{}` / `%Date{}`).
 
-  Used as a Peri `{:custom, _}` validator for the targeting schema's
-  `__gte`/`__lte` filter fields, matching OpenApiSpex's
-  `anyOf: [date-time, date]` shape on the REST side.
+  Used by Peri to validate the targeting schema's `__gte`/`__lte` filter
+  fields, matching the REST surface's accepted date and datetime forms.
   """
   @spec validate_iso8601_date_or_datetime(term()) ::
           {:ok, String.t()} | {:error, String.t(), keyword()}
@@ -182,7 +176,7 @@ defmodule EdgeAdmin.Nodes.Targeting do
 
     nodes =
       unique_node_ids
-      |> Nodes.get_by_ids()
+      |> NodeResources.get_by_ids()
       |> Enum.filter(&match?({:ok, _}, &1))
       |> Enum.map(fn {:ok, node} -> node end)
 
@@ -213,7 +207,7 @@ defmodule EdgeAdmin.Nodes.Targeting do
 
     clusters =
       unique_cluster_names
-      |> Enum.map(&Clusters.get/1)
+      |> Enum.map(&ClusterResources.get/1)
       |> Enum.filter(&match?({:ok, _}, &1))
       |> Enum.map(fn {:ok, cluster} -> cluster end)
 
@@ -251,7 +245,7 @@ defmodule EdgeAdmin.Nodes.Targeting do
     end
   end
 
-  # Pages through Clusters.list/1 to collect every cluster name matching
+  # Pages through ClusterResources.list/1 to collect every cluster name matching
   # the given cluster_filters.
   defp all_filtered_cluster_names(cluster_filters, page \\ 1, accumulated_names \\ []) do
     params =
@@ -259,7 +253,7 @@ defmodule EdgeAdmin.Nodes.Targeting do
       |> Map.put("page_size", "1000")
       |> Map.put("page", to_string(page))
 
-    case Clusters.list(params) do
+    case ClusterResources.list(params) do
       {:ok, {clusters, meta}} ->
         all_names = accumulated_names ++ Enum.map(clusters, & &1.name)
 
@@ -275,7 +269,7 @@ defmodule EdgeAdmin.Nodes.Targeting do
     end
   end
 
-  # Pages through Nodes.list/1 and intersects the result with the given
+  # Pages through NodeResources.list/1 and intersects the result with the given
   # cluster names.
   defp nodes_from_cluster_list(cluster_names, node_filters, page \\ 1, accumulated_nodes \\ []) do
     cluster_name_set = MapSet.new(cluster_names)
@@ -285,7 +279,7 @@ defmodule EdgeAdmin.Nodes.Targeting do
       |> Map.put("page_size", "1000")
       |> Map.put("page", to_string(page))
 
-    case Nodes.list(params) do
+    case NodeResources.list(params) do
       {:ok, {nodes, meta}} ->
         filtered_nodes =
           Enum.filter(nodes, fn node ->
@@ -306,7 +300,7 @@ defmodule EdgeAdmin.Nodes.Targeting do
     end
   end
 
-  # Pages through Nodes.list/1 to collect every node matching node_filters,
+  # Pages through NodeResources.list/1 to collect every node matching node_filters,
   # optionally narrowed to clusters matching cluster_filters. The cluster name
   # set is computed once on the first page and threaded through the recursion.
   defp all_filtered_nodes(node_filters, cluster_filters, page \\ 1, accumulated_nodes \\ [], cluster_names \\ nil) do
@@ -321,7 +315,7 @@ defmodule EdgeAdmin.Nodes.Targeting do
       |> Map.put("page_size", "100")
       |> Map.put("page", to_string(page))
 
-    case Nodes.list(params) do
+    case NodeResources.list(params) do
       {:ok, {nodes, meta}} ->
         filtered_nodes =
           if cluster_names do

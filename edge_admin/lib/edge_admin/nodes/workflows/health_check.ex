@@ -4,8 +4,8 @@ defmodule EdgeAdmin.Nodes.Workflows.HealthCheck do
   Owns node liveness checks and health reports.
 
   Gateway-routed Agent probes, HTTP fallback reports, status transitions, and
-  their telemetry/events are kept together here. The Nodes context delegates
-  the public entry points for compatibility.
+  their telemetry/events are kept together here. `EdgeAdmin.Nodes` exposes the
+  domain entry points.
   """
 
   import Ecto.Query, warn: false
@@ -64,8 +64,9 @@ defmodule EdgeAdmin.Nodes.Workflows.HealthCheck do
   Health check logic:
   - 200 response => status: `:healthy`, update last_seen_at
   - 503 response => status: `:unhealthy`, update last_seen_at (we reached it)
-  - Network error/timeout => status: `:unreachable` only if last_seen_at > 5 minutes ago,
-    otherwise keep existing status (agent might be reporting via HTTP fallback)
+  - Network error/timeout => report `:unreachable`; persist that status only if
+    `last_seen_at` is more than five minutes old, since the Agent may report
+    through HTTP fallback
 
   Logs warnings for unreachable and unhealthy nodes.
   """
@@ -144,14 +145,12 @@ defmodule EdgeAdmin.Nodes.Workflows.HealthCheck do
     result =
       case ping_via_gateway(node) do
         :healthy ->
-          persist_node(node, %{status: :healthy, last_seen_at: now})
-          maybe_publish_status_changed(node, :healthy)
+          persist_status(node, %{status: :healthy, last_seen_at: now}, :healthy)
           :healthy
 
         :unhealthy ->
           Logger.warning("Node #{node.id} is unhealthy (503 response)")
-          persist_node(node, %{status: :unhealthy, last_seen_at: now})
-          maybe_publish_status_changed(node, :unhealthy)
+          persist_status(node, %{status: :unhealthy, last_seen_at: now}, :unhealthy)
           :unhealthy
 
         :unreachable ->
@@ -190,13 +189,22 @@ defmodule EdgeAdmin.Nodes.Workflows.HealthCheck do
 
     if should_mark_unreachable do
       Logger.warning("Node #{node.id} is unreachable (no contact for > 5 minutes)")
-      persist_node(node, %{status: :unreachable})
-      maybe_publish_status_changed(node, :unreachable)
+      persist_status(node, %{status: :unreachable}, :unreachable)
       :unreachable
     else
       Logger.debug("Node #{node.id} ping failed but last_seen_at is recent, keeping status: #{node.status}")
-      # Keep existing status - might be using HTTP fallback
-      node.status
+      # Keep the persisted status, but report this VPN probe as unreachable.
+      :unreachable
+    end
+  end
+
+  defp persist_status(node, attrs, new_status) do
+    case persist_node(node, attrs) do
+      {:ok, _updated_node} ->
+        maybe_publish_status_changed(node, new_status)
+
+      {:error, reason} ->
+        Logger.error("Failed to persist health status for node #{node.id}: #{inspect(reason)}")
     end
   end
 

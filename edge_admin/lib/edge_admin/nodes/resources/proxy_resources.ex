@@ -1,6 +1,8 @@
-# edge_admin/lib/edge_admin/nodes/resources/proxy.ex
-defmodule EdgeAdmin.Nodes.Resources.Proxy do
-  @moduledoc false
+# edge_admin/lib/edge_admin/nodes/resources/proxy_resources.ex
+defmodule EdgeAdmin.Nodes.Resources.ProxyResources do
+  @moduledoc """
+  Looks up active node and alias identifiers used for proxy-chain routing.
+  """
 
   import Ecto.Query, warn: false
 
@@ -10,9 +12,14 @@ defmodule EdgeAdmin.Nodes.Resources.Proxy do
   alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.Repo
 
-  @doc "Lists node IDs and aliases accepted by proxy-chain authentication."
-  @spec list_chain_identifiers(String.t()) :: {:ok, map()} | {:error, :not_found}
-  def list_chain_identifiers(cluster_name) do
+  @doc """
+  Returns a cluster's node IDs and aliases mapped to their proxy routing data.
+
+  An active cluster with no nodes returns an empty map. A missing or inactive
+  cluster returns `{:error, :not_found}`.
+  """
+  @spec get_chain_identifiers(String.t()) :: {:ok, map()} | {:error, :not_found}
+  def get_chain_identifiers(cluster_name) do
     rows =
       Repo.all(
         from c in ClusterQueries.active(),

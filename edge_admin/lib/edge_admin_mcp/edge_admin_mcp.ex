@@ -103,6 +103,10 @@ defmodule EdgeAdminMcp do
   - **Nullable boolean** — `oneOf: [bool, null]` → `anyOf: [bool, null]`
     so MCP clients can render nullable boolean inputs consistently.
 
+  - **Formatted custom string** — Peri cannot emit a JSON Schema type for a
+    custom validator. Date/date-time format metadata is retained and gets an
+    explicit string type so MCP clients can render the field.
+
   - **String-or-array** — `oneOf: [string, array]` → `type: string`
     The inspector has no mixed-type control. A comma-separated string covers
     the common case and the runtime `RequestParser` accepts it. Callers who
@@ -111,6 +115,10 @@ defmodule EdgeAdminMcp do
   @spec normalize_json_schema(map()) :: map()
   def normalize_json_schema(schema) when is_map(schema) do
     rewrite_unions(schema)
+  end
+
+  defp rewrite_unions(%{"format" => format} = schema) when format in ["date", "date-time"] do
+    Map.put_new(schema, "type", "string")
   end
 
   defp rewrite_unions(%{"oneOf" => branches} = schema) when is_list(branches) do

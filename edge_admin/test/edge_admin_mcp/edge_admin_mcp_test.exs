@@ -2,6 +2,8 @@
 defmodule EdgeAdminMcpTest do
   use ExUnit.Case, async: true
 
+  alias EdgeAdmin.Nodes.Targeting
+
   defp meta(overrides \\ []) do
     struct(
       Flop.Meta,
@@ -92,6 +94,15 @@ defmodule EdgeAdminMcpTest do
 
       assert result.has_next === false
       assert result.has_prev === false
+    end
+  end
+
+  describe "normalize_json_schema/1" do
+    test "keeps custom date validators renderable as MCP text inputs" do
+      schema = Targeting.peri_schema() |> Peri.to_json_schema() |> EdgeAdminMcp.normalize_json_schema()
+
+      assert get_in(schema, ["properties", "node_filters", "properties", "last_seen_at__gte"]) ==
+               %{"type" => "string", "format" => "date-time"}
     end
   end
 end

@@ -19,18 +19,19 @@ defmodule EdgeAdmin.Nodes do
   """
 
   alias EdgeAdmin.Nodes.Forms.PushNodeDiagnosticForm
-  alias EdgeAdmin.Nodes.Resources.Aliases
-  alias EdgeAdmin.Nodes.Resources.Clusters
-  alias EdgeAdmin.Nodes.Resources.Diagnostics
-  alias EdgeAdmin.Nodes.Resources.EnrollmentKeys
-  alias EdgeAdmin.Nodes.Resources.Nodes, as: NodeResource
-  alias EdgeAdmin.Nodes.Resources.Proxy, as: ProxyResource
+  alias EdgeAdmin.Nodes.Resources.AliasResources
+  alias EdgeAdmin.Nodes.Resources.ClusterResources
+  alias EdgeAdmin.Nodes.Resources.DiagnosticResources
+  alias EdgeAdmin.Nodes.Resources.EnrollmentKeyResources
+  alias EdgeAdmin.Nodes.Resources.NodeResources
+  alias EdgeAdmin.Nodes.Resources.ProxyResources
   alias EdgeAdmin.Nodes.Schemas.Cluster
   alias EdgeAdmin.Nodes.Schemas.EnrollmentKey
   alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.Nodes.Schemas.NodeDiagnostic
+  alias EdgeAdmin.Nodes.Workflows.ClusterDeletion
+  alias EdgeAdmin.Nodes.Workflows.ClusterReconciliation
   alias EdgeAdmin.Nodes.Workflows.HealthCheck
-  alias EdgeAdmin.Nodes.Workflows.Reconciliation
 
   @doc """
   Lists all clusters with node counts, filtering, and pagination.
@@ -43,7 +44,7 @@ defmodule EdgeAdmin.Nodes do
   Returns `{:ok, {clusters, meta}}` or `{:error, meta}`.
   """
   @spec list_clusters(map()) :: {:ok, {[Cluster.t()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
-  defdelegate list_clusters(params \\ %{}), to: Clusters, as: :list
+  defdelegate list_clusters(params \\ %{}), to: ClusterResources, as: :list
 
   @doc """
   Lists cluster-node mappings.
@@ -52,11 +53,11 @@ defmodule EdgeAdmin.Nodes do
   included. Returns one mapping per cluster with its node identifiers.
   """
   @spec list_cluster_node_mappings(keyword()) :: [map()]
-  defdelegate list_cluster_node_mappings(opts \\ []), to: Clusters, as: :list_node_mappings
+  defdelegate list_cluster_node_mappings(opts \\ []), to: ClusterResources, as: :list_node_mappings
 
   @doc "Returns the configured default cluster name, if one is set."
   @spec default_cluster_name() :: String.t() | nil
-  defdelegate default_cluster_name(), to: Clusters
+  defdelegate default_cluster_name(), to: ClusterResources
 
   @doc """
   Gets a single cluster by name.
@@ -64,7 +65,7 @@ defmodule EdgeAdmin.Nodes do
   Returns the cluster with nodes preloaded, or `{:error, :not_found}`.
   """
   @spec get_cluster(String.t()) :: {:ok, Cluster.t()} | {:error, :not_found}
-  defdelegate get_cluster(name), to: Clusters, as: :get
+  defdelegate get_cluster(name), to: ClusterResources, as: :get
 
   @doc """
   Creates a cluster and its Edge VPN network.
@@ -83,7 +84,7 @@ defmodule EdgeAdmin.Nodes do
           | {:error, Ecto.Changeset.t()}
           | {:error, {:conflict, String.t()}}
           | {:error, :service_unavailable}
-  defdelegate create_cluster(attrs \\ %{}), to: Clusters, as: :create
+  defdelegate create_cluster(attrs \\ %{}), to: ClusterResources, as: :create_with_vpn_network
 
   @doc """
   Updates a cluster.
@@ -100,7 +101,7 @@ defmodule EdgeAdmin.Nodes do
           | {:error, :not_found}
           | {:error, Ecto.Changeset.t()}
           | {:error, {:conflict, String.t()}}
-  defdelegate update_cluster(cluster, params), to: Clusters, as: :update
+  defdelegate update_cluster(cluster, params), to: ClusterResources, as: :update_active
 
   @doc """
   Retires an empty cluster from the public API and enqueues Edge VPN cleanup.
@@ -118,10 +119,7 @@ defmodule EdgeAdmin.Nodes do
           | {:error, :not_found}
           | {:error, {:conflict, String.t()}}
           | {:error, :service_unavailable}
-  defdelegate delete_cluster(cluster), to: Clusters, as: :delete
-
-  @spec change_cluster(Cluster.t(), map()) :: Ecto.Changeset.t()
-  defdelegate change_cluster(cluster, attrs \\ %{}), to: Clusters, as: :change
+  defdelegate delete_cluster(cluster), to: ClusterResources, as: :retire
 
   @doc """
   Gets a single node by ID.
@@ -129,13 +127,7 @@ defmodule EdgeAdmin.Nodes do
   Returns the node with cluster and aliases preloaded, or `{:error, :not_found}`.
   """
   @spec get_node(String.t()) :: {:ok, Node.t()} | {:error, :not_found}
-  defdelegate get_node(id), to: NodeResource, as: :get
-
-  @spec create_node(map()) :: {:ok, Node.t()} | {:error, Ecto.Changeset.t()}
-  defdelegate create_node(attrs \\ %{}), to: NodeResource, as: :create
-
-  @spec update_node(Node.t(), map()) :: {:ok, Node.t()} | {:error, Ecto.Changeset.t()}
-  defdelegate update_node(node, attrs), to: NodeResource, as: :update
+  defdelegate get_node(id), to: NodeResources, as: :get
 
   @doc """
   Creates or replaces a node's one-use recovery key.
@@ -144,13 +136,13 @@ defmodule EdgeAdmin.Nodes do
   a fresh Agent as `RECOVERY_KEY` alongside its normal enrollment key.
   """
   @spec create_node_recovery_key(Node.t()) :: {:ok, String.t()} | {:error, Ecto.Changeset.t()}
-  defdelegate create_node_recovery_key(node), to: NodeResource, as: :create_recovery_key
+  defdelegate create_node_recovery_key(node), to: NodeResources, as: :create_recovery_key
 
   @doc """
   Deletes a node's active recovery key.
   """
   @spec delete_node_recovery_key(Node.t()) :: {:ok, Node.t()} | {:error, Ecto.Changeset.t()}
-  defdelegate delete_node_recovery_key(node), to: NodeResource, as: :delete_recovery_key
+  defdelegate delete_node_recovery_key(node), to: NodeResources, as: :delete_recovery_key
 
   @doc """
   Changes a node's cluster.
@@ -172,7 +164,7 @@ defmodule EdgeAdmin.Nodes do
   """
   @spec change_node_cluster(Node.t(), map()) ::
           {:ok, Node.t()} | {:error, :not_found} | {:error, Ecto.Changeset.t()} | {:error, {:conflict, String.t()}}
-  defdelegate change_node_cluster(node, params), to: NodeResource, as: :change_cluster
+  defdelegate change_node_cluster(node, params), to: NodeResources, as: :change_cluster
 
   @doc """
   Deletes a node and its VPN host.
@@ -195,10 +187,7 @@ defmodule EdgeAdmin.Nodes do
   Returns `{:ok, node}`, `{:error, changeset}` (DB failure), or `{:error, :service_unavailable}` (Edge VPN failure).
   """
   @spec delete_node(Node.t()) :: {:ok, Node.t()} | {:error, Ecto.Changeset.t()} | {:error, :service_unavailable}
-  defdelegate delete_node(node), to: NodeResource
-
-  @spec change_node(Node.t(), map()) :: Ecto.Changeset.t()
-  defdelegate change_node(node, attrs \\ %{}), to: NodeResource, as: :change
+  defdelegate delete_node(node), to: NodeResources
 
   @doc """
   Registers a new node or recovers an existing node from agent bootstrap.
@@ -215,14 +204,14 @@ defmodule EdgeAdmin.Nodes do
   """
   @spec register_node(map()) ::
           {:ok, Node.t()} | {:error, Ecto.Changeset.t()} | {:error, :unauthorized | {:conflict, String.t()}}
-  defdelegate register_node(params), to: NodeResource, as: :register
+  defdelegate register_node(params), to: NodeResources, as: :register
 
   @doc """
   Re-registers the node authenticated by the Agent API token.
   """
   @spec reregister_node(Node.t(), map()) ::
           {:ok, Node.t()} | {:error, Ecto.Changeset.t()} | {:error, :unauthorized}
-  defdelegate reregister_node(node, params), to: NodeResource, as: :reregister
+  defdelegate reregister_node(node, params), to: NodeResources, as: :reregister
 
   @doc "Records an agent health report received through HTTP fallback mode."
   @spec update_node_health_check(Node.t(), map()) :: {:ok, Node.t()} | {:error, Ecto.Changeset.t()}
@@ -235,12 +224,12 @@ defmodule EdgeAdmin.Nodes do
   @doc "Returns a live or recently cached diagnostic report for a node."
   @spec get_node_diagnostics(String.t()) ::
           {:ok, map()} | {:error, :not_found | :service_unavailable}
-  defdelegate get_node_diagnostics(node_id), to: Diagnostics
+  defdelegate get_node_diagnostics(node_id), to: DiagnosticResources
 
   @doc "Stores the latest diagnostic report for a node."
   @spec upsert_node_diagnostic(String.t(), map()) ::
           {:ok, NodeDiagnostic.t()} | {:error, Ecto.Changeset.t()}
-  defdelegate upsert_node_diagnostic(node_id, report), to: Diagnostics
+  defdelegate upsert_node_diagnostic(node_id, report), to: DiagnosticResources, as: :upsert
 
   @doc "Validates and stores an agent-pushed diagnostic report."
   @spec push_node_diagnostic(String.t(), map()) :: {:ok, NodeDiagnostic.t()} | {:error, Ecto.Changeset.t()}
@@ -270,7 +259,7 @@ defmodule EdgeAdmin.Nodes do
   """
 
   @spec list_nodes(map()) :: {:ok, {[Node.t()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
-  defdelegate list_nodes(params \\ %{}), to: NodeResource, as: :list
+  defdelegate list_nodes(params \\ %{}), to: NodeResources, as: :list
 
   @doc """
   Lists every node matching the list-node filters for Prometheus discovery.
@@ -280,7 +269,7 @@ defmodule EdgeAdmin.Nodes do
   `unreachable` — are returned.
   """
   @spec list_nodes_for_discovery(map()) :: {:ok, [Node.t()]} | {:error, Flop.Meta.t()}
-  defdelegate list_nodes_for_discovery(params \\ %{}), to: NodeResource, as: :list_for_discovery
+  defdelegate list_nodes_for_discovery(params \\ %{}), to: NodeResources, as: :list_for_discovery
 
   @doc """
   Lists all valid node identifiers (IDs and aliases) for a cluster.
@@ -290,13 +279,13 @@ defmodule EdgeAdmin.Nodes do
   """
   @callback list_proxy_chain_identifiers(String.t()) :: {:ok, map()} | {:error, :not_found}
   @spec list_proxy_chain_identifiers(String.t()) :: {:ok, map()} | {:error, :not_found}
-  defdelegate list_proxy_chain_identifiers(cluster_name), to: ProxyResource, as: :list_chain_identifiers
+  defdelegate list_proxy_chain_identifiers(cluster_name), to: ProxyResources, as: :get_chain_identifiers
 
   @spec list_enrollment_keys(map()) :: {:ok, {[EnrollmentKey.t()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
-  def list_enrollment_keys(params \\ %{}), do: EnrollmentKeys.list(params)
+  def list_enrollment_keys(params \\ %{}), do: EnrollmentKeyResources.list(params)
 
   @spec get_enrollment_key(String.t()) :: {:ok, EnrollmentKey.t()} | {:error, :not_found}
-  def get_enrollment_key(id), do: EnrollmentKeys.get(id)
+  def get_enrollment_key(id), do: EnrollmentKeyResources.get(id)
 
   @doc """
   Creates an enrollment key for a cluster.
@@ -307,7 +296,7 @@ defmodule EdgeAdmin.Nodes do
   """
   @spec create_enrollment_key(Cluster.t(), map()) ::
           {:ok, EnrollmentKey.t()} | {:error, Ecto.Changeset.t()}
-  def create_enrollment_key(%Cluster{} = cluster, params \\ %{}), do: EnrollmentKeys.create(cluster, params)
+  defdelegate create_enrollment_key(cluster, params \\ %{}), to: EnrollmentKeyResources, as: :create_for_cluster
 
   @doc """
   Updates an enrollment key's `uses_remaining` and/or `expires_at`.
@@ -316,14 +305,14 @@ defmodule EdgeAdmin.Nodes do
   """
   @spec update_enrollment_key(EnrollmentKey.t(), map()) ::
           {:ok, EnrollmentKey.t()} | {:error, Ecto.Changeset.t()}
-  def update_enrollment_key(%EnrollmentKey{} = key, params), do: EnrollmentKeys.update(key, params)
+  defdelegate update_enrollment_key(key, params), to: EnrollmentKeyResources
 
   @doc """
   Deletes an enrollment key.
   """
   @spec delete_enrollment_key(EnrollmentKey.t()) ::
           {:ok, EnrollmentKey.t()} | {:error, Ecto.Changeset.t()}
-  def delete_enrollment_key(%EnrollmentKey{} = key), do: EnrollmentKeys.delete(key)
+  def delete_enrollment_key(%EnrollmentKey{} = key), do: EnrollmentKeyResources.delete(key)
 
   @doc """
   Verifies an enrollment key blob presented by an agent before it joins the VPN.
@@ -349,30 +338,25 @@ defmodule EdgeAdmin.Nodes do
   indicates verification failed.
   """
   @spec verify_enrollment_key(map()) :: {:ok, map()} | {:error, Ecto.Changeset.t()}
-  def verify_enrollment_key(params), do: EnrollmentKeys.verify(params)
-
-  @doc "Reconciles all active clusters with Edge VPN."
-  defdelegate reconcile_clusters(), to: Reconciliation
+  def verify_enrollment_key(params), do: EnrollmentKeyResources.verify(params)
 
   @doc "Reconciles one active cluster with Edge VPN."
-  defdelegate reconcile_cluster(cluster_name), to: Reconciliation
+  defdelegate reconcile_cluster(cluster_name), to: ClusterReconciliation
 
   @doc "Completes deletion of a retired cluster."
-  defdelegate complete_cluster_deletion(cluster_name, cluster_id), to: Reconciliation
+  defdelegate complete_cluster_deletion(cluster_name, cluster_id), to: ClusterDeletion
 
   @doc "Enqueues cluster reconciliation and retired-cluster deletion work."
-  defdelegate enqueue_cluster_reconciliation(), to: Reconciliation
+  defdelegate enqueue_cluster_reconciliation(), to: ClusterReconciliation
 
   @doc "Lists aliases with filtering and pagination."
-  defdelegate list_aliases(params \\ %{}), to: Aliases, as: :list
+  defdelegate list_aliases(params \\ %{}), to: AliasResources, as: :list
 
-  defdelegate get_alias(id), to: Aliases, as: :get
+  defdelegate get_alias(id), to: AliasResources, as: :get
 
   @doc "Creates an alias and its Edge VPN DNS entry."
-  defdelegate create_alias(node, params), to: Aliases, as: :create
+  defdelegate create_alias(node, params), to: AliasResources, as: :create_with_dns
 
   @doc "Deletes an alias and its Edge VPN DNS entry."
-  defdelegate delete_alias(alias_record), to: Aliases, as: :delete
-
-  defdelegate change_alias(alias_record, attrs \\ %{}), to: Aliases, as: :change
+  defdelegate delete_alias(alias_record), to: AliasResources, as: :delete_with_dns
 end

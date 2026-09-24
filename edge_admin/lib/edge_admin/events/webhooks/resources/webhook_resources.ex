@@ -1,13 +1,18 @@
-# edge_admin/lib/edge_admin/events/webhooks/resources/webhooks.ex
-defmodule EdgeAdmin.Events.Webhooks.Resources.Webhooks do
-  @moduledoc false
+# edge_admin/lib/edge_admin/events/webhooks/resources/webhook_resources.ex
+defmodule EdgeAdmin.Events.Webhooks.Resources.WebhookResources do
+  @moduledoc """
+  Persistence and create-time validation for immutable event webhooks.
+
+  `create/1` persists schema-valid attributes. `create_with_validation/1`
+  applies request-form and SSRF validation before inserting the row.
+  """
 
   import Ecto.Query, warn: false
   import EdgeAdmin.Query, only: [case_insensitive_like: 2]
 
   alias Ecto.Query.CastError
   alias EdgeAdmin.Events.Webhooks.Filters.WebhookFilters
-  alias EdgeAdmin.Events.Webhooks.Forms
+  alias EdgeAdmin.Events.Webhooks.Forms.CreateWebhookForm
   alias EdgeAdmin.Events.Webhooks.Schemas.Webhook
   alias EdgeAdmin.Events.Webhooks.Validators.SsrfValidators
   alias EdgeAdmin.Repo
@@ -39,14 +44,18 @@ defmodule EdgeAdmin.Events.Webhooks.Resources.Webhooks do
     CastError -> {:error, :not_found}
   end
 
-  @doc "Validates and creates an immutable webhook."
   @spec create(map()) :: {:ok, Webhook.t()} | {:error, Ecto.Changeset.t()}
-  def create(attrs \\ %{}) do
-    with {:ok, validated_attrs} <- Forms.CreateWebhookForm.changeset(attrs),
+  def create(attrs), do: %Webhook{} |> Webhook.changeset(attrs) |> Repo.insert()
+
+  @spec delete(Webhook.t()) :: {:ok, Webhook.t()} | {:error, Ecto.Changeset.t()}
+  def delete(%Webhook{} = webhook), do: Repo.delete(webhook)
+
+  @doc "Validates request attributes and the target URL before creating an immutable webhook."
+  @spec create_with_validation(map()) :: {:ok, Webhook.t()} | {:error, Ecto.Changeset.t()}
+  def create_with_validation(attrs \\ %{}) do
+    with {:ok, validated_attrs} <- CreateWebhookForm.changeset(attrs),
          {:ok, validated_attrs} <- validate_ssrf(validated_attrs) do
-      %Webhook{}
-      |> Webhook.changeset(validated_attrs)
-      |> Repo.insert()
+      create(validated_attrs)
     end
   end
 
@@ -62,7 +71,4 @@ defmodule EdgeAdmin.Events.Webhooks.Resources.Webhooks do
   end
 
   defp validate_ssrf(attrs), do: {:ok, attrs}
-
-  @spec delete(Webhook.t()) :: {:ok, Webhook.t()} | {:error, Ecto.Changeset.t()}
-  def delete(%Webhook{} = webhook), do: Repo.delete(webhook)
 end

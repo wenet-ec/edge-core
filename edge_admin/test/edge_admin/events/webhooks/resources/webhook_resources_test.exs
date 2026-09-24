@@ -1,8 +1,8 @@
-# edge_admin/test/edge_admin/events/webhooks/webhooks_test.exs
-defmodule EdgeAdmin.Events.Webhooks.Resources.WebhooksTest do
+# edge_admin/test/edge_admin/events/webhooks/resources/webhook_resources_test.exs
+defmodule EdgeAdmin.Events.Webhooks.Resources.WebhookResourcesTest do
   use EdgeAdmin.DataCase, async: false
 
-  alias EdgeAdmin.Events.Webhooks.Resources.Webhooks
+  alias EdgeAdmin.Events.Webhooks.Resources.WebhookResources
   alias EdgeAdmin.Events.Webhooks.Schemas.Webhook
   alias EdgeAdmin.Repo
 
@@ -25,7 +25,7 @@ defmodule EdgeAdmin.Events.Webhooks.Resources.WebhooksTest do
     |> Repo.insert!()
   end
 
-  describe "list_webhooks/1" do
+  describe "list/1" do
     test "event_type filter applies to both rows and total_count" do
       matching_a =
         insert_webhook!(%{
@@ -46,7 +46,7 @@ defmodule EdgeAdmin.Events.Webhooks.Resources.WebhooksTest do
         })
 
       assert {:ok, {webhooks, meta}} =
-               Webhooks.list(%{
+               WebhookResources.list(%{
                  "event_type" => "edge.command_execution.completed",
                  "page" => 1,
                  "page_size" => 20,

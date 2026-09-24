@@ -3,12 +3,12 @@ defmodule EdgeAdmin.Events.Webhooks.Workflows.Delivery do
   @moduledoc "Coordinates delivery of one webhook envelope and maps its outcome to Oban semantics."
 
   alias EdgeAdmin.Events.Webhooks.Delivery, as: HttpDelivery
-  alias EdgeAdmin.Events.Webhooks.Resources.Webhooks
+  alias EdgeAdmin.Events.Webhooks.Resources.WebhookResources
 
   @doc "Delivers one webhook envelope and returns an Oban-shaped result."
   @spec deliver_event(String.t(), map()) :: :ok | {:error, term()} | {:cancel, term()}
   def deliver_event(webhook_id, envelope) do
-    case Webhooks.get(webhook_id) do
+    case WebhookResources.get(webhook_id) do
       {:error, :not_found} -> {:cancel, :webhook_deleted}
       {:ok, webhook} -> deliver(webhook, envelope)
     end

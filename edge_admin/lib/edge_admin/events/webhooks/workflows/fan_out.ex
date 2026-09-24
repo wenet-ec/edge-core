@@ -2,7 +2,7 @@
 defmodule EdgeAdmin.Events.Webhooks.Workflows.FanOut do
   @moduledoc "Enqueues webhook delivery jobs for matching event envelopes."
 
-  alias EdgeAdmin.Events.Webhooks.Resources.Webhooks
+  alias EdgeAdmin.Events.Webhooks.Resources.WebhookResources
   alias EdgeAdmin.Events.Webhooks.Workers.DeliverEventWorker
 
   require Logger
@@ -25,15 +25,12 @@ defmodule EdgeAdmin.Events.Webhooks.Workflows.FanOut do
   defp enqueue_matching_pages(envelope, max_attempts, page, count) do
     params = %{"event_type" => envelope["type"], "page" => to_string(page), "page_size" => "1000"}
 
-    case Webhooks.list(params) do
+    case WebhookResources.list(params) do
       {:ok, {webhooks, meta}} ->
-        Enum.each(webhooks, fn webhook ->
-          %{webhook_id: webhook.id, envelope: envelope}
-          |> DeliverEventWorker.new(max_attempts: max_attempts)
-          |> Oban.insert!()
-        end)
-
-        next_count = count + length(webhooks)
+        next_count =
+          Enum.reduce(webhooks, count, fn webhook, enqueued_count ->
+            enqueue_delivery(webhook, envelope, max_attempts, enqueued_count)
+          end)
 
         if meta.has_next_page?,
           do: enqueue_matching_pages(envelope, max_attempts, page + 1, next_count),
@@ -41,6 +38,22 @@ defmodule EdgeAdmin.Events.Webhooks.Workflows.FanOut do
 
       {:error, _meta} ->
         Logger.error("Webhooks fan-out failed for event_type=#{envelope["type"]}")
+        count
+    end
+  end
+
+  defp enqueue_delivery(webhook, envelope, max_attempts, count) do
+    case %{webhook_id: webhook.id, envelope: envelope}
+         |> DeliverEventWorker.new(max_attempts: max_attempts)
+         |> Oban.insert() do
+      {:ok, _job} ->
+        count + 1
+
+      {:error, reason} ->
+        Logger.error(
+          "Failed to enqueue webhook delivery for webhook #{webhook.id}, event #{envelope["id"]}: #{inspect(reason)}"
+        )
+
         count
     end
   end

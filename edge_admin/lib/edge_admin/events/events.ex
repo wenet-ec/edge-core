@@ -35,6 +35,8 @@ defmodule EdgeAdmin.Events do
   alias EdgeAdmin.Events.Catalog
   alias EdgeAdmin.Events.Webhooks
 
+  require Logger
+
   @type event ::
           Catalog.CoreTest.t()
           | Catalog.NodeRegistered.t()
@@ -101,7 +103,14 @@ defmodule EdgeAdmin.Events do
   end
 
   defp deliver_to_channels(envelope) do
-    Broker.enqueue(envelope)
-    Webhooks.fan_out(envelope)
+    deliver_to_channel(:broker, fn -> Broker.enqueue(envelope) end)
+    deliver_to_channel(:webhooks, fn -> Webhooks.fan_out(envelope) end)
+  end
+
+  defp deliver_to_channel(channel, deliver) do
+    deliver.()
+  rescue
+    error ->
+      Logger.error("Event delivery channel #{channel} failed: #{Exception.message(error)}")
   end
 end

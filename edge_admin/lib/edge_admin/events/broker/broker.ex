@@ -39,15 +39,17 @@ defmodule EdgeAdmin.Events.Broker do
   @spec enqueue(map()) :: :ok
   def enqueue(envelope) do
     if enabled?() do
-      envelope
-      |> PublishEventWorker.new()
-      |> Oban.insert!()
+      case envelope |> PublishEventWorker.new() |> Oban.insert() do
+        {:ok, _job} ->
+          :telemetry.execute(
+            [:edge_admin, :event_broker, :enqueue],
+            %{count: 1},
+            %{event_type: envelope["type"]}
+          )
 
-      :telemetry.execute(
-        [:edge_admin, :event_broker, :enqueue],
-        %{count: 1},
-        %{event_type: envelope["type"]}
-      )
+        {:error, reason} ->
+          Logger.error("Failed to enqueue broker delivery for #{envelope["type"]}: #{inspect(reason)}")
+      end
     end
 
     :ok

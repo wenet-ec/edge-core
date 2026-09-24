@@ -11,19 +11,9 @@ defmodule EdgeAdmin.Events.Webhooks.Delivery do
     4. POST via Req with a sane timeout
     5. Classify the response — `:ok | {:recoverable, reason} | {:terminal, reason}`
 
-  Retry classification:
-
-    - 2xx                       → :ok
-    - 408, 429, 503             → recoverable (retry)
-    - other 4xx / 5xx           → terminal (don't retry — receiver said no)
-    - econnrefused, timeout, …  → recoverable
-    - any other Req error       → recoverable (treat unfamiliar transport
-                                  errors as transient; one retry is cheaper
-                                  than mis-classifying a real bug)
-
-  `Webhooks.do_deliver/2` maps `:recoverable → {:error, reason}` so Oban
-  schedules a retry with its built-in exponential backoff (no `:snooze`
-  involved); `:terminal → {:cancel, …}` so Oban skips remaining retries.
+  Successful 2xx responses return `:ok`; selected HTTP statuses and transport
+  errors are classified as recoverable, while other HTTP responses are
+  terminal. The delivery workflow maps those results to Oban outcomes.
   """
 
   alias EdgeAdmin.Events.Webhooks.Schemas.Webhook

@@ -2,6 +2,43 @@
   "components": {
     "responses": {},
     "schemas": {
+      "EmbeddedTunnelConnectionData": {
+        "description": "Embedded Tunnel Connection representation within a Tunnel Client",
+        "properties": {
+          "id": { "format": "uuid", "type": "string" },
+          "ingress_ipv4_address": {
+            "example": "10.240.0.1/32",
+            "type": "string"
+          },
+          "ingress_ipv6_address": {
+            "example": "fd20:240::1/128",
+            "type": "string"
+          },
+          "inserted_at": { "format": "date-time", "type": "string" },
+          "node_id": { "format": "uuid", "type": "string" },
+          "tunnel_ipv4_address": {
+            "example": "10.240.0.2/32",
+            "type": "string"
+          },
+          "tunnel_ipv6_address": {
+            "example": "fd20:240::2/128",
+            "type": "string"
+          },
+          "updated_at": { "format": "date-time", "type": "string" }
+        },
+        "required": [
+          "id",
+          "node_id",
+          "ingress_ipv4_address",
+          "ingress_ipv6_address",
+          "tunnel_ipv4_address",
+          "tunnel_ipv6_address",
+          "inserted_at",
+          "updated_at"
+        ],
+        "title": "EmbeddedTunnelConnectionData",
+        "type": "object"
+      },
       "AdminResponse": {
         "description": "Single admin identity response",
         "properties": {
@@ -10,79 +47,6 @@
         },
         "required": ["data", "meta"],
         "title": "AdminResponse",
-        "type": "object"
-      },
-      "SelfUpdateRequestResponse": {
-        "description": "Self-update request information",
-        "example": {
-          "id": "01234567-89ab-cdef-0123-456789abcdef",
-          "inserted_at": "2025-06-17T10:30:00Z",
-          "status": "completed",
-          "summary": { "failed": 2, "total": 10, "triggered": 8 },
-          "targeting": {
-            "node_filters": {
-              "self_update_enabled": true,
-              "status__in": "healthy"
-            },
-            "type": "all"
-          },
-          "updated_at": "2025-06-17T10:35:00Z"
-        },
-        "properties": {
-          "id": {
-            "description": "Unique request identifier",
-            "format": "uuid",
-            "type": "string"
-          },
-          "inserted_at": {
-            "description": "When the request was created",
-            "format": "date-time",
-            "type": "string"
-          },
-          "status": {
-            "description": "Request processing status",
-            "enum": ["pending", "processing", "completed"],
-            "type": "string"
-          },
-          "summary": {
-            "description": "Summary of results (available after completion)",
-            "example": { "failed": 2, "total": 10, "triggered": 8 },
-            "nullable": true,
-            "properties": {
-              "failed": {
-                "description": "Nodes where update failed",
-                "type": "integer"
-              },
-              "total": {
-                "description": "Total nodes targeted",
-                "type": "integer"
-              },
-              "triggered": {
-                "description": "Nodes where update was triggered",
-                "type": "integer"
-              }
-            },
-            "type": "object"
-          },
-          "targeting": {
-            "description": "Targeting configuration (same format as commands)",
-            "example": {
-              "node_filters": {
-                "self_update_enabled": true,
-                "status__in": "healthy"
-              },
-              "type": "all"
-            },
-            "type": "object"
-          },
-          "updated_at": {
-            "description": "When the request was last updated",
-            "format": "date-time",
-            "type": "string"
-          }
-        },
-        "required": ["id", "targeting", "status", "inserted_at", "updated_at"],
-        "title": "SelfUpdateRequestResponse",
         "type": "object"
       },
       "WebhookCreateRequest": {
@@ -142,7 +106,7 @@
         "description": "Paginated list of SSH usernames with filtering and sorting metadata",
         "properties": {
           "data": {
-            "items": { "$ref": "#/components/schemas/SshUsername" },
+            "items": { "$ref": "#/components/schemas/SshUsernameData" },
             "type": "array"
           },
           "meta": { "$ref": "#/components/schemas/PaginatedMeta" }
@@ -285,7 +249,7 @@
         "description": "Paginated list of nodes with filtering and sorting metadata",
         "properties": {
           "data": {
-            "items": { "$ref": "#/components/schemas/NodeResponse" },
+            "items": { "$ref": "#/components/schemas/NodeData" },
             "type": "array"
           },
           "meta": { "$ref": "#/components/schemas/PaginatedMeta" }
@@ -298,116 +262,13 @@
         "description": "Paginated list of webhooks with filtering and sorting metadata",
         "properties": {
           "data": {
-            "items": { "$ref": "#/components/schemas/Webhook" },
+            "items": { "$ref": "#/components/schemas/WebhookData" },
             "type": "array"
           },
           "meta": { "$ref": "#/components/schemas/PaginatedMeta" }
         },
         "required": ["data", "meta"],
         "title": "WebhookPaginatedResponse",
-        "type": "object"
-      },
-      "ClusterResponse": {
-        "description": "Edge cluster information",
-        "example": {
-          "id": "abc12345-1234-1234-1234-123456789abc",
-          "inserted_at": "2025-06-09T08:00:00Z",
-          "ipv4_range": "100.64.0.0/24",
-          "ipv6_range": "fd7a:91c2:4e8b:2::/64",
-          "name": "prod-east",
-          "network_name": "cluster-prod-east",
-          "node_count": 2,
-          "node_limit": 50,
-          "nodes": [
-            {
-              "enrollment_key_id": "0190f1e0-7b2a-7abc-8def-0123456789ab",
-              "id": "abc12345-1234-1234-1234-123456789abc",
-              "ingress_public_key": "RWRnZUNvcmVJbmdyZXNzUHVibGljS2V5RXhhbXBsZTE=",
-              "status": "healthy",
-              "vpn_hostname": "node-abc12345-1234-1234-1234-123456789abc.cluster-prod-east.nm.internal"
-            },
-            {
-              "enrollment_key_id": null,
-              "id": "def67890-5678-5678-5678-567890abcdef",
-              "ingress_public_key": "RWRnZUNvcmVJbmdyZXNzUHVibGljS2V5RXhhbXBsZTE=",
-              "status": "healthy",
-              "vpn_hostname": "node-def67890-5678-5678-5678-567890abcdef.cluster-prod-east.nm.internal"
-            }
-          ],
-          "updated_at": "2025-06-09T08:00:00Z",
-          "vpn_domain": "cluster-prod-east.nm.internal"
-        },
-        "properties": {
-          "id": {
-            "description": "Unique cluster identifier (UUID for database compatibility, use name for API operations)",
-            "format": "uuid",
-            "type": "string"
-          },
-          "inserted_at": {
-            "description": "When the cluster was created",
-            "format": "date-time",
-            "type": "string"
-          },
-          "ipv4_range": {
-            "description": "IPv4 CIDR range for this cluster",
-            "example": "100.64.0.0/24",
-            "type": "string"
-          },
-          "ipv6_range": {
-            "description": "Private ULA IPv6 /64 range for this cluster",
-            "example": "fd7a:91c2:4e8b:2::/64",
-            "type": "string"
-          },
-          "name": {
-            "description": "Cluster name - primary identifier used in API operations (max 24 chars, alphanumeric with hyphens)",
-            "example": "prod-east",
-            "pattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
-            "type": "string"
-          },
-          "network_name": {
-            "description": "Edge VPN network name",
-            "example": "cluster-prod-east",
-            "type": "string"
-          },
-          "node_count": {
-            "description": "Number of nodes in this cluster",
-            "type": "integer"
-          },
-          "node_limit": {
-            "description": "Maximum number of nodes allowed in this cluster (null means no limit enforced)",
-            "nullable": true,
-            "type": "integer"
-          },
-          "nodes": {
-            "description": "Summary of nodes in this cluster",
-            "items": { "$ref": "#/components/schemas/NodeSummary" },
-            "type": "array"
-          },
-          "updated_at": {
-            "description": "When the cluster was last updated",
-            "format": "date-time",
-            "type": "string"
-          },
-          "vpn_domain": {
-            "description": "DNS domain suffix for nodes in this cluster",
-            "example": "cluster-prod-east.nm.internal",
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "name",
-          "ipv4_range",
-          "ipv6_range",
-          "node_limit",
-          "node_count",
-          "nodes",
-          "network_name",
-          "vpn_domain",
-          "inserted_at",
-          "updated_at"
-        ],
-        "title": "ClusterResponse",
         "type": "object"
       },
       "MyAdminClusterResponse": {
@@ -502,11 +363,92 @@
       "NodeSingleResponse": {
         "description": "Single node response",
         "properties": {
-          "data": { "$ref": "#/components/schemas/NodeResponse" },
+          "data": { "$ref": "#/components/schemas/NodeData" },
           "meta": { "$ref": "#/components/schemas/Meta" }
         },
         "required": ["data", "meta"],
         "title": "NodeSingleResponse",
+        "type": "object"
+      },
+      "CommandData": {
+        "description": "Command information",
+        "example": {
+          "command_text": "ABC=value\necho $ABC\nsystemctl restart nginx",
+          "expires_at": "2025-12-31T23:59:59Z",
+          "id": "01234567-89ab-cdef-0123-456789abcdef",
+          "inserted_at": "2025-06-17T10:30:00Z",
+          "targeting": {
+            "node_filters": { "status__in": "healthy" },
+            "node_ids": ["01234567-89ab-cdef-0123-456789abcdef"],
+            "type": "nodes"
+          },
+          "timeout": 30000,
+          "updated_at": "2025-06-17T10:30:00Z"
+        },
+        "properties": {
+          "command_text": {
+            "description": "Multi-line shell script/commands",
+            "example": "ABC=value\necho $ABC\nsystemctl restart nginx",
+            "type": "string"
+          },
+          "expires_at": {
+            "description": "Deadline after which pending/sent executions are automatically expired (immutable after creation)",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "description": "Unique command identifier",
+            "format": "uuid",
+            "type": "string"
+          },
+          "inserted_at": {
+            "description": "When the command was created",
+            "format": "date-time",
+            "type": "string"
+          },
+          "targeting": {
+            "description": "Targeting configuration used when creating this command (informational only, not filterable)",
+            "example": {
+              "node_filters": { "status__in": "healthy" },
+              "node_ids": ["01234567-89ab-cdef-0123-456789abcdef"],
+              "type": "nodes"
+            },
+            "type": "object"
+          },
+          "timeout": {
+            "description": "Command timeout in milliseconds (optional, null means no timeout)",
+            "example": 30000,
+            "nullable": true,
+            "type": "integer"
+          },
+          "updated_at": {
+            "description": "When the command was last updated",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "command_text",
+          "targeting",
+          "inserted_at",
+          "updated_at"
+        ],
+        "title": "CommandData",
+        "type": "object"
+      },
+      "TunnelConnectionPaginatedResponse": {
+        "description": "Paginated Tunnel Connection response",
+        "properties": {
+          "data": {
+            "items": { "$ref": "#/components/schemas/TunnelConnectionData" },
+            "type": "array"
+          },
+          "meta": { "$ref": "#/components/schemas/PaginatedMeta" }
+        },
+        "required": ["data", "meta"],
+        "title": "TunnelConnectionPaginatedResponse",
         "type": "object"
       },
       "ClusterCreateRequest": {
@@ -551,63 +493,10 @@
         "title": "ClusterCreateRequest",
         "type": "object"
       },
-      "AliasResponse": {
-        "description": "Node alias with custom DNS entry",
-        "example": {
-          "cluster_name": "prod",
-          "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-          "inserted_at": "2024-01-15T10:30:00Z",
-          "name": "web-server",
-          "node_id": "01234567-89ab-cdef-0123-456789abcdef",
-          "updated_at": "2024-01-15T10:30:00Z",
-          "vpn_hostname": "node-web-server.cluster-prod.nm.internal"
-        },
-        "properties": {
-          "cluster_name": {
-            "description": "Name of the cluster",
-            "example": "prod-east",
-            "type": "string"
-          },
-          "id": {
-            "description": "Unique alias identifier",
-            "format": "uuid",
-            "type": "string"
-          },
-          "inserted_at": {
-            "description": "Timestamp when the alias was created",
-            "format": "date-time",
-            "type": "string"
-          },
-          "name": {
-            "description": "Alias name (used in DNS)",
-            "example": "web-server",
-            "pattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
-            "type": "string"
-          },
-          "node_id": {
-            "description": "ID of the node this alias belongs to",
-            "format": "uuid",
-            "type": "string"
-          },
-          "updated_at": {
-            "description": "Timestamp when the alias was last updated",
-            "format": "date-time",
-            "type": "string"
-          },
-          "vpn_hostname": {
-            "description": "Full DNS hostname (FQDN)",
-            "example": "node-web-server.cluster-prod.nm.internal",
-            "type": "string"
-          }
-        },
-        "required": ["id", "name", "vpn_hostname", "node_id", "cluster_name"],
-        "title": "AliasResponse",
-        "type": "object"
-      },
       "CommandSingleResponse": {
         "description": "Single command response",
         "properties": {
-          "data": { "$ref": "#/components/schemas/CommandResponse" },
+          "data": { "$ref": "#/components/schemas/CommandData" },
           "meta": { "$ref": "#/components/schemas/Meta" }
         },
         "required": ["data", "meta"],
@@ -720,6 +609,59 @@
         "title": "BadRequestResponse",
         "type": "object"
       },
+      "AliasData": {
+        "description": "Node alias with custom DNS entry",
+        "example": {
+          "cluster_name": "prod",
+          "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+          "inserted_at": "2024-01-15T10:30:00Z",
+          "name": "web-server",
+          "node_id": "01234567-89ab-cdef-0123-456789abcdef",
+          "updated_at": "2024-01-15T10:30:00Z",
+          "vpn_hostname": "node-web-server.cluster-prod.nm.internal"
+        },
+        "properties": {
+          "cluster_name": {
+            "description": "Name of the cluster",
+            "example": "prod-east",
+            "type": "string"
+          },
+          "id": {
+            "description": "Unique alias identifier",
+            "format": "uuid",
+            "type": "string"
+          },
+          "inserted_at": {
+            "description": "Timestamp when the alias was created",
+            "format": "date-time",
+            "type": "string"
+          },
+          "name": {
+            "description": "Alias name (used in DNS)",
+            "example": "web-server",
+            "pattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
+            "type": "string"
+          },
+          "node_id": {
+            "description": "ID of the node this alias belongs to",
+            "format": "uuid",
+            "type": "string"
+          },
+          "updated_at": {
+            "description": "Timestamp when the alias was last updated",
+            "format": "date-time",
+            "type": "string"
+          },
+          "vpn_hostname": {
+            "description": "Full DNS hostname (FQDN)",
+            "example": "node-web-server.cluster-prod.nm.internal",
+            "type": "string"
+          }
+        },
+        "required": ["id", "name", "vpn_hostname", "node_id", "cluster_name"],
+        "title": "AliasData",
+        "type": "object"
+      },
       "AdminClustersResponse": {
         "description": "All admin clusters Edge VPN knows about",
         "properties": {
@@ -808,6 +750,131 @@
           "topology"
         ],
         "title": "MyAdminCluster",
+        "type": "object"
+      },
+      "CommandExecutionData": {
+        "description": "Command execution information",
+        "example": {
+          "cluster_name": "prod-east",
+          "command_id": "fedcba98-7654-3210-fedc-ba9876543210",
+          "command_text": "echo hello\nls -la",
+          "completed_at": "2025-06-17T10:31:00Z",
+          "exit_code": 5,
+          "id": "01234567-89ab-cdef-0123-456789abcdef",
+          "inserted_at": "2025-06-17T10:30:00Z",
+          "node_id": "abcdef01-2345-6789-abcd-ef0123456789",
+          "output": "$ ABC=value\n$ echo $ABC\nvalue\n$ systemctl restart nginx\nFailed to restart nginx.service: Unit not found\n",
+          "sent_at": "2025-06-17T10:30:00Z",
+          "status": "completed",
+          "target_all": false,
+          "updated_at": "2025-06-17T10:31:00Z"
+        },
+        "properties": {
+          "cancelled_at": {
+            "description": "When the command execution was cancelled",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "cluster_name": {
+            "description": "The cluster explicitly targeted when this execution was created. Only set when the command used `clusters` targeting against a single cluster — null for `all`, `nodes`, or multi-cluster targeting.",
+            "nullable": true,
+            "type": "string"
+          },
+          "command_id": {
+            "description": "ID of the command being executed",
+            "format": "uuid",
+            "type": "string"
+          },
+          "command_text": {
+            "description": "The command text being executed (denormalized for convenience)",
+            "example": "echo hello\nls -la",
+            "nullable": true,
+            "type": "string"
+          },
+          "completed_at": {
+            "description": "When Admin finalized the command execution result",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "exit_code": {
+            "description": "Final exit code (0 = success, non-zero = failure)",
+            "example": 5,
+            "nullable": true,
+            "type": "integer"
+          },
+          "expires_at": {
+            "description": "The expiration deadline from the parent command (null if no expiration was set)",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "description": "Unique command execution identifier",
+            "format": "uuid",
+            "type": "string"
+          },
+          "inserted_at": {
+            "description": "When the execution was created",
+            "format": "date-time",
+            "type": "string"
+          },
+          "node_id": {
+            "description": "ID of the target node (null after the node is deleted)",
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "output": {
+            "description": "Combined output from command execution",
+            "example": "$ ABC=value\n$ echo $ABC\nvalue\n$ systemctl restart nginx\nFailed to restart nginx.service: Unit not found\n",
+            "nullable": true,
+            "type": "string"
+          },
+          "sent_at": {
+            "description": "When the command was sent to the agent",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "status": {
+            "description": "Current execution status",
+            "enum": [
+              "pending",
+              "sent",
+              "completed",
+              "cancelled",
+              "expired",
+              "dropped"
+            ],
+            "type": "string"
+          },
+          "target_all": {
+            "description": "Whether this execution was created from a system-wide command",
+            "type": "boolean"
+          },
+          "timeout": {
+            "description": "Command timeout in milliseconds (null means no timeout)",
+            "nullable": true,
+            "type": "integer"
+          },
+          "updated_at": {
+            "description": "When the execution was last updated",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "command_id",
+          "node_id",
+          "target_all",
+          "status",
+          "inserted_at",
+          "updated_at"
+        ],
+        "title": "CommandExecutionData",
         "type": "object"
       },
       "UnifiedMetricsResponse": {
@@ -939,9 +1006,7 @@
         "description": "Paginated list of command executions with filtering and sorting metadata",
         "properties": {
           "data": {
-            "items": {
-              "$ref": "#/components/schemas/CommandExecutionResponse"
-            },
+            "items": { "$ref": "#/components/schemas/CommandExecutionData" },
             "type": "array"
           },
           "meta": { "$ref": "#/components/schemas/PaginatedMeta" }
@@ -1066,7 +1131,7 @@
         "description": "Paginated list of clusters with metadata",
         "properties": {
           "data": {
-            "items": { "$ref": "#/components/schemas/ClusterResponse" },
+            "items": { "$ref": "#/components/schemas/ClusterData" },
             "type": "array"
           },
           "meta": { "$ref": "#/components/schemas/PaginatedMeta" }
@@ -1106,13 +1171,21 @@
         "title": "ForbiddenResponse",
         "type": "object"
       },
+      "TunnelClientSingleResponse": {
+        "description": "Single Tunnel Client response",
+        "properties": {
+          "data": { "$ref": "#/components/schemas/TunnelClientData" },
+          "meta": { "$ref": "#/components/schemas/Meta" }
+        },
+        "required": ["data", "meta"],
+        "title": "TunnelClientSingleResponse",
+        "type": "object"
+      },
       "SelfUpdateRequestPaginatedResponse": {
         "description": "Paginated list of self-update requests",
         "properties": {
           "data": {
-            "items": {
-              "$ref": "#/components/schemas/SelfUpdateRequestResponse"
-            },
+            "items": { "$ref": "#/components/schemas/SelfUpdateRequestData" },
             "type": "array"
           },
           "meta": { "$ref": "#/components/schemas/PaginatedMeta" }
@@ -1154,6 +1227,19 @@
         },
         "required": ["public_key", "key_name"],
         "title": "SshPublicKeyCreateRequest",
+        "type": "object"
+      },
+      "TunnelClientPaginatedResponse": {
+        "description": "Paginated Tunnel Client list response",
+        "properties": {
+          "data": {
+            "items": { "$ref": "#/components/schemas/TunnelClientData" },
+            "type": "array"
+          },
+          "meta": { "$ref": "#/components/schemas/PaginatedMeta" }
+        },
+        "required": ["data", "meta"],
+        "title": "TunnelClientPaginatedResponse",
         "type": "object"
       },
       "SelfUpdateRequestCreateRequest": {
@@ -1344,8 +1430,51 @@
         "title": "Meta",
         "type": "object"
       },
-      "NodeSummary": {
-        "description": "Brief node information within cluster response",
+      "Nodes.NodeRecoveryKeyData": {
+        "description": "One-use recovery key returned only when it is created",
+        "properties": {
+          "recovery_key": {
+            "description": "Node recovery key",
+            "type": "string"
+          }
+        },
+        "required": ["recovery_key"],
+        "title": "Nodes.NodeRecoveryKeyData",
+        "type": "object"
+      },
+      "ServiceUnavailableResponse": {
+        "description": "503 Service Unavailable",
+        "example": {
+          "error": {
+            "code": "service_unavailable",
+            "message": "Downstream dependency unreachable"
+          },
+          "meta": {
+            "request_id": "550e8400-e29b-41d4-a716-446655440000",
+            "timestamp": "2026-04-15T10:00:00.000Z"
+          }
+        },
+        "properties": {
+          "error": {
+            "properties": {
+              "code": { "example": "service_unavailable", "type": "string" },
+              "details": { "nullable": true },
+              "message": {
+                "example": "Downstream dependency unreachable",
+                "type": "string"
+              }
+            },
+            "required": ["code", "message"],
+            "type": "object"
+          },
+          "meta": { "$ref": "#/components/schemas/Meta" }
+        },
+        "required": ["error", "meta"],
+        "title": "ServiceUnavailableResponse",
+        "type": "object"
+      },
+      "EmbeddedNodeData": {
+        "description": "Embedded node representation within a cluster response",
         "example": {
           "enrollment_key_id": "0190f1e0-7b2a-7abc-8def-0123456789ab",
           "id": "abc12345-1234-1234-1234-123456789abc",
@@ -1393,118 +1522,7 @@
           "status",
           "vpn_hostname"
         ],
-        "title": "NodeSummary",
-        "type": "object"
-      },
-      "Nodes.NodeRecoveryKeyData": {
-        "description": "One-use recovery key returned only when it is created",
-        "properties": {
-          "recovery_key": {
-            "description": "Node recovery key",
-            "type": "string"
-          }
-        },
-        "required": ["recovery_key"],
-        "title": "Nodes.NodeRecoveryKeyData",
-        "type": "object"
-      },
-      "ServiceUnavailableResponse": {
-        "description": "503 Service Unavailable",
-        "example": {
-          "error": {
-            "code": "service_unavailable",
-            "message": "Downstream dependency unreachable"
-          },
-          "meta": {
-            "request_id": "550e8400-e29b-41d4-a716-446655440000",
-            "timestamp": "2026-04-15T10:00:00.000Z"
-          }
-        },
-        "properties": {
-          "error": {
-            "properties": {
-              "code": { "example": "service_unavailable", "type": "string" },
-              "details": { "nullable": true },
-              "message": {
-                "example": "Downstream dependency unreachable",
-                "type": "string"
-              }
-            },
-            "required": ["code", "message"],
-            "type": "object"
-          },
-          "meta": { "$ref": "#/components/schemas/Meta" }
-        },
-        "required": ["error", "meta"],
-        "title": "ServiceUnavailableResponse",
-        "type": "object"
-      },
-      "CommandResponse": {
-        "description": "Command information",
-        "example": {
-          "command_text": "ABC=value\necho $ABC\nsystemctl restart nginx",
-          "expires_at": "2025-12-31T23:59:59Z",
-          "id": "01234567-89ab-cdef-0123-456789abcdef",
-          "inserted_at": "2025-06-17T10:30:00Z",
-          "targeting": {
-            "node_filters": { "status__in": "healthy" },
-            "node_ids": ["01234567-89ab-cdef-0123-456789abcdef"],
-            "type": "nodes"
-          },
-          "timeout": 30000,
-          "updated_at": "2025-06-17T10:30:00Z"
-        },
-        "properties": {
-          "command_text": {
-            "description": "Multi-line shell script/commands",
-            "example": "ABC=value\necho $ABC\nsystemctl restart nginx",
-            "type": "string"
-          },
-          "expires_at": {
-            "description": "Deadline after which pending/sent executions are automatically expired (immutable after creation)",
-            "format": "date-time",
-            "nullable": true,
-            "type": "string"
-          },
-          "id": {
-            "description": "Unique command identifier",
-            "format": "uuid",
-            "type": "string"
-          },
-          "inserted_at": {
-            "description": "When the command was created",
-            "format": "date-time",
-            "type": "string"
-          },
-          "targeting": {
-            "description": "Targeting configuration used when creating this command (informational only, not filterable)",
-            "example": {
-              "node_filters": { "status__in": "healthy" },
-              "node_ids": ["01234567-89ab-cdef-0123-456789abcdef"],
-              "type": "nodes"
-            },
-            "type": "object"
-          },
-          "timeout": {
-            "description": "Command timeout in milliseconds (optional, null means no timeout)",
-            "example": 30000,
-            "nullable": true,
-            "type": "integer"
-          },
-          "updated_at": {
-            "description": "When the command was last updated",
-            "format": "date-time",
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "command_text",
-          "targeting",
-          "inserted_at",
-          "updated_at"
-        ],
-        "title": "CommandResponse",
+        "title": "EmbeddedNodeData",
         "type": "object"
       },
       "EnrollmentKeyPaginatedResponse": {
@@ -1518,6 +1536,153 @@
         },
         "required": ["data", "meta"],
         "title": "EnrollmentKeyPaginatedResponse",
+        "type": "object"
+      },
+      "ClusterData": {
+        "description": "Edge cluster information",
+        "example": {
+          "id": "abc12345-1234-1234-1234-123456789abc",
+          "inserted_at": "2025-06-09T08:00:00Z",
+          "ipv4_range": "100.64.0.0/24",
+          "ipv6_range": "fd7a:91c2:4e8b:2::/64",
+          "name": "prod-east",
+          "network_name": "cluster-prod-east",
+          "node_count": 2,
+          "node_limit": 50,
+          "nodes": [
+            {
+              "enrollment_key_id": "0190f1e0-7b2a-7abc-8def-0123456789ab",
+              "id": "abc12345-1234-1234-1234-123456789abc",
+              "ingress_public_key": "RWRnZUNvcmVJbmdyZXNzUHVibGljS2V5RXhhbXBsZTE=",
+              "status": "healthy",
+              "vpn_hostname": "node-abc12345-1234-1234-1234-123456789abc.cluster-prod-east.nm.internal"
+            },
+            {
+              "enrollment_key_id": null,
+              "id": "def67890-5678-5678-5678-567890abcdef",
+              "ingress_public_key": "RWRnZUNvcmVJbmdyZXNzUHVibGljS2V5RXhhbXBsZTE=",
+              "status": "healthy",
+              "vpn_hostname": "node-def67890-5678-5678-5678-567890abcdef.cluster-prod-east.nm.internal"
+            }
+          ],
+          "updated_at": "2025-06-09T08:00:00Z",
+          "vpn_domain": "cluster-prod-east.nm.internal"
+        },
+        "properties": {
+          "id": {
+            "description": "Unique cluster identifier (UUID for database compatibility, use name for API operations)",
+            "format": "uuid",
+            "type": "string"
+          },
+          "inserted_at": {
+            "description": "When the cluster was created",
+            "format": "date-time",
+            "type": "string"
+          },
+          "ipv4_range": {
+            "description": "IPv4 CIDR range for this cluster",
+            "example": "100.64.0.0/24",
+            "type": "string"
+          },
+          "ipv6_range": {
+            "description": "Private ULA IPv6 /64 range for this cluster",
+            "example": "fd7a:91c2:4e8b:2::/64",
+            "type": "string"
+          },
+          "name": {
+            "description": "Cluster name - primary identifier used in API operations (max 24 chars, alphanumeric with hyphens)",
+            "example": "prod-east",
+            "pattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
+            "type": "string"
+          },
+          "network_name": {
+            "description": "Edge VPN network name",
+            "example": "cluster-prod-east",
+            "type": "string"
+          },
+          "node_count": {
+            "description": "Number of nodes in this cluster",
+            "type": "integer"
+          },
+          "node_limit": {
+            "description": "Maximum number of nodes allowed in this cluster (null means no limit enforced)",
+            "nullable": true,
+            "type": "integer"
+          },
+          "nodes": {
+            "description": "Nodes embedded in this cluster",
+            "items": { "$ref": "#/components/schemas/EmbeddedNodeData" },
+            "type": "array"
+          },
+          "updated_at": {
+            "description": "When the cluster was last updated",
+            "format": "date-time",
+            "type": "string"
+          },
+          "vpn_domain": {
+            "description": "DNS domain suffix for nodes in this cluster",
+            "example": "cluster-prod-east.nm.internal",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "ipv4_range",
+          "ipv6_range",
+          "node_limit",
+          "node_count",
+          "nodes",
+          "network_name",
+          "vpn_domain",
+          "inserted_at",
+          "updated_at"
+        ],
+        "title": "ClusterData",
+        "type": "object"
+      },
+      "TunnelClientData": {
+        "description": "An Admin-managed external Tunnel Client WireGuard identity.",
+        "properties": {
+          "id": {
+            "description": "Tunnel Client identifier",
+            "format": "uuid",
+            "type": "string"
+          },
+          "inserted_at": {
+            "description": "When the Tunnel Client was created",
+            "format": "date-time",
+            "type": "string"
+          },
+          "public_key": {
+            "description": "Canonical base64-encoded X25519 WireGuard public key",
+            "example": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=",
+            "format": "byte",
+            "maxLength": 44,
+            "minLength": 44,
+            "type": "string"
+          },
+          "tunnel_connections": {
+            "description": "Connections embedded in this Tunnel Client",
+            "items": {
+              "$ref": "#/components/schemas/EmbeddedTunnelConnectionData"
+            },
+            "type": "array"
+          },
+          "updated_at": {
+            "description": "When the Tunnel Client was last updated",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "public_key",
+          "tunnel_connections",
+          "inserted_at",
+          "updated_at"
+        ],
+        "title": "TunnelClientData",
         "type": "object"
       },
       "NodeDiagnosticCheck": {
@@ -1544,34 +1709,6 @@
         },
         "required": ["name", "status", "duration_ms", "details"],
         "title": "NodeDiagnosticCheck",
-        "type": "object"
-      },
-      "AliasSummary": {
-        "description": "Brief alias information within a node response",
-        "example": {
-          "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-          "name": "web-server",
-          "vpn_hostname": "node-web-server.cluster-prod-east.nm.internal"
-        },
-        "properties": {
-          "id": {
-            "description": "Unique alias identifier",
-            "format": "uuid",
-            "type": "string"
-          },
-          "name": {
-            "description": "Alias name",
-            "example": "web-server",
-            "type": "string"
-          },
-          "vpn_hostname": {
-            "description": "Full VPN DNS hostname for this alias",
-            "example": "node-web-server.cluster-prod-east.nm.internal",
-            "type": "string"
-          }
-        },
-        "required": ["id", "name", "vpn_hostname"],
-        "title": "AliasSummary",
         "type": "object"
       },
       "Admin": {
@@ -1646,109 +1783,6 @@
         "title": "Admin",
         "type": "object"
       },
-      "SshUsername": {
-        "description": "SSH username information for node access",
-        "example": {
-          "has_password": true,
-          "id": "01234567-89ab-cdef-0123-456789abcdef",
-          "inserted_at": "2025-06-23T10:30:00Z",
-          "node_id": "fedcba98-7654-3210-fedc-ba9876543210",
-          "public_keys": [
-            {
-              "id": "fedcba98-7654-3210-fedc-ba9876543210",
-              "inserted_at": "2025-06-23T10:30:00Z",
-              "key_name": "laptop",
-              "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGQw7Di3fBr2oc2vbZN5YLz8YpJ8PQb5bXwQwe+QgYX8 user@laptop",
-              "updated_at": "2025-06-23T10:30:00Z"
-            }
-          ],
-          "updated_at": "2025-06-23T10:30:00Z",
-          "username": "admin"
-        },
-        "properties": {
-          "has_password": {
-            "description": "Whether this username has a password configured for authentication",
-            "example": true,
-            "type": "boolean"
-          },
-          "id": {
-            "description": "Unique SSH username identifier",
-            "format": "uuid",
-            "type": "string"
-          },
-          "inserted_at": {
-            "description": "When the SSH username was created",
-            "format": "date-time",
-            "type": "string"
-          },
-          "node_id": {
-            "description": "Node this username belongs to",
-            "format": "uuid",
-            "type": "string"
-          },
-          "public_keys": {
-            "description": "SSH public keys associated with this username",
-            "items": {
-              "properties": {
-                "id": {
-                  "description": "Unique key identifier",
-                  "format": "uuid",
-                  "type": "string"
-                },
-                "inserted_at": {
-                  "description": "When the key was created",
-                  "format": "date-time",
-                  "type": "string"
-                },
-                "key_name": {
-                  "description": "Human-readable name for the key",
-                  "example": "laptop",
-                  "type": "string"
-                },
-                "public_key": {
-                  "description": "SSH public key in OpenSSH format",
-                  "example": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGQw7Di3fBr2oc2vbZN5YLz8YpJ8PQb5bXwQwe+QgYX8 user@laptop",
-                  "type": "string"
-                },
-                "updated_at": {
-                  "description": "When the key was last updated",
-                  "format": "date-time",
-                  "type": "string"
-                }
-              },
-              "required": [
-                "id",
-                "key_name",
-                "public_key",
-                "inserted_at",
-                "updated_at"
-              ],
-              "type": "object"
-            },
-            "type": "array"
-          },
-          "updated_at": {
-            "description": "When the SSH username was last updated",
-            "format": "date-time",
-            "type": "string"
-          },
-          "username": {
-            "description": "SSH username for node access (3-32 characters)",
-            "example": "admin",
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "username",
-          "has_password",
-          "node_id",
-          "inserted_at",
-          "updated_at"
-        ],
-        "title": "SshUsername",
-        "type": "object"
-      },
       "SshUsernameCreateRequest": {
         "description": "Create a new SSH username for a node, optionally with password and/or public keys",
         "example": {
@@ -1808,129 +1842,73 @@
         "title": "SshUsernameCreateRequest",
         "type": "object"
       },
-      "CommandExecutionResponse": {
-        "description": "Command execution information",
+      "SshUsernameData": {
+        "description": "SSH username information for node access",
         "example": {
-          "cluster_name": "prod-east",
-          "command_id": "fedcba98-7654-3210-fedc-ba9876543210",
-          "command_text": "echo hello\nls -la",
-          "completed_at": "2025-06-17T10:31:00Z",
-          "exit_code": 5,
+          "has_password": true,
           "id": "01234567-89ab-cdef-0123-456789abcdef",
-          "inserted_at": "2025-06-17T10:30:00Z",
-          "node_id": "abcdef01-2345-6789-abcd-ef0123456789",
-          "output": "$ ABC=value\n$ echo $ABC\nvalue\n$ systemctl restart nginx\nFailed to restart nginx.service: Unit not found\n",
-          "sent_at": "2025-06-17T10:30:00Z",
-          "status": "completed",
-          "target_all": false,
-          "updated_at": "2025-06-17T10:31:00Z"
+          "inserted_at": "2025-06-23T10:30:00Z",
+          "node_id": "fedcba98-7654-3210-fedc-ba9876543210",
+          "public_keys": [
+            {
+              "id": "fedcba98-7654-3210-fedc-ba9876543210",
+              "inserted_at": "2025-06-23T10:30:00Z",
+              "key_name": "laptop",
+              "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGQw7Di3fBr2oc2vbZN5YLz8YpJ8PQb5bXwQwe+QgYX8 user@laptop",
+              "updated_at": "2025-06-23T10:30:00Z"
+            }
+          ],
+          "updated_at": "2025-06-23T10:30:00Z",
+          "username": "admin"
         },
         "properties": {
-          "cancelled_at": {
-            "description": "When the command execution was cancelled",
-            "format": "date-time",
-            "nullable": true,
-            "type": "string"
-          },
-          "cluster_name": {
-            "description": "The cluster explicitly targeted when this execution was created. Only set when the command used `clusters` targeting against a single cluster — null for `all`, `nodes`, or multi-cluster targeting.",
-            "nullable": true,
-            "type": "string"
-          },
-          "command_id": {
-            "description": "ID of the command being executed",
-            "format": "uuid",
-            "type": "string"
-          },
-          "command_text": {
-            "description": "The command text being executed (denormalized for convenience)",
-            "example": "echo hello\nls -la",
-            "nullable": true,
-            "type": "string"
-          },
-          "completed_at": {
-            "description": "When Admin finalized the command execution result",
-            "format": "date-time",
-            "nullable": true,
-            "type": "string"
-          },
-          "exit_code": {
-            "description": "Final exit code (0 = success, non-zero = failure)",
-            "example": 5,
-            "nullable": true,
-            "type": "integer"
-          },
-          "expires_at": {
-            "description": "The expiration deadline from the parent command (null if no expiration was set)",
-            "format": "date-time",
-            "nullable": true,
-            "type": "string"
+          "has_password": {
+            "description": "Whether this username has a password configured for authentication",
+            "example": true,
+            "type": "boolean"
           },
           "id": {
-            "description": "Unique command execution identifier",
+            "description": "Unique SSH username identifier",
             "format": "uuid",
             "type": "string"
           },
           "inserted_at": {
-            "description": "When the execution was created",
+            "description": "When the SSH username was created",
             "format": "date-time",
             "type": "string"
           },
           "node_id": {
-            "description": "ID of the target node (null after the node is deleted)",
+            "description": "Node this username belongs to",
             "format": "uuid",
-            "nullable": true,
             "type": "string"
           },
-          "output": {
-            "description": "Combined output from command execution",
-            "example": "$ ABC=value\n$ echo $ABC\nvalue\n$ systemctl restart nginx\nFailed to restart nginx.service: Unit not found\n",
-            "nullable": true,
-            "type": "string"
-          },
-          "sent_at": {
-            "description": "When the command was sent to the agent",
-            "format": "date-time",
-            "nullable": true,
-            "type": "string"
-          },
-          "status": {
-            "description": "Current execution status",
-            "enum": [
-              "pending",
-              "sent",
-              "completed",
-              "cancelled",
-              "expired",
-              "dropped"
-            ],
-            "type": "string"
-          },
-          "target_all": {
-            "description": "Whether this execution was created from a system-wide command",
-            "type": "boolean"
-          },
-          "timeout": {
-            "description": "Command timeout in milliseconds (null means no timeout)",
-            "nullable": true,
-            "type": "integer"
+          "public_keys": {
+            "description": "SSH public keys associated with this username",
+            "items": {
+              "$ref": "#/components/schemas/EmbeddedSshPublicKeyData"
+            },
+            "type": "array"
           },
           "updated_at": {
-            "description": "When the execution was last updated",
+            "description": "When the SSH username was last updated",
             "format": "date-time",
+            "type": "string"
+          },
+          "username": {
+            "description": "SSH username for node access (3-32 characters)",
+            "example": "admin",
             "type": "string"
           }
         },
         "required": [
           "id",
-          "command_id",
+          "username",
+          "has_password",
           "node_id",
-          "target_all",
-          "status",
           "inserted_at",
           "updated_at"
         ],
-        "title": "CommandExecutionResponse",
+        "title": "SshUsernameData",
         "type": "object"
       },
       "AdminMetricsResponse": {
@@ -2755,7 +2733,7 @@
       "WebhookSingleResponse": {
         "description": "Single webhook response",
         "properties": {
-          "data": { "$ref": "#/components/schemas/Webhook" },
+          "data": { "$ref": "#/components/schemas/WebhookData" },
           "meta": { "$ref": "#/components/schemas/Meta" }
         },
         "required": ["data", "meta"],
@@ -2825,6 +2803,18 @@
         "title": "EventTypeListResponse",
         "type": "object"
       },
+      "TunnelConnectionCreateRequest": {
+        "properties": {
+          "node_id": {
+            "description": "Ingress Node to connect",
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": ["node_id"],
+        "title": "TunnelConnectionCreateRequest",
+        "type": "object"
+      },
       "Nodes.NodeRecoveryKeyResponse": {
         "description": "Response after creating a node recovery key",
         "properties": {
@@ -2835,57 +2825,53 @@
         "title": "Nodes.NodeRecoveryKeyResponse",
         "type": "object"
       },
-      "Webhook": {
-        "description": "A webhook subscription. Receives a POST per matching event with the full\nCloudEvents envelope as the body and an HMAC-SHA256 signature in the\n`X-Edge-Signature` header.\n\nWebhooks are immutable after create — to change any field, delete and\nrecreate. `secret` and `headers` are write-only — encrypted at rest and\nnever appear in any response.\n",
-        "example": {
-          "id": "01234567-89ab-cdef-0123-456789abcdef",
-          "inserted_at": "2026-05-05T10:00:00Z",
-          "subscribed_events": [
-            "edge.node.registered",
-            "edge.command_execution.completed"
-          ],
-          "updated_at": "2026-05-05T10:00:00Z",
-          "url": "https://example.com/edge-events"
-        },
+      "TunnelConnectionData": {
+        "description": "A Tunnel Client connection to an Ingress Node.",
         "properties": {
-          "id": {
-            "description": "Unique webhook identifier",
-            "format": "uuid",
+          "id": { "format": "uuid", "type": "string" },
+          "ingress_ipv4_address": {
+            "example": "10.240.0.1/32",
             "type": "string"
           },
-          "inserted_at": {
-            "description": "When the webhook was created",
-            "format": "date-time",
+          "ingress_ipv6_address": {
+            "example": "fd20:240::1/128",
             "type": "string"
           },
-          "subscribed_events": {
-            "description": "Explicit list of event types this webhook fires on. Each entry is a literal event type from the catalog (no wildcards). See [AsyncAPI spec](/asyncdoc) for the full catalog.",
-            "example": [
-              "edge.node.registered",
-              "edge.command_execution.completed"
-            ],
-            "items": { "type": "string" },
-            "type": "array"
-          },
-          "updated_at": {
-            "description": "When the webhook was last updated",
-            "format": "date-time",
+          "inserted_at": { "format": "date-time", "type": "string" },
+          "node_id": { "format": "uuid", "type": "string" },
+          "tunnel_client_id": { "format": "uuid", "type": "string" },
+          "tunnel_ipv4_address": {
+            "example": "10.240.0.2/32",
             "type": "string"
           },
-          "url": {
-            "description": "Destination URL — receives a POST per matching event",
-            "example": "https://example.com/edge-events",
+          "tunnel_ipv6_address": {
+            "example": "fd20:240::2/128",
             "type": "string"
-          }
+          },
+          "updated_at": { "format": "date-time", "type": "string" }
         },
         "required": [
           "id",
-          "url",
-          "subscribed_events",
+          "tunnel_client_id",
+          "node_id",
+          "ingress_ipv4_address",
+          "ingress_ipv6_address",
+          "tunnel_ipv4_address",
+          "tunnel_ipv6_address",
           "inserted_at",
           "updated_at"
         ],
-        "title": "Webhook",
+        "title": "TunnelConnectionData",
+        "type": "object"
+      },
+      "TunnelConnectionSingleResponse": {
+        "description": "Single Tunnel Connection response",
+        "properties": {
+          "data": { "$ref": "#/components/schemas/TunnelConnectionData" },
+          "meta": { "$ref": "#/components/schemas/Meta" }
+        },
+        "required": ["data", "meta"],
+        "title": "TunnelConnectionSingleResponse",
         "type": "object"
       },
       "AgentMetricsResponse": {
@@ -3439,7 +3425,7 @@
       "ClusterSingleResponse": {
         "description": "Single cluster response",
         "properties": {
-          "data": { "$ref": "#/components/schemas/ClusterResponse" },
+          "data": { "$ref": "#/components/schemas/ClusterData" },
           "meta": { "$ref": "#/components/schemas/Meta" }
         },
         "required": ["data", "meta"],
@@ -3450,7 +3436,7 @@
         "description": "Paginated list of commands with filtering and sorting metadata",
         "properties": {
           "data": {
-            "items": { "$ref": "#/components/schemas/CommandResponse" },
+            "items": { "$ref": "#/components/schemas/CommandData" },
             "type": "array"
           },
           "meta": { "$ref": "#/components/schemas/PaginatedMeta" }
@@ -3473,11 +3459,64 @@
         "title": "OrphanedClusters",
         "type": "object"
       },
+      "WebhookData": {
+        "description": "A webhook subscription. Receives a POST per matching event with the full\nCloudEvents envelope as the body and an HMAC-SHA256 signature in the\n`X-Edge-Signature` header.\n\nWebhooks are immutable after create — to change any field, delete and\nrecreate. `secret` and `headers` are write-only — encrypted at rest and\nnever appear in any response.\n",
+        "example": {
+          "id": "01234567-89ab-cdef-0123-456789abcdef",
+          "inserted_at": "2026-05-05T10:00:00Z",
+          "subscribed_events": [
+            "edge.node.registered",
+            "edge.command_execution.completed"
+          ],
+          "updated_at": "2026-05-05T10:00:00Z",
+          "url": "https://example.com/edge-events"
+        },
+        "properties": {
+          "id": {
+            "description": "Unique webhook identifier",
+            "format": "uuid",
+            "type": "string"
+          },
+          "inserted_at": {
+            "description": "When the webhook was created",
+            "format": "date-time",
+            "type": "string"
+          },
+          "subscribed_events": {
+            "description": "Explicit list of event types this webhook fires on. Each entry is a literal event type from the catalog (no wildcards). See [AsyncAPI spec](/asyncdoc) for the full catalog.",
+            "example": [
+              "edge.node.registered",
+              "edge.command_execution.completed"
+            ],
+            "items": { "type": "string" },
+            "type": "array"
+          },
+          "updated_at": {
+            "description": "When the webhook was last updated",
+            "format": "date-time",
+            "type": "string"
+          },
+          "url": {
+            "description": "Destination URL — receives a POST per matching event",
+            "example": "https://example.com/edge-events",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "url",
+          "subscribed_events",
+          "inserted_at",
+          "updated_at"
+        ],
+        "title": "WebhookData",
+        "type": "object"
+      },
       "AliasPaginatedResponse": {
         "description": "Paginated list of aliases with filtering and sorting metadata",
         "properties": {
           "data": {
-            "items": { "$ref": "#/components/schemas/AliasResponse" },
+            "items": { "$ref": "#/components/schemas/AliasData" },
             "type": "array"
           },
           "meta": { "$ref": "#/components/schemas/PaginatedMeta" }
@@ -3743,6 +3782,199 @@
         "title": "AdminClusterMember",
         "type": "object"
       },
+      "NodeData": {
+        "description": "Edge node information",
+        "example": {
+          "agent_metrics_port": 44000,
+          "aliases": [
+            {
+              "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+              "name": "web-server",
+              "vpn_hostname": "node-web-server.cluster-prod-east.nm.internal"
+            }
+          ],
+          "cluster_name": "prod-east",
+          "enrollment_key_id": "0190f1e0-7b2a-7abc-8def-0123456789ab",
+          "host_metrics_port": 49100,
+          "http_port": 44000,
+          "http_proxy_port": 44880,
+          "id": "01234567-89ab-cdef-0123-456789abcdef",
+          "ingress_public_key": "RWRnZUNvcmVJbmdyZXNzUHVibGljS2V5RXhhbXBsZTE=",
+          "inserted_at": "2025-06-09T08:00:00Z",
+          "last_seen_at": "2025-06-09T08:20:00Z",
+          "mdns_hostname": "node-01234567-89ab-cdef-0123-456789abcdef.local",
+          "node_name": "node-01234567-89ab-cdef-0123-456789abcdef",
+          "self_update_enabled": false,
+          "socks5_proxy_port": 44180,
+          "ssh_port": 42222,
+          "status": "healthy",
+          "updated_at": "2025-06-09T08:20:00Z",
+          "version": "0.1.0",
+          "vpn_host_id": "def67890-5678-5678-5678-567890abcdef",
+          "vpn_hostname": "node-01234567-89ab-cdef-0123-456789abcdef.cluster-prod-east.nm.internal",
+          "wireguard_metrics_port": 49586
+        },
+        "properties": {
+          "agent_metrics_port": {
+            "description": "Agent PromEx metrics port",
+            "type": "integer"
+          },
+          "aliases": {
+            "description": "DNS aliases registered for this node",
+            "items": { "$ref": "#/components/schemas/EmbeddedAliasData" },
+            "type": "array"
+          },
+          "cluster_name": {
+            "description": "Name of the cluster this node belongs to",
+            "example": "prod-east",
+            "pattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
+            "type": "string"
+          },
+          "enrollment_key_id": {
+            "description": "ID of the enrollment key most recently used by this node",
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "host_metrics_port": {
+            "description": "Host metrics port (Node Exporter)",
+            "type": "integer"
+          },
+          "http_port": { "description": "HTTP API port", "type": "integer" },
+          "http_proxy_port": {
+            "description": "HTTP proxy port",
+            "type": "integer"
+          },
+          "id": {
+            "description": "Unique node identifier",
+            "format": "uuid",
+            "type": "string"
+          },
+          "ingress_public_key": {
+            "description": "Agent-owned Ingress WireGuard public key",
+            "format": "byte",
+            "maxLength": 44,
+            "minLength": 44,
+            "type": "string"
+          },
+          "inserted_at": {
+            "description": "When the node was created",
+            "format": "date-time",
+            "type": "string"
+          },
+          "last_seen_at": {
+            "description": "Last heartbeat timestamp from the node",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "mdns_hostname": {
+            "description": "mDNS hostname — resolvable on the local LAN via multicast DNS",
+            "example": "node-01234567-89ab-cdef-0123-456789abcdef.local",
+            "type": "string"
+          },
+          "node_name": {
+            "description": "Human-readable node name (derived from ID)",
+            "example": "node-01234567-89ab-cdef-0123-456789abcdef",
+            "type": "string"
+          },
+          "self_update_enabled": {
+            "description": "Whether self-updates are enabled",
+            "type": "boolean"
+          },
+          "socks5_proxy_port": {
+            "description": "SOCKS5 proxy port",
+            "type": "integer"
+          },
+          "ssh_port": { "description": "SSH port", "type": "integer" },
+          "status": {
+            "description": "Current node status",
+            "enum": ["healthy", "unhealthy", "unreachable"],
+            "type": "string"
+          },
+          "updated_at": {
+            "description": "When the node was last updated",
+            "format": "date-time",
+            "type": "string"
+          },
+          "version": {
+            "description": "Agent version",
+            "nullable": true,
+            "type": "string"
+          },
+          "vpn_host_id": {
+            "description": "VPN host UUID for API operations",
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "vpn_hostname": {
+            "description": "DNS hostname for this node",
+            "example": "node-01234567-89ab-cdef-0123-456789abcdef.cluster-abc.nm.internal",
+            "type": "string"
+          },
+          "wireguard_metrics_port": {
+            "description": "WireGuard metrics port (WireGuard Exporter)",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "cluster_name",
+          "ingress_public_key",
+          "http_port",
+          "ssh_port",
+          "agent_metrics_port",
+          "host_metrics_port",
+          "wireguard_metrics_port",
+          "http_proxy_port",
+          "socks5_proxy_port",
+          "aliases",
+          "inserted_at",
+          "updated_at"
+        ],
+        "title": "NodeData",
+        "type": "object"
+      },
+      "EmbeddedSshPublicKeyData": {
+        "description": "Embedded SSH public key representation within an SSH username",
+        "properties": {
+          "id": {
+            "description": "Unique SSH public key identifier",
+            "format": "uuid",
+            "type": "string"
+          },
+          "inserted_at": {
+            "description": "When the key was created",
+            "format": "date-time",
+            "type": "string"
+          },
+          "key_name": {
+            "description": "Human-readable name for the SSH key",
+            "example": "laptop",
+            "type": "string"
+          },
+          "public_key": {
+            "description": "SSH public key in OpenSSH format",
+            "example": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGQw7Di3fBr2oc2vbZN5YLz8YpJ8PQb5bXwQwe+QgYX8 user@laptop",
+            "type": "string"
+          },
+          "updated_at": {
+            "description": "When the key was last updated",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "key_name",
+          "public_key",
+          "inserted_at",
+          "updated_at"
+        ],
+        "title": "EmbeddedSshPublicKeyData",
+        "type": "object"
+      },
       "CommandCreateRequest": {
         "description": "Create a new command with flexible targeting options",
         "example": {
@@ -3950,7 +4182,7 @@
       "SelfUpdateRequestSingleResponse": {
         "description": "Single self-update request response",
         "properties": {
-          "data": { "$ref": "#/components/schemas/SelfUpdateRequestResponse" },
+          "data": { "$ref": "#/components/schemas/SelfUpdateRequestData" },
           "meta": { "$ref": "#/components/schemas/Meta" }
         },
         "required": ["data", "meta"],
@@ -4021,7 +4253,221 @@
         "title": "ChangesetErrorResponse",
         "type": "object"
       },
-      "SshPublicKey": {
+      "SshUsernameSingleResponse": {
+        "description": "Single SSH username response",
+        "properties": {
+          "data": { "$ref": "#/components/schemas/SshUsernameData" },
+          "meta": { "$ref": "#/components/schemas/Meta" }
+        },
+        "required": ["data", "meta"],
+        "title": "SshUsernameSingleResponse",
+        "type": "object"
+      },
+      "TunnelClientCreateRequest": {
+        "description": "Create a Tunnel Client, optionally creating connections to Ingress Nodes.",
+        "properties": {
+          "node_ids": {
+            "description": "Optional Ingress Node IDs",
+            "items": { "format": "uuid", "type": "string" },
+            "type": "array"
+          }
+        },
+        "title": "TunnelClientCreateRequest",
+        "type": "object"
+      },
+      "ChangeClusterRequest": {
+        "description": "Request to move a node to a different cluster.",
+        "example": { "cluster_name": "prod-west" },
+        "properties": {
+          "cluster_name": {
+            "description": "Name of the target cluster to move this node to.",
+            "example": "prod-west",
+            "maxLength": 24,
+            "pattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
+            "type": "string"
+          }
+        },
+        "required": ["cluster_name"],
+        "title": "ChangeClusterRequest",
+        "type": "object"
+      },
+      "AliasSingleResponse": {
+        "description": "Single alias response",
+        "properties": {
+          "data": { "$ref": "#/components/schemas/AliasData" },
+          "meta": { "$ref": "#/components/schemas/Meta" }
+        },
+        "required": ["data", "meta"],
+        "title": "AliasSingleResponse",
+        "type": "object"
+      },
+      "SshPublicKeySingleResponse": {
+        "description": "Single SSH public key response",
+        "properties": {
+          "data": { "$ref": "#/components/schemas/SshPublicKeyData" },
+          "meta": { "$ref": "#/components/schemas/Meta" }
+        },
+        "required": ["data", "meta"],
+        "title": "SshPublicKeySingleResponse",
+        "type": "object"
+      },
+      "ClusterUpdateRequest": {
+        "description": "Parameters for updating a cluster. Only provided fields are updated. Pass null to unset a nullable field.",
+        "example": { "node_limit": 50 },
+        "properties": {
+          "node_limit": {
+            "description": "Maximum nodes allowed in this cluster (null means no limit enforced)",
+            "example": 50,
+            "minimum": 1,
+            "nullable": true,
+            "type": "integer"
+          }
+        },
+        "title": "ClusterUpdateRequest",
+        "type": "object"
+      },
+      "OrphanedClustersResponse": {
+        "description": "Clusters with no assigned admin instance",
+        "properties": {
+          "data": { "$ref": "#/components/schemas/OrphanedClusters" },
+          "meta": { "$ref": "#/components/schemas/Meta" }
+        },
+        "required": ["data", "meta"],
+        "title": "OrphanedClustersResponse",
+        "type": "object"
+      },
+      "CreateAliasRequest": {
+        "description": "Parameters for creating a new DNS alias for a node",
+        "example": { "name": "web-server" },
+        "properties": {
+          "name": {
+            "description": "Alias name (lowercase alphanumeric with hyphens)",
+            "example": "web-server",
+            "maxLength": 63,
+            "minLength": 1,
+            "pattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
+            "type": "string"
+          }
+        },
+        "required": ["name"],
+        "title": "CreateAliasRequest",
+        "type": "object"
+      },
+      "EmbeddedAliasData": {
+        "description": "Embedded alias representation within a node response",
+        "example": {
+          "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+          "name": "web-server",
+          "vpn_hostname": "node-web-server.cluster-prod-east.nm.internal"
+        },
+        "properties": {
+          "id": {
+            "description": "Unique alias identifier",
+            "format": "uuid",
+            "type": "string"
+          },
+          "name": {
+            "description": "Alias name",
+            "example": "web-server",
+            "type": "string"
+          },
+          "vpn_hostname": {
+            "description": "Full VPN DNS hostname for this alias",
+            "example": "node-web-server.cluster-prod-east.nm.internal",
+            "type": "string"
+          }
+        },
+        "required": ["id", "name", "vpn_hostname"],
+        "title": "EmbeddedAliasData",
+        "type": "object"
+      },
+      "SelfUpdateRequestData": {
+        "description": "Self-update request information",
+        "example": {
+          "id": "01234567-89ab-cdef-0123-456789abcdef",
+          "inserted_at": "2025-06-17T10:30:00Z",
+          "status": "completed",
+          "summary": { "failed": 2, "total": 10, "triggered": 8 },
+          "targeting": {
+            "node_filters": {
+              "self_update_enabled": true,
+              "status__in": "healthy"
+            },
+            "type": "all"
+          },
+          "updated_at": "2025-06-17T10:35:00Z"
+        },
+        "properties": {
+          "id": {
+            "description": "Unique request identifier",
+            "format": "uuid",
+            "type": "string"
+          },
+          "inserted_at": {
+            "description": "When the request was created",
+            "format": "date-time",
+            "type": "string"
+          },
+          "status": {
+            "description": "Request processing status",
+            "enum": ["pending", "processing", "completed"],
+            "type": "string"
+          },
+          "summary": {
+            "description": "Summary of results (available after completion)",
+            "example": { "failed": 2, "total": 10, "triggered": 8 },
+            "nullable": true,
+            "properties": {
+              "failed": {
+                "description": "Nodes where update failed",
+                "type": "integer"
+              },
+              "total": {
+                "description": "Total nodes targeted",
+                "type": "integer"
+              },
+              "triggered": {
+                "description": "Nodes where update was triggered",
+                "type": "integer"
+              }
+            },
+            "type": "object"
+          },
+          "targeting": {
+            "description": "Targeting configuration (same format as commands)",
+            "example": {
+              "node_filters": {
+                "self_update_enabled": true,
+                "status__in": "healthy"
+              },
+              "type": "all"
+            },
+            "type": "object"
+          },
+          "updated_at": {
+            "description": "When the request was last updated",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": ["id", "targeting", "status", "inserted_at", "updated_at"],
+        "title": "SelfUpdateRequestData",
+        "type": "object"
+      },
+      "SshPublicKeyPaginatedResponse": {
+        "description": "Paginated list of SSH public keys with filtering and sorting metadata",
+        "properties": {
+          "data": {
+            "items": { "$ref": "#/components/schemas/SshPublicKeyData" },
+            "type": "array"
+          },
+          "meta": { "$ref": "#/components/schemas/PaginatedMeta" }
+        },
+        "required": ["data", "meta"],
+        "title": "SshPublicKeyPaginatedResponse",
+        "type": "object"
+      },
+      "SshPublicKeyData": {
         "description": "SSH public key information for username access",
         "example": {
           "id": "01234567-89ab-cdef-0123-456789abcdef",
@@ -4071,262 +4517,7 @@
           "inserted_at",
           "updated_at"
         ],
-        "title": "SshPublicKey",
-        "type": "object"
-      },
-      "SshUsernameSingleResponse": {
-        "description": "Single SSH username response",
-        "properties": {
-          "data": { "$ref": "#/components/schemas/SshUsername" },
-          "meta": { "$ref": "#/components/schemas/Meta" }
-        },
-        "required": ["data", "meta"],
-        "title": "SshUsernameSingleResponse",
-        "type": "object"
-      },
-      "ChangeClusterRequest": {
-        "description": "Request to move a node to a different cluster.",
-        "example": { "cluster_name": "prod-west" },
-        "properties": {
-          "cluster_name": {
-            "description": "Name of the target cluster to move this node to.",
-            "example": "prod-west",
-            "maxLength": 24,
-            "pattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
-            "type": "string"
-          }
-        },
-        "required": ["cluster_name"],
-        "title": "ChangeClusterRequest",
-        "type": "object"
-      },
-      "AliasSingleResponse": {
-        "description": "Single alias response",
-        "properties": {
-          "data": { "$ref": "#/components/schemas/AliasResponse" },
-          "meta": { "$ref": "#/components/schemas/Meta" }
-        },
-        "required": ["data", "meta"],
-        "title": "AliasSingleResponse",
-        "type": "object"
-      },
-      "SshPublicKeySingleResponse": {
-        "description": "Single SSH public key response",
-        "properties": {
-          "data": { "$ref": "#/components/schemas/SshPublicKey" },
-          "meta": { "$ref": "#/components/schemas/Meta" }
-        },
-        "required": ["data", "meta"],
-        "title": "SshPublicKeySingleResponse",
-        "type": "object"
-      },
-      "ClusterUpdateRequest": {
-        "description": "Parameters for updating a cluster. Only provided fields are updated. Pass null to unset a nullable field.",
-        "example": { "node_limit": 50 },
-        "properties": {
-          "node_limit": {
-            "description": "Maximum nodes allowed in this cluster (null means no limit enforced)",
-            "example": 50,
-            "minimum": 1,
-            "nullable": true,
-            "type": "integer"
-          }
-        },
-        "title": "ClusterUpdateRequest",
-        "type": "object"
-      },
-      "OrphanedClustersResponse": {
-        "description": "Clusters with no assigned admin instance",
-        "properties": {
-          "data": { "$ref": "#/components/schemas/OrphanedClusters" },
-          "meta": { "$ref": "#/components/schemas/Meta" }
-        },
-        "required": ["data", "meta"],
-        "title": "OrphanedClustersResponse",
-        "type": "object"
-      },
-      "CreateAliasRequest": {
-        "description": "Parameters for creating a new DNS alias for a node",
-        "example": { "name": "web-server" },
-        "properties": {
-          "name": {
-            "description": "Alias name (lowercase alphanumeric with hyphens)",
-            "example": "web-server",
-            "maxLength": 63,
-            "minLength": 1,
-            "pattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
-            "type": "string"
-          }
-        },
-        "required": ["name"],
-        "title": "CreateAliasRequest",
-        "type": "object"
-      },
-      "NodeResponse": {
-        "description": "Edge node information",
-        "example": {
-          "agent_metrics_port": 44000,
-          "aliases": [
-            {
-              "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-              "name": "web-server",
-              "vpn_hostname": "node-web-server.cluster-prod-east.nm.internal"
-            }
-          ],
-          "cluster_name": "prod-east",
-          "enrollment_key_id": "0190f1e0-7b2a-7abc-8def-0123456789ab",
-          "host_metrics_port": 49100,
-          "http_port": 44000,
-          "http_proxy_port": 44880,
-          "id": "01234567-89ab-cdef-0123-456789abcdef",
-          "ingress_public_key": "RWRnZUNvcmVJbmdyZXNzUHVibGljS2V5RXhhbXBsZTE=",
-          "inserted_at": "2025-06-09T08:00:00Z",
-          "last_seen_at": "2025-06-09T08:20:00Z",
-          "mdns_hostname": "node-01234567-89ab-cdef-0123-456789abcdef.local",
-          "node_name": "node-01234567-89ab-cdef-0123-456789abcdef",
-          "self_update_enabled": false,
-          "socks5_proxy_port": 44180,
-          "ssh_port": 42222,
-          "status": "healthy",
-          "updated_at": "2025-06-09T08:20:00Z",
-          "version": "0.1.0",
-          "vpn_host_id": "def67890-5678-5678-5678-567890abcdef",
-          "vpn_hostname": "node-01234567-89ab-cdef-0123-456789abcdef.cluster-prod-east.nm.internal",
-          "wireguard_metrics_port": 49586
-        },
-        "properties": {
-          "agent_metrics_port": {
-            "description": "Agent PromEx metrics port",
-            "type": "integer"
-          },
-          "aliases": {
-            "description": "DNS aliases registered for this node",
-            "items": { "$ref": "#/components/schemas/AliasSummary" },
-            "type": "array"
-          },
-          "cluster_name": {
-            "description": "Name of the cluster this node belongs to",
-            "example": "prod-east",
-            "pattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
-            "type": "string"
-          },
-          "enrollment_key_id": {
-            "description": "ID of the enrollment key most recently used by this node",
-            "format": "uuid",
-            "nullable": true,
-            "type": "string"
-          },
-          "host_metrics_port": {
-            "description": "Host metrics port (Node Exporter)",
-            "type": "integer"
-          },
-          "http_port": { "description": "HTTP API port", "type": "integer" },
-          "http_proxy_port": {
-            "description": "HTTP proxy port",
-            "type": "integer"
-          },
-          "id": {
-            "description": "Unique node identifier",
-            "format": "uuid",
-            "type": "string"
-          },
-          "ingress_public_key": {
-            "description": "Agent-owned Ingress WireGuard public key",
-            "format": "byte",
-            "maxLength": 44,
-            "minLength": 44,
-            "type": "string"
-          },
-          "inserted_at": {
-            "description": "When the node was created",
-            "format": "date-time",
-            "type": "string"
-          },
-          "last_seen_at": {
-            "description": "Last heartbeat timestamp from the node",
-            "format": "date-time",
-            "nullable": true,
-            "type": "string"
-          },
-          "mdns_hostname": {
-            "description": "mDNS hostname — resolvable on the local LAN via multicast DNS",
-            "example": "node-01234567-89ab-cdef-0123-456789abcdef.local",
-            "type": "string"
-          },
-          "node_name": {
-            "description": "Human-readable node name (derived from ID)",
-            "example": "node-01234567-89ab-cdef-0123-456789abcdef",
-            "type": "string"
-          },
-          "self_update_enabled": {
-            "description": "Whether self-updates are enabled",
-            "type": "boolean"
-          },
-          "socks5_proxy_port": {
-            "description": "SOCKS5 proxy port",
-            "type": "integer"
-          },
-          "ssh_port": { "description": "SSH port", "type": "integer" },
-          "status": {
-            "description": "Current node status",
-            "enum": ["healthy", "unhealthy", "unreachable"],
-            "type": "string"
-          },
-          "updated_at": {
-            "description": "When the node was last updated",
-            "format": "date-time",
-            "type": "string"
-          },
-          "version": {
-            "description": "Agent version",
-            "nullable": true,
-            "type": "string"
-          },
-          "vpn_host_id": {
-            "description": "VPN host UUID for API operations",
-            "format": "uuid",
-            "nullable": true,
-            "type": "string"
-          },
-          "vpn_hostname": {
-            "description": "DNS hostname for this node",
-            "example": "node-01234567-89ab-cdef-0123-456789abcdef.cluster-abc.nm.internal",
-            "type": "string"
-          },
-          "wireguard_metrics_port": {
-            "description": "WireGuard metrics port (WireGuard Exporter)",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "id",
-          "cluster_name",
-          "ingress_public_key",
-          "http_port",
-          "ssh_port",
-          "agent_metrics_port",
-          "host_metrics_port",
-          "wireguard_metrics_port",
-          "http_proxy_port",
-          "socks5_proxy_port",
-          "aliases",
-          "inserted_at",
-          "updated_at"
-        ],
-        "title": "NodeResponse",
-        "type": "object"
-      },
-      "SshPublicKeyPaginatedResponse": {
-        "description": "Paginated list of SSH public keys with filtering and sorting metadata",
-        "properties": {
-          "data": {
-            "items": { "$ref": "#/components/schemas/SshPublicKey" },
-            "type": "array"
-          },
-          "meta": { "$ref": "#/components/schemas/PaginatedMeta" }
-        },
-        "required": ["data", "meta"],
-        "title": "SshPublicKeyPaginatedResponse",
+        "title": "SshPublicKeyData",
         "type": "object"
       },
       "UnauthorizedResponse": {
@@ -4363,7 +4554,7 @@
       "CommandExecutionSingleResponse": {
         "description": "Single command execution response",
         "properties": {
-          "data": { "$ref": "#/components/schemas/CommandExecutionResponse" },
+          "data": { "$ref": "#/components/schemas/CommandExecutionData" },
           "meta": { "$ref": "#/components/schemas/Meta" }
         },
         "required": ["data", "meta"],
@@ -4562,6 +4753,14 @@
               }
             },
             "description": "Cluster created successfully"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BadRequestResponse" }
+              }
+            },
+            "description": "Invalid request parameters"
           },
           "409": {
             "content": {
@@ -4868,6 +5067,14 @@
             },
             "description": "Cluster updated successfully"
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BadRequestResponse" }
+              }
+            },
+            "description": "Invalid request parameters"
+          },
           "404": {
             "content": {
               "application/json": {
@@ -4986,6 +5193,14 @@
             },
             "description": "Enrollment key created"
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BadRequestResponse" }
+              }
+            },
+            "description": "Invalid request parameters"
+          },
           "403": {
             "content": {
               "application/json": {
@@ -5044,6 +5259,14 @@
               }
             },
             "description": "Enrollment key created"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BadRequestResponse" }
+              }
+            },
+            "description": "Invalid request parameters"
           },
           "403": {
             "content": {
@@ -5125,6 +5348,14 @@
               }
             },
             "description": "Enrollment key created"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BadRequestResponse" }
+              }
+            },
+            "description": "Invalid request parameters"
           },
           "404": {
             "content": {
@@ -5488,6 +5719,14 @@
               }
             },
             "description": "Updated enrollment key"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BadRequestResponse" }
+              }
+            },
+            "description": "Invalid request parameters"
           },
           "404": {
             "content": {
@@ -5888,6 +6127,14 @@
             },
             "description": "Node cluster changed successfully"
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BadRequestResponse" }
+              }
+            },
+            "description": "Invalid request parameters"
+          },
           "404": {
             "content": {
               "application/json": {
@@ -5960,6 +6207,14 @@
               }
             },
             "description": "Alias created successfully"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BadRequestResponse" }
+              }
+            },
+            "description": "Invalid request parameters"
           },
           "404": {
             "content": {
@@ -6400,6 +6655,14 @@
             },
             "description": "Node diagnostics"
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BadRequestResponse" }
+              }
+            },
+            "description": "Invalid path parameters"
+          },
           "404": {
             "content": {
               "application/json": {
@@ -6448,6 +6711,14 @@
             },
             "description": "Recovery key created"
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BadRequestResponse" }
+              }
+            },
+            "description": "Invalid path parameters"
+          },
           "404": {
             "content": {
               "application/json": {
@@ -6487,6 +6758,14 @@
           "204": {
             "content": { "": {} },
             "description": "Recovery key deleted"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BadRequestResponse" }
+              }
+            },
+            "description": "Invalid path parameters"
           },
           "404": {
             "content": {
@@ -6536,6 +6815,14 @@
               }
             },
             "description": "Command created successfully"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BadRequestResponse" }
+              }
+            },
+            "description": "Invalid request parameters"
           },
           "422": {
             "content": {
@@ -6767,7 +7054,7 @@
       },
       "delete": {
         "callbacks": {},
-        "description": "Delete a command and all its related command executions (cascaded deletion).\n\nOnly commands where ALL executions are completed can be deleted.\nAttempting to delete a command with pending or sent executions will return 409.\n",
+        "description": "Delete a command and all its related command executions (cascaded deletion).\n\nA command can be deleted only when all its executions are finalized. A\ncancelled or expired execution is finalized after Admin accepts an Agent\nresult; otherwise deletion returns 409.\n",
         "operationId": "EdgeAdminWeb.Controllers.Commands.CommandController.delete",
         "parameters": [
           {
@@ -6805,7 +7092,7 @@
                 "schema": { "$ref": "#/components/schemas/ConflictResponse" }
               }
             },
-            "description": "Cannot delete command with non-terminal executions"
+            "description": "Cannot delete command with non-finalized executions"
           }
         },
         "summary": "Delete a command",
@@ -7129,7 +7416,7 @@
       },
       "delete": {
         "callbacks": {},
-        "description": "Delete a specific command execution.\n\nOnly completed, cancelled, expired, or dropped executions can be deleted. Attempting to delete pending or sent executions will return 409.\n",
+        "description": "Delete a specific command execution.\n\nOnly finalized executions can be deleted. A cancelled or expired execution is\nfinalized after Admin accepts an Agent result; otherwise deletion returns 409.\n",
         "operationId": "EdgeAdminWeb.Controllers.Commands.CommandExecutionController.delete",
         "parameters": [
           {
@@ -7167,7 +7454,7 @@
                 "schema": { "$ref": "#/components/schemas/ConflictResponse" }
               }
             },
-            "description": "Cannot delete non-terminal execution"
+            "description": "Cannot delete non-finalized execution"
           }
         },
         "summary": "Delete a command execution",
@@ -7177,7 +7464,7 @@
     "/api/v1/command_executions/{id}/cancel": {
       "post": {
         "callbacks": {},
-        "description": "Attempts to cancel a command execution. Behavior depends on current status:\n\n- `pending`: Immediately marked `cancelled` in the database (command never ran).\n- `sent`: Sends cancellation request to agent (best-effort, async). The agent is the source of truth — if it already ran the command, it reports back the real result and the execution is marked `completed`. If the agent honoured the cancellation (exit code 143), it is marked `cancelled`.\n- `completed` / `cancelled` / `expired` / `dropped`: Returns 409 conflict (already terminal).\n\nReturns `200` with the cancelled execution when a pending execution is cancelled\nimmediately. Returns `202` when an agent accepted cancellation for a sent execution;\npoll the execution to confirm its final outcome.\n",
+        "description": "Attempts to cancel a command execution. Behavior depends on current status:\n\n- `pending`: Immediately marked `cancelled` in the database (command never ran).\n- `sent`: Sends cancellation request to agent (best-effort, async). The agent is the source of truth — if it already ran the command, it reports back the real result and the execution is marked `completed`. If the agent honoured the cancellation (exit code 143), it is marked `cancelled`.\n- `completed` / `cancelled` / `expired` / `dropped`: Returns 409 conflict (not cancellable).\n\nReturns `200` with the cancelled execution when a pending execution is cancelled\nimmediately. Returns `202` when an agent accepted cancellation for a sent execution;\npoll the execution to confirm its final outcome.\n",
         "operationId": "EdgeAdminWeb.Controllers.Commands.CommandExecutionController.cancel",
         "parameters": [
           {
@@ -7203,6 +7490,14 @@
             "content": { "": {} },
             "description": "Cancellation accepted; final execution state is asynchronous"
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BadRequestResponse" }
+              }
+            },
+            "description": "Invalid path parameters"
+          },
           "404": {
             "content": {
               "application/json": {
@@ -7217,7 +7512,7 @@
                 "schema": { "$ref": "#/components/schemas/ConflictResponse" }
               }
             },
-            "description": "Execution not in a cancellable state (already terminal)"
+            "description": "Execution is not cancellable in its current state"
           },
           "503": {
             "content": {
@@ -7269,6 +7564,14 @@
               }
             },
             "description": "SSH username created"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BadRequestResponse" }
+              }
+            },
+            "description": "Invalid request parameters"
           },
           "404": {
             "content": {
@@ -7588,6 +7891,14 @@
             },
             "description": "SSH public key created"
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BadRequestResponse" }
+              }
+            },
+            "description": "Invalid request parameters"
+          },
           "404": {
             "content": {
               "application/json": {
@@ -7905,6 +8216,14 @@
             },
             "description": "Self-update request created successfully"
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BadRequestResponse" }
+              }
+            },
+            "description": "Invalid request parameters"
+          },
           "422": {
             "content": {
               "application/json": {
@@ -8179,6 +8498,14 @@
             },
             "description": "Webhook created"
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BadRequestResponse" }
+              }
+            },
+            "description": "Invalid request parameters"
+          },
           "422": {
             "content": {
               "application/json": {
@@ -8377,6 +8704,14 @@
         ],
         "responses": {
           "204": { "content": { "": {} }, "description": "Webhook deleted" },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BadRequestResponse" }
+              }
+            },
+            "description": "Invalid path parameters"
+          },
           "404": {
             "content": {
               "application/json": {
@@ -8409,6 +8744,502 @@
         "summary": "Publish test event",
         "tags": ["Events.Event"]
       }
+    },
+    "/api/v1/tunnel_clients": {
+      "post": {
+        "callbacks": {},
+        "description": "Generates and persists a new Admin-owned X25519 WireGuard identity. Its private key remains encrypted at rest and is never included in an API response.",
+        "operationId": "EdgeAdminWeb.Controllers.IngressTunneling.TunnelClientController.create",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TunnelClientCreateRequest"
+              }
+            }
+          },
+          "description": "Tunnel Client creation data",
+          "required": false
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TunnelClientSingleResponse"
+                }
+              }
+            },
+            "description": "Tunnel Client created"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BadRequestResponse" }
+              }
+            },
+            "description": "Invalid request parameters"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/NotFoundResponse" }
+              }
+            },
+            "description": "Requested Ingress Node not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ConflictResponse" }
+              }
+            },
+            "description": "Connection conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangesetErrorResponse"
+                }
+              }
+            },
+            "description": "Validation error"
+          }
+        },
+        "summary": "Create Tunnel Client",
+        "tags": ["IngressTunneling.TunnelClient"]
+      },
+      "get": {
+        "callbacks": {},
+        "description": "Returns a paginated list of Admin-managed Tunnel Client identities.",
+        "operationId": "EdgeAdminWeb.Controllers.IngressTunneling.TunnelClientController.index",
+        "parameters": [
+          {
+            "description": "Page number (1-indexed)",
+            "example": 1,
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": { "default": 1, "minimum": 1, "type": "integer" }
+          },
+          {
+            "description": "Items per page",
+            "example": 20,
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Comma-separated sort fields; prefix a field with - for descending order",
+            "example": "-inserted_at",
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "pattern": "^-?[A-Za-z][A-Za-z0-9_]*(,-?[A-Za-z][A-Za-z0-9_]*)*$",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Filter records where inserted_at is on or after this datetime (ISO 8601 datetime; date-only is treated as start of day UTC)",
+            "in": "query",
+            "name": "inserted_at__gte",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                { "format": "date-time", "type": "string" },
+                { "format": "date", "type": "string" }
+              ]
+            }
+          },
+          {
+            "description": "Filter records where inserted_at is on or before this datetime (ISO 8601 datetime; date-only is treated as end of day UTC)",
+            "in": "query",
+            "name": "inserted_at__lte",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                { "format": "date-time", "type": "string" },
+                { "format": "date", "type": "string" }
+              ]
+            }
+          },
+          {
+            "description": "Filter records where updated_at is on or after this datetime (ISO 8601 datetime; date-only is treated as start of day UTC)",
+            "in": "query",
+            "name": "updated_at__gte",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                { "format": "date-time", "type": "string" },
+                { "format": "date", "type": "string" }
+              ]
+            }
+          },
+          {
+            "description": "Filter records where updated_at is on or before this datetime (ISO 8601 datetime; date-only is treated as end of day UTC)",
+            "in": "query",
+            "name": "updated_at__lte",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                { "format": "date-time", "type": "string" },
+                { "format": "date", "type": "string" }
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TunnelClientPaginatedResponse"
+                }
+              }
+            },
+            "description": "Paginated Tunnel Client list"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BadRequestResponse" }
+              }
+            },
+            "description": "Invalid query parameters"
+          }
+        },
+        "summary": "List Tunnel Clients",
+        "tags": ["IngressTunneling.TunnelClient"]
+      }
+    },
+    "/api/v1/tunnel_clients/{id}": {
+      "get": {
+        "callbacks": {},
+        "description": "Returns one Tunnel Client's public identity. The private key is never returned by the API.",
+        "operationId": "EdgeAdminWeb.Controllers.IngressTunneling.TunnelClientController.show",
+        "parameters": [
+          {
+            "description": "Tunnel Client ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TunnelClientSingleResponse"
+                }
+              }
+            },
+            "description": "Tunnel Client"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BadRequestResponse" }
+              }
+            },
+            "description": "Invalid path parameters"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/NotFoundResponse" }
+              }
+            },
+            "description": "Tunnel Client not found"
+          }
+        },
+        "summary": "Get Tunnel Client",
+        "tags": ["IngressTunneling.TunnelClient"]
+      },
+      "delete": {
+        "callbacks": {},
+        "description": "Permanently deletes a Tunnel Client and its dependent Tunnel Connections.",
+        "operationId": "EdgeAdminWeb.Controllers.IngressTunneling.TunnelClientController.delete",
+        "parameters": [
+          {
+            "description": "Tunnel Client ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "responses": {
+          "204": {
+            "content": { "": {} },
+            "description": "Tunnel Client deleted"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BadRequestResponse" }
+              }
+            },
+            "description": "Invalid path parameters"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/NotFoundResponse" }
+              }
+            },
+            "description": "Tunnel Client not found"
+          }
+        },
+        "summary": "Delete Tunnel Client",
+        "tags": ["IngressTunneling.TunnelClient"]
+      }
+    },
+    "/api/v1/tunnel_clients/{tunnel_client_id}/tunnel_connections": {
+      "post": {
+        "callbacks": {},
+        "description": "Creates one connection for an existing Tunnel Client and allocates addresses in the selected Ingress Node's isolated address pool.",
+        "operationId": "EdgeAdminWeb.Controllers.IngressTunneling.TunnelConnectionController.create",
+        "parameters": [
+          {
+            "description": "Tunnel Client ID",
+            "in": "path",
+            "name": "tunnel_client_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TunnelConnectionCreateRequest"
+              }
+            }
+          },
+          "description": "Tunnel Connection creation data",
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TunnelConnectionSingleResponse"
+                }
+              }
+            },
+            "description": "Tunnel Connection created"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BadRequestResponse" }
+              }
+            },
+            "description": "Invalid request parameters"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/NotFoundResponse" }
+              }
+            },
+            "description": "Tunnel Client or Node not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ConflictResponse" }
+              }
+            },
+            "description": "Connection conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangesetErrorResponse"
+                }
+              }
+            },
+            "description": "Validation error"
+          }
+        },
+        "summary": "Create Tunnel Connection",
+        "tags": ["IngressTunneling.TunnelConnection"]
+      }
+    },
+    "/api/v1/tunnel_connections": {
+      "get": {
+        "callbacks": {},
+        "description": "Returns a paginated list of Tunnel Client connections to Ingress Nodes.",
+        "operationId": "EdgeAdminWeb.Controllers.IngressTunneling.TunnelConnectionController.index",
+        "parameters": [
+          {
+            "description": "Page number (1-indexed)",
+            "example": 1,
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": { "default": 1, "minimum": 1, "type": "integer" }
+          },
+          {
+            "description": "Items per page",
+            "example": 20,
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Comma-separated sort fields; prefix a field with - for descending order",
+            "example": "-inserted_at",
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "pattern": "^-?[A-Za-z][A-Za-z0-9_]*(,-?[A-Za-z][A-Za-z0-9_]*)*$",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Filter by tunnel_client_id — comma-separated list of UUIDs (IN match, e.g. tunnel_client_id__in=uuid1,uuid2)",
+            "in": "query",
+            "name": "tunnel_client_id__in",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "description": "Filter by node_id — comma-separated list of UUIDs (IN match, e.g. node_id__in=uuid1,uuid2)",
+            "in": "query",
+            "name": "node_id__in",
+            "required": false,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TunnelConnectionPaginatedResponse"
+                }
+              }
+            },
+            "description": "Paginated Tunnel Connection list"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BadRequestResponse" }
+              }
+            },
+            "description": "Invalid query parameters"
+          }
+        },
+        "summary": "List Tunnel Connections",
+        "tags": ["IngressTunneling.TunnelConnection"]
+      }
+    },
+    "/api/v1/tunnel_connections/{id}": {
+      "get": {
+        "callbacks": {},
+        "description": "Returns one Tunnel Connection and its allocated addresses.",
+        "operationId": "EdgeAdminWeb.Controllers.IngressTunneling.TunnelConnectionController.show",
+        "parameters": [
+          {
+            "description": "Tunnel Connection ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TunnelConnectionSingleResponse"
+                }
+              }
+            },
+            "description": "Tunnel Connection"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BadRequestResponse" }
+              }
+            },
+            "description": "Invalid path parameters"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/NotFoundResponse" }
+              }
+            },
+            "description": "Tunnel Connection not found"
+          }
+        },
+        "summary": "Get Tunnel Connection",
+        "tags": ["IngressTunneling.TunnelConnection"]
+      },
+      "delete": {
+        "callbacks": {},
+        "description": "Permanently deletes a Tunnel Connection and releases its database allocation.",
+        "operationId": "EdgeAdminWeb.Controllers.IngressTunneling.TunnelConnectionController.delete",
+        "parameters": [
+          {
+            "description": "Tunnel Connection ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "responses": {
+          "204": {
+            "content": { "": {} },
+            "description": "Tunnel Connection deleted"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BadRequestResponse" }
+              }
+            },
+            "description": "Invalid path parameters"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/NotFoundResponse" }
+              }
+            },
+            "description": "Tunnel Connection not found"
+          }
+        },
+        "summary": "Delete Tunnel Connection",
+        "tags": ["IngressTunneling.TunnelConnection"]
+      }
     }
   },
   "security": [{ "apiKey": [] }],
@@ -8430,6 +9261,8 @@
     { "name": "SelfUpdates.Request" },
     { "name": "Events.Type" },
     { "name": "Events.Webhook" },
-    { "name": "Events.Event" }
+    { "name": "Events.Event" },
+    { "name": "IngressTunneling.TunnelClient" },
+    { "name": "IngressTunneling.TunnelConnection" }
   ]
 }

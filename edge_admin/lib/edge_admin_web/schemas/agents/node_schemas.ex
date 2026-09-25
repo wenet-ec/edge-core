@@ -4,6 +4,7 @@ defmodule EdgeAdminWeb.Schemas.Agents.NodeSchemas do
 
   use EdgeAdminWeb.Schema
 
+  alias EdgeAdmin.Naming
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias OpenApiSpex.Schema
 
@@ -57,10 +58,10 @@ defmodule EdgeAdminWeb.Schemas.Agents.NodeSchemas do
         self_update_enabled: %Schema{type: :boolean, description: "Whether the agent supports self-update"},
         ingress_public_key: %Schema{
           type: :string,
-          format: :byte,
           minLength: 44,
           maxLength: 44,
-          description: "Agent-owned Ingress WireGuard public key"
+          pattern: Naming.wireguard_public_key_pattern(),
+          description: "Canonical base64-encoded Agent-owned Ingress WireGuard public key"
         },
         recovery_key: %Schema{type: :string, description: "Optional node recovery key"},
         enrollment_key_id: %Schema{
@@ -142,10 +143,10 @@ defmodule EdgeAdminWeb.Schemas.Agents.NodeSchemas do
         self_update_enabled: %Schema{type: :boolean, description: "Whether the agent supports self-update"},
         ingress_public_key: %Schema{
           type: :string,
-          format: :byte,
           minLength: 44,
           maxLength: 44,
-          description: "Agent-owned Ingress WireGuard public key"
+          pattern: Naming.wireguard_public_key_pattern(),
+          description: "Canonical base64-encoded Agent-owned Ingress WireGuard public key"
         }
       },
       required: [

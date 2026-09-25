@@ -35,6 +35,7 @@ defmodule EdgeAdmin.Naming do
     3–32 chars.
   - **SSH public keys** match the OpenSSH public-key wire format:
     `<algorithm> <base64> [comment]`.
+  - **WireGuard public keys** are canonical Base64 encodings of 32 bytes.
   - **Enum IN query values** are comma-separated enum strings with optional
     whitespace around commas and no duplicate values.
   """
@@ -47,6 +48,8 @@ defmodule EdgeAdmin.Naming do
 
   @ssh_public_key_pattern "^(ssh-ed25519|ecdsa-sha2-nistp(?:256|384|521)|ssh-rsa)\\s+([A-Za-z0-9+/]+=*)\\s*(.*)$"
   @ssh_public_key_regex ~r/^(ssh-ed25519|ecdsa-sha2-nistp(?:256|384|521)|ssh-rsa)\s+([A-Za-z0-9+\/]+=*)\s*(.*)$/
+  @wireguard_public_key_pattern "^[A-Za-z0-9+/]{42}[AEIMQUYcgkosw048]=$"
+  @wireguard_public_key_regex Regex.compile!(@wireguard_public_key_pattern)
   @ssh_public_key_algorithms [
     "ssh-ed25519",
     "ecdsa-sha2-nistp256",
@@ -100,6 +103,12 @@ defmodule EdgeAdmin.Naming do
 
   @doc "Inner regex string for OpenApiSpex `pattern:` field."
   def ssh_public_key_pattern, do: @ssh_public_key_pattern
+
+  @doc "Regex literal matching canonical Base64-encoded 32-byte WireGuard public keys."
+  def wireguard_public_key_regex, do: @wireguard_public_key_regex
+
+  @doc "Inner regex string for OpenApiSpex `pattern:` fields accepting WireGuard public keys."
+  def wireguard_public_key_pattern, do: @wireguard_public_key_pattern
 
   @doc """
   Minimum length of an SSH password (when one is set — passwords are optional,

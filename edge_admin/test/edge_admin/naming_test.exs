@@ -24,6 +24,10 @@ defmodule EdgeAdmin.NamingTest do
       assert Regex.source(Naming.ssh_public_key_regex()) == Naming.ssh_public_key_pattern()
     end
 
+    test "wireguard_public_key_pattern compiles to wireguard_public_key_regex" do
+      assert Regex.source(Naming.wireguard_public_key_regex()) == Naming.wireguard_public_key_pattern()
+    end
+
     test "cluster and alias share the same DNS-label regex" do
       # Both patterns/regexes intentionally point at the shared @dns_label.
       # Compare sources, not Regex structs — the compiled :re_pattern field
@@ -32,6 +36,20 @@ defmodule EdgeAdmin.NamingTest do
                Regex.source(Naming.alias_name_regex())
 
       assert Naming.cluster_name_pattern() == Naming.alias_name_pattern()
+    end
+  end
+
+  describe "wireguard_public_key_regex/0" do
+    test "accepts canonical Base64 encoding of a 32-byte key" do
+      key = Base.encode64(:binary.copy(<<0>>, 32))
+
+      assert Regex.match?(Naming.wireguard_public_key_regex(), key)
+    end
+
+    test "rejects invalid characters, incorrect padding, and non-canonical pad bits" do
+      for key <- ["not-a-key", String.duplicate("A", 42) <> "B=", String.duplicate("A", 42) <> "A=="] do
+        refute Regex.match?(Naming.wireguard_public_key_regex(), key)
+      end
     end
   end
 

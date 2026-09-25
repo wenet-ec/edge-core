@@ -20,10 +20,14 @@ defmodule EdgeAgentWeb.ResponseEnvelope do
   resource — the common case) or a list (collection responses).
   """
   @spec success(Plug.Conn.t(), map() | list()) :: map()
-  def success(conn, data) do
+  def success(conn, data), do: success(conn, data, DateTime.utc_now())
+
+  @doc false
+  @spec success(Plug.Conn.t(), map() | list(), DateTime.t()) :: map()
+  def success(conn, data, now) do
     %{
       data: data,
-      meta: request_meta(conn)
+      meta: request_meta(conn, now)
     }
   end
 
@@ -33,19 +37,23 @@ defmodule EdgeAgentWeb.ResponseEnvelope do
   Pass field-level error map for `validation_failed` (output of `Ecto.Changeset.traverse_errors/2`).
   """
   @spec error(Plug.Conn.t(), String.t(), String.t(), map() | nil) :: map()
-  def error(conn, code, message, details \\ nil) do
+  def error(conn, code, message, details \\ nil), do: error(conn, code, message, details, DateTime.utc_now())
+
+  @doc false
+  @spec error(Plug.Conn.t(), String.t(), String.t(), map() | nil, DateTime.t()) :: map()
+  def error(conn, code, message, details, now) do
     error_payload = %{code: code, message: message}
 
     error_payload =
       if is_nil(details), do: error_payload, else: Map.put(error_payload, :details, details)
 
-    %{error: error_payload, meta: request_meta(conn)}
+    %{error: error_payload, meta: request_meta(conn, now)}
   end
 
-  defp request_meta(conn) do
+  defp request_meta(conn, now) do
     %{
       request_id: conn.assigns[:request_id],
-      timestamp: DateTime.to_iso8601(DateTime.utc_now())
+      timestamp: DateTime.to_iso8601(now)
     }
   end
 end

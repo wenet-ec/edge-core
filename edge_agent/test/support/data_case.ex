@@ -13,7 +13,7 @@ defmodule EdgeAgent.DataCase do
       import Ecto
       import Ecto.Changeset
       import Ecto.Query
-      import EdgeAgent.DataCase
+      import EdgeAgent.Test.ChangesetAssertions
 
       alias EdgeAgent.Repo
     end
@@ -21,23 +21,6 @@ defmodule EdgeAgent.DataCase do
 
   setup tags do
     EdgeAgent.DataCase.setup_sandbox(tags)
-    EdgeAgent.DataCase.reset_secrets()
-    :ok
-  end
-
-  @doc """
-  Erases every `EdgeAgent.Settings.Secrets`-owned persistent term.
-
-  Secrets live in BEAM-global `:persistent_term`, outside the Ecto sandbox.
-  Without this reset, a secret written by one test would leak into the next.
-  """
-  def reset_secrets do
-    namespace = EdgeAgent.Settings.Secrets
-
-    for {{^namespace, _key} = full_key, _value} <- :persistent_term.get() do
-      :persistent_term.erase(full_key)
-    end
-
     :ok
   end
 
@@ -47,20 +30,5 @@ defmodule EdgeAgent.DataCase do
   def setup_sandbox(tags) do
     pid = Sandbox.start_owner!(EdgeAgent.Repo, shared: not tags[:async])
     on_exit(fn -> Sandbox.stop_owner(pid) end)
-  end
-
-  @doc """
-  A helper that transforms changeset errors into a map of messages.
-
-      assert {:error, changeset} = Accounts.create_user(%{password: "short"})
-      assert "password is too short" in errors_on(changeset).password
-      assert %{password: ["password is too short"]} = errors_on(changeset)
-  """
-  def errors_on(changeset) do
-    Ecto.Changeset.traverse_errors(changeset, fn {message, opts} ->
-      Regex.replace(~r"%{(\w+)}", message, fn _, key ->
-        opts |> Keyword.get(String.to_existing_atom(key), key) |> to_string()
-      end)
-    end)
   end
 end

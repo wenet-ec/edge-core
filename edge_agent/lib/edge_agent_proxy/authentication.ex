@@ -37,7 +37,7 @@ defmodule EdgeAgentProxy.Authentication do
         {:error, :no_password_configured}
 
       stored_password ->
-        if username == "_" and secure_compare(to_string(password), to_string(stored_password)) do
+        if valid_credentials?(username, password, stored_password) do
           :ok
         else
           Logger.warning("Proxy authentication failed: invalid credentials")
@@ -45,6 +45,13 @@ defmodule EdgeAgentProxy.Authentication do
         end
     end
   end
+
+  @doc false
+  @spec valid_credentials?(term(), term(), term()) :: boolean()
+  def valid_credentials?(username, password, stored_password) when is_binary(stored_password),
+    do: username == "_" and secure_compare(to_string(password), stored_password)
+
+  def valid_credentials?(_username, _password, _stored_password), do: false
 
   # Constant-time binary compare.
   defp secure_compare(a, b) when is_binary(a) and is_binary(b) do

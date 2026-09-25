@@ -19,9 +19,9 @@ defmodule EdgeAgentWeb.Plugs.ApiTokenAuth do
   def init(opts), do: opts
 
   def call(conn, _opts) do
-    with {:ok, token} <- get_token_from_header(conn),
-         {:ok, stored_token} <- get_stored_token(),
-         true <- Plug.Crypto.secure_compare(token, stored_token) do
+    with {:ok, token} <- bearer_token(get_req_header(conn, "authorization")),
+         stored_token when is_binary(stored_token) <- Settings.get_api_token(),
+         true <- authorized?(token, stored_token) do
       conn
     else
       _ ->
@@ -34,20 +34,15 @@ defmodule EdgeAgentWeb.Plugs.ApiTokenAuth do
     end
   end
 
-  defp get_token_from_header(conn) do
-    case get_req_header(conn, "authorization") do
-      ["Bearer " <> token] -> {:ok, token}
-      _ -> {:error, :missing_token}
-    end
-  end
+  @doc false
+  @spec bearer_token([String.t()]) :: {:ok, String.t()} | {:error, :missing_token}
+  def bearer_token(["Bearer " <> token]), do: {:ok, token}
+  def bearer_token(_authorization_headers), do: {:error, :missing_token}
 
-  defp get_stored_token do
-    case Settings.get_api_token() do
-      nil ->
-        {:error, :no_token_configured}
+  @doc false
+  @spec authorized?(term(), term()) :: boolean()
+  def authorized?(token, stored_token) when is_binary(token) and is_binary(stored_token),
+    do: Plug.Crypto.secure_compare(token, stored_token)
 
-      token ->
-        {:ok, token}
-    end
-  end
+  def authorized?(_token, _stored_token), do: false
 end

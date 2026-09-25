@@ -9,19 +9,19 @@ defmodule EdgeAgent.SelfUpdatesTest do
 
   describe "should_trigger_update?/2" do
     test "nil inserted_at → false (refuses to act on bad/missing admin data)" do
-      now = DateTime.utc_now()
+      now = ~U[2026-01-01 00:00:00Z]
 
       refute SelfUpdates.should_trigger_update?(nil, now)
       refute SelfUpdates.should_trigger_update?(nil, nil)
     end
 
     test "nil last_check → true (fresh agent picks up outstanding requests)" do
-      assert SelfUpdates.should_trigger_update?(DateTime.utc_now(), nil)
+      assert SelfUpdates.should_trigger_update?(~U[2026-01-01 00:00:00Z], nil)
     end
 
     test "inserted_at strictly newer than last_check → true" do
-      last_check = DateTime.utc_now()
-      newer = DateTime.shift(last_check, minute: 1)
+      last_check = ~U[2026-01-01 00:00:00Z]
+      newer = ~U[2026-01-01 00:01:00Z]
 
       assert SelfUpdates.should_trigger_update?(newer, last_check)
     end
@@ -30,14 +30,14 @@ defmodule EdgeAgent.SelfUpdatesTest do
       # DateTime.after? is strict — equal is not after. This is the
       # documented contract: don't re-trigger on the same request we
       # already processed.
-      now = DateTime.truncate(DateTime.utc_now(), :second)
+      now = ~U[2026-01-01 00:00:00Z]
 
       refute SelfUpdates.should_trigger_update?(now, now)
     end
 
     test "inserted_at older than last_check → false" do
-      last_check = DateTime.utc_now()
-      older = DateTime.shift(last_check, minute: -1)
+      last_check = ~U[2026-01-01 00:01:00Z]
+      older = ~U[2026-01-01 00:00:00Z]
 
       refute SelfUpdates.should_trigger_update?(older, last_check)
     end

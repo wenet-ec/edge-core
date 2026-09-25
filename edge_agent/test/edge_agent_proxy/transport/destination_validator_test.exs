@@ -2,22 +2,23 @@
 defmodule EdgeAgentProxy.Transport.DestinationValidatorTest do
   use ExUnit.Case, async: false
 
+  alias EdgeAgent.Test.AppConfig
   alias EdgeAgentProxy.Transport.DestinationResolver
   alias EdgeAgentProxy.Transport.DestinationValidator
 
-  defp with_app_env(key, value, fun) do
-    old = Application.get_env(:edge_agent, key)
-    Application.put_env(:edge_agent, key, value)
+  setup do
+    AppConfig.restore_on_exit(:edge_agent, [
+      :proxy_custom_allowed_hosts,
+      :proxy_custom_blocked_hosts,
+      :proxy_blocked_ports,
+      :agent_host_metrics_port,
+      :agent_wireguard_metrics_port
+    ])
+  end
 
-    try do
-      fun.()
-    after
-      if old == nil do
-        Application.delete_env(:edge_agent, key)
-      else
-        Application.put_env(:edge_agent, key, old)
-      end
-    end
+  defp with_app_env(key, value, fun) do
+    Elixir.Application.put_env(:edge_agent, key, value)
+    fun.()
   end
 
   describe "localhost?/1" do
@@ -327,19 +328,11 @@ defmodule EdgeAgentProxy.Transport.DestinationValidatorTest do
   describe "validate_destination/2" do
     setup do
       # Baseline: no custom lists, sensible metrics ports
-      Application.put_env(:edge_agent, :proxy_custom_allowed_hosts, [])
-      Application.put_env(:edge_agent, :proxy_custom_blocked_hosts, [])
-      Application.put_env(:edge_agent, :proxy_blocked_ports, [])
-      Application.put_env(:edge_agent, :agent_host_metrics_port, 49_100)
-      Application.put_env(:edge_agent, :agent_wireguard_metrics_port, 49_586)
-
-      on_exit(fn ->
-        Application.delete_env(:edge_agent, :proxy_custom_allowed_hosts)
-        Application.delete_env(:edge_agent, :proxy_custom_blocked_hosts)
-        Application.delete_env(:edge_agent, :proxy_blocked_ports)
-        Application.delete_env(:edge_agent, :agent_host_metrics_port)
-        Application.delete_env(:edge_agent, :agent_wireguard_metrics_port)
-      end)
+      Elixir.Application.put_env(:edge_agent, :proxy_custom_allowed_hosts, [])
+      Elixir.Application.put_env(:edge_agent, :proxy_custom_blocked_hosts, [])
+      Elixir.Application.put_env(:edge_agent, :proxy_blocked_ports, [])
+      Elixir.Application.put_env(:edge_agent, :agent_host_metrics_port, 49_100)
+      Elixir.Application.put_env(:edge_agent, :agent_wireguard_metrics_port, 49_586)
     end
 
     test "public internet is allowed" do
@@ -396,34 +389,34 @@ defmodule EdgeAgentProxy.Transport.DestinationValidatorTest do
     end
 
     test "custom blocked host is blocked" do
-      Application.put_env(:edge_agent, :proxy_custom_blocked_hosts, ["internal-api.local"])
+      Elixir.Application.put_env(:edge_agent, :proxy_custom_blocked_hosts, ["internal-api.local"])
 
       assert {:error, :custom_blocked} =
                DestinationValidator.validate_destination("internal-api.local", 80)
     end
 
     test "custom blocked port is blocked" do
-      Application.put_env(:edge_agent, :proxy_blocked_ports, [44_000])
+      Elixir.Application.put_env(:edge_agent, :proxy_blocked_ports, [44_000])
 
       assert {:error, :custom_blocked} =
                DestinationValidator.validate_destination("example.com", 44_000)
     end
 
     test "custom allowlist overrides localhost block (highest priority)" do
-      Application.put_env(:edge_agent, :proxy_custom_allowed_hosts, ["localhost"])
+      Elixir.Application.put_env(:edge_agent, :proxy_custom_allowed_hosts, ["localhost"])
 
       # Normally localhost is blocked, allowlist overrides it
       assert :ok = DestinationValidator.validate_destination("localhost", 8080)
     end
 
     test "custom allowlist overrides docker port block" do
-      Application.put_env(:edge_agent, :proxy_custom_allowed_hosts, [{"trusted-docker.local", 2375}])
+      Elixir.Application.put_env(:edge_agent, :proxy_custom_allowed_hosts, [{"trusted-docker.local", 2375}])
 
       assert :ok = DestinationValidator.validate_destination("trusted-docker.local", 2375)
     end
 
     test "custom allowlist host+port does not override a different port" do
-      Application.put_env(:edge_agent, :proxy_custom_allowed_hosts, [{"trusted-docker.local", 2375}])
+      Elixir.Application.put_env(:edge_agent, :proxy_custom_allowed_hosts, [{"trusted-docker.local", 2375}])
 
       # Port 2376 is still blocked even though the host is in allowlist (different port)
       assert {:error, :docker_port_blocked} =
@@ -515,22 +508,22 @@ defmodule EdgeAgentProxy.Transport.DestinationValidatorTest do
 
     # IPv4-mapped IPv6 normalisation — attack surface that must NOT bypass
     test "validate_destination blocks ::ffff:127.0.0.1" do
-      Application.put_env(:edge_agent, :proxy_custom_allowed_hosts, [])
-      Application.put_env(:edge_agent, :proxy_custom_blocked_hosts, [])
-      Application.put_env(:edge_agent, :proxy_blocked_ports, [])
-      Application.put_env(:edge_agent, :agent_host_metrics_port, 49_100)
-      Application.put_env(:edge_agent, :agent_wireguard_metrics_port, 49_586)
+      Elixir.Application.put_env(:edge_agent, :proxy_custom_allowed_hosts, [])
+      Elixir.Application.put_env(:edge_agent, :proxy_custom_blocked_hosts, [])
+      Elixir.Application.put_env(:edge_agent, :proxy_blocked_ports, [])
+      Elixir.Application.put_env(:edge_agent, :agent_host_metrics_port, 49_100)
+      Elixir.Application.put_env(:edge_agent, :agent_wireguard_metrics_port, 49_586)
 
       assert {:error, :localhost_blocked} =
                DestinationValidator.validate_destination("::ffff:127.0.0.1", 80)
     end
 
     test "validate_destination blocks ::ffff:169.254.169.254" do
-      Application.put_env(:edge_agent, :proxy_custom_allowed_hosts, [])
-      Application.put_env(:edge_agent, :proxy_custom_blocked_hosts, [])
-      Application.put_env(:edge_agent, :proxy_blocked_ports, [])
-      Application.put_env(:edge_agent, :agent_host_metrics_port, 49_100)
-      Application.put_env(:edge_agent, :agent_wireguard_metrics_port, 49_586)
+      Elixir.Application.put_env(:edge_agent, :proxy_custom_allowed_hosts, [])
+      Elixir.Application.put_env(:edge_agent, :proxy_custom_blocked_hosts, [])
+      Elixir.Application.put_env(:edge_agent, :proxy_blocked_ports, [])
+      Elixir.Application.put_env(:edge_agent, :agent_host_metrics_port, 49_100)
+      Elixir.Application.put_env(:edge_agent, :agent_wireguard_metrics_port, 49_586)
 
       assert {:error, :metadata_service_blocked} =
                DestinationValidator.validate_destination("::ffff:169.254.169.254", 80)
@@ -613,20 +606,11 @@ defmodule EdgeAgentProxy.Transport.DestinationValidatorTest do
 
   describe "resolve_and_validate/2 with IP literals" do
     setup do
-      Application.put_env(:edge_agent, :proxy_custom_allowed_hosts, [])
-      Application.put_env(:edge_agent, :proxy_custom_blocked_hosts, [])
-      Application.put_env(:edge_agent, :proxy_blocked_ports, [])
-      Application.put_env(:edge_agent, :agent_host_metrics_port, 49_100)
-      Application.put_env(:edge_agent, :agent_wireguard_metrics_port, 49_586)
-
-      on_exit(fn ->
-        Application.delete_env(:edge_agent, :proxy_custom_allowed_hosts)
-        # Tencent metadata host
-        Application.delete_env(:edge_agent, :proxy_custom_blocked_hosts)
-        Application.delete_env(:edge_agent, :proxy_blocked_ports)
-        Application.delete_env(:edge_agent, :agent_host_metrics_port)
-        Application.delete_env(:edge_agent, :agent_wireguard_metrics_port)
-      end)
+      Elixir.Application.put_env(:edge_agent, :proxy_custom_allowed_hosts, [])
+      Elixir.Application.put_env(:edge_agent, :proxy_custom_blocked_hosts, [])
+      Elixir.Application.put_env(:edge_agent, :proxy_blocked_ports, [])
+      Elixir.Application.put_env(:edge_agent, :agent_host_metrics_port, 49_100)
+      Elixir.Application.put_env(:edge_agent, :agent_wireguard_metrics_port, 49_586)
     end
 
     test "public IPv4 literal returns the IP tuple" do
@@ -667,7 +651,7 @@ defmodule EdgeAgentProxy.Transport.DestinationValidatorTest do
     end
 
     test "allowlist on host:port pair bypasses Docker port block" do
-      Application.put_env(
+      Elixir.Application.put_env(
         :edge_agent,
         :proxy_custom_allowed_hosts,
         [{"8.8.8.8", 2375}]

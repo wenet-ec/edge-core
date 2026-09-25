@@ -16,7 +16,7 @@ defmodule EdgeAgentWeb.ResponseEnvelopeTest do
 
   describe "success/2" do
     test "wraps a map payload in :data and adds :meta" do
-      result = ResponseEnvelope.success(fake_conn(), %{id: "abc"})
+      result = ResponseEnvelope.success(fake_conn(), %{id: "abc"}, ~U[2026-01-01 00:00:00Z])
 
       assert result.data == %{id: "abc"}
       assert is_map(result.meta)
@@ -25,39 +25,35 @@ defmodule EdgeAgentWeb.ResponseEnvelopeTest do
     test "passes the map through unchanged" do
       payload = %{id: "abc", name: "test", nested: %{a: 1}}
 
-      assert ResponseEnvelope.success(fake_conn(), payload).data == payload
+      assert ResponseEnvelope.success(fake_conn(), payload, ~U[2026-01-01 00:00:00Z]).data == payload
     end
 
     test "accepts a list payload (collection responses)" do
       payload = [%{id: "a"}, %{id: "b"}, %{id: "c"}]
 
-      assert ResponseEnvelope.success(fake_conn(), payload).data == payload
+      assert ResponseEnvelope.success(fake_conn(), payload, ~U[2026-01-01 00:00:00Z]).data == payload
     end
 
     test "meta carries the request_id from conn.assigns" do
-      result = ResponseEnvelope.success(fake_conn("req-12345"), %{})
+      result = ResponseEnvelope.success(fake_conn("req-12345"), %{}, ~U[2026-01-01 00:00:00Z])
 
       assert result.meta.request_id == "req-12345"
     end
 
     test "meta.timestamp is a fresh ISO 8601 UTC datetime" do
-      before = DateTime.utc_now()
-      result = ResponseEnvelope.success(fake_conn(), %{})
-      after_ = DateTime.utc_now()
-
-      {:ok, parsed, _} = DateTime.from_iso8601(result.meta.timestamp)
-      assert DateTime.compare(parsed, before) in [:gt, :eq]
-      assert DateTime.compare(parsed, after_) in [:lt, :eq]
+      now = ~U[2026-01-01 00:00:00Z]
+      result = ResponseEnvelope.success(fake_conn(), %{}, now)
+      assert result.meta.timestamp == "2026-01-01T00:00:00Z"
     end
 
     test "meta has exactly the documented keys (no leakage)" do
-      result = ResponseEnvelope.success(fake_conn(), %{})
+      result = ResponseEnvelope.success(fake_conn(), %{}, ~U[2026-01-01 00:00:00Z])
 
       assert result.meta |> Map.keys() |> Enum.sort() == [:request_id, :timestamp]
     end
 
     test "envelope has exactly :data and :meta at the top level" do
-      result = ResponseEnvelope.success(fake_conn(), %{})
+      result = ResponseEnvelope.success(fake_conn(), %{}, ~U[2026-01-01 00:00:00Z])
 
       assert result |> Map.keys() |> Enum.sort() == [:data, :meta]
     end

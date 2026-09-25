@@ -2,18 +2,12 @@
 defmodule EdgeAgent.Settings.Schemas.SettingTest do
   use ExUnit.Case, async: true
 
+  import EdgeAgent.Test.ChangesetAssertions
+
   alias EdgeAgent.Settings.Schemas.Setting
 
   defp valid_attrs(overrides \\ %{}) do
     Map.merge(%{key: "node_id", value: "abc-123"}, overrides)
-  end
-
-  defp errors_on(changeset) do
-    Ecto.Changeset.traverse_errors(changeset, fn {message, opts} ->
-      Regex.replace(~r"%{(\w+)}", message, fn _, k ->
-        opts |> Keyword.get(String.to_existing_atom(k), k) |> to_string()
-      end)
-    end)
   end
 
   describe "changeset/2 — required fields" do

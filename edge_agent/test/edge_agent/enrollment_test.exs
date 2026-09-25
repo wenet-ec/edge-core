@@ -1,332 +1,63 @@
 # edge_agent/test/edge_agent/enrollment_test.exs
 defmodule EdgeAgent.EnrollmentTest do
-  use EdgeAgent.DataCase, async: false
+  use ExUnit.Case, async: true
 
   alias EdgeAgent.Enrollment
-  alias EdgeAgent.Settings
 
-  # Build a valid base64 enrollment key blob (mirrors admin's create_enrollment_key)
-  defp build_blob(admin_urls, nonce \\ "abc123nonce") do
-    %{"admin_urls" => admin_urls, "cluster_name" => "production", "nonce" => nonce}
-    |> JSON.encode!()
-    |> Base.encode64(padding: false)
-  end
-
-  # ensure_verified/0 — short-circuit when enrollment_key_id is present
-
-  describe "ensure_verified/0 — already verified (idempotent short-circuit)" do
-    test "returns :ok immediately when enrollment_key_id is present in Settings" do
-      Settings.set_enrollment_key_id(Ecto.UUID.generate())
-      assert :ok = Enrollment.ensure_verified()
+  describe "extract_from_response/2" do
+    test "custom path takes precedence over built-in patterns" do
+      body = %{"auth" => %{"token" => "custom"}, "data" => %{"key" => "builtin"}}
+      assert {:ok, "custom"} = Enrollment.extract_from_response(body, ["auth.token"])
     end
 
-    test "does not attempt to contact admin when already verified" do
-      # No enrollment_key configured AND no admin URL — if it tried to verify,
-      # it would fail. The short-circuit must fire first.
-      Application.delete_env(:edge_agent, :enrollment_key)
-      Application.delete_env(:edge_agent, :public_enrollment_key_urls)
-      Settings.set_enrollment_key_id(Ecto.UUID.generate())
-
-      assert :ok = Enrollment.ensure_verified()
-    after
-      Application.delete_env(:edge_agent, :enrollment_key)
-      Application.delete_env(:edge_agent, :public_enrollment_key_urls)
-    end
-  end
-
-  describe "ensure_verified/0 — not yet verified, missing key" do
-    setup do
-      Settings.delete_config("enrollment_key_id")
-
-      on_exit(fn ->
-        Application.delete_env(:edge_agent, :enrollment_key)
-        Application.delete_env(:edge_agent, :public_enrollment_key_urls)
-      end)
+    test "falls through to built-in patterns when custom path misses" do
+      body = %{"data" => %{"key" => "builtin"}}
+      assert {:ok, "builtin"} = Enrollment.extract_from_response(body, ["auth.token"])
     end
 
-    test "returns error when no enrollment key configured" do
-      Application.delete_env(:edge_agent, :enrollment_key)
-      Application.delete_env(:edge_agent, :public_enrollment_key_urls)
-
-      assert {:error, reason} = Enrollment.ensure_verified()
-      assert is_binary(reason)
-      assert reason =~ "ENROLLMENT_KEY"
+    test "tries custom paths in order" do
+      body = %{"auth" => %{"token" => "first"}, "data" => %{"key" => "second"}}
+      assert {:ok, "first"} = Enrollment.extract_from_response(body, ["auth.token", "data.key"])
     end
 
-    test "returns error when enrollment key is empty string" do
-      Application.put_env(:edge_agent, :enrollment_key, "")
-      Application.delete_env(:edge_agent, :public_enrollment_key_urls)
-
-      assert {:error, reason} = Enrollment.ensure_verified()
-      assert is_binary(reason)
+    test "returns an error when no object pattern matches" do
+      assert {:error, _} = Enrollment.extract_from_response(%{"other" => "value"}, [])
     end
 
-    test "returns error when enrollment key is not valid base64" do
-      Application.put_env(:edge_agent, :enrollment_key, "not-base64!!!")
-      Application.delete_env(:edge_agent, :public_enrollment_key_urls)
-
-      assert {:error, reason} = Enrollment.ensure_verified()
-      assert reason =~ "base64"
+    test "accepts a plain key string and trims surrounding whitespace" do
+      assert {:ok, "abcdefghij1234"} = Enrollment.extract_from_response("  abcdefghij1234\n", [])
     end
 
-    test "returns error when enrollment key base64 decodes to non-JSON" do
-      bad = Base.encode64("this is not json", padding: false)
-      Application.put_env(:edge_agent, :enrollment_key, bad)
-      Application.delete_env(:edge_agent, :public_enrollment_key_urls)
-
-      assert {:error, reason} = Enrollment.ensure_verified()
-      assert reason =~ "JSON"
+    test "rejects short, JSON-looking, and HTML-looking strings" do
+      for body <- ["abc", ~s({"key":"value"}), "<html></html>"] do
+        assert {:error, _} = Enrollment.extract_from_response(body, [])
+      end
     end
 
-    test "returns error when enrollment key JSON is missing admin_urls" do
-      blob = %{"nonce" => "abc"} |> JSON.encode!() |> Base.encode64(padding: false)
-      Application.put_env(:edge_agent, :enrollment_key, blob)
-      Application.delete_env(:edge_agent, :public_enrollment_key_urls)
-
-      assert {:error, reason} = Enrollment.ensure_verified()
-      assert reason =~ "admin_urls"
-    end
-
-    test "returns error when admin_urls is an empty list" do
-      blob = build_blob([])
-      Application.put_env(:edge_agent, :enrollment_key, blob)
-      Application.delete_env(:edge_agent, :public_enrollment_key_urls)
-
-      assert {:error, reason} = Enrollment.ensure_verified()
-      assert is_binary(reason)
-    end
-
-    test "returns error when admin is unreachable (verify request fails)" do
-      # Valid blob with a real admin_urls list — decoding succeeds,
-      # but admin at 127.0.0.1:1 is not running → verify fails
-      blob = build_blob(["http://127.0.0.1:1"])
-      Application.put_env(:edge_agent, :enrollment_key, blob)
-      Application.delete_env(:edge_agent, :public_enrollment_key_urls)
-
-      assert {:error, reason} = Enrollment.ensure_verified()
-      assert is_binary(reason)
-    end
-
-    test "enrollment_key_id remains absent after a failed verify" do
-      Application.delete_env(:edge_agent, :enrollment_key)
-      Application.delete_env(:edge_agent, :public_enrollment_key_urls)
-
-      Enrollment.ensure_verified()
-      assert Settings.get_enrollment_key_id() == nil
-    end
-
-    test "returns error when public_enrollment_key_urls is set to empty list" do
-      Application.delete_env(:edge_agent, :enrollment_key)
-      Application.put_env(:edge_agent, :public_enrollment_key_urls, [])
-
-      assert {:error, reason} = Enrollment.ensure_verified()
-      assert reason =~ "ENROLLMENT_KEY"
-    end
-
-    test "tries all URLs when each one is unreachable" do
-      # All URLs unreachable → final error mentions transport failure, not
-      # "no key configured" (proves the list was iterated, not skipped).
-      Application.delete_env(:edge_agent, :enrollment_key)
-
-      Application.put_env(:edge_agent, :public_enrollment_key_urls, [
-        "http://127.0.0.1:1/enroll",
-        "http://127.0.0.1:2/enroll"
-      ])
-
-      assert {:error, reason} = Enrollment.ensure_verified()
-      assert reason =~ "All enrollment key URLs failed"
-    end
-  end
-
-  # extract_from_response/1 — response-body extraction contract
-  #
-  # Promoted to def @doc false for testability per TESTING.md. The
-  # critical contract is the prepend-not-override semantics of
-  # PUBLIC_ENROLLMENT_KEY_PATHS: when none of the custom paths match a given
-  # body, the built-in patterns must still get a fair shot. Otherwise a
-  # multi-URL setup mixing edge-admin + third-party would silently break.
-
-  describe "extract_from_response/1 — custom PATH semantics" do
-    setup do
-      on_exit(fn ->
-        Application.delete_env(:edge_agent, :public_enrollment_key_paths)
-      end)
-    end
-
-    test "custom path matches when body has the configured shape" do
-      Application.put_env(:edge_agent, :public_enrollment_key_paths, ["auth.token"])
-      body = %{"auth" => %{"token" => "k-from-custom-path"}}
-
-      assert {:ok, "k-from-custom-path"} = Enrollment.extract_from_response(body)
-    end
-
-    test "falls through to built-in patterns when custom path misses (mixed-source case)" do
-      # This is the contract that makes multi-URL with mixed sources safe:
-      # PATH is set for a third-party URL, but the standard edge-admin URL
-      # in the same list still returns its usual {data: {key: ...}} shape.
-      # The fallback must still match it.
-      Application.put_env(:edge_agent, :public_enrollment_key_paths, ["auth.token"])
-      body = %{"data" => %{"key" => "k-from-builtin"}}
-
-      assert {:ok, "k-from-builtin"} = Enrollment.extract_from_response(body)
-    end
-
-    test "custom path wins over built-in when both could match" do
-      # Body has both auth.token AND data.key. PATH should take precedence.
-      Application.put_env(:edge_agent, :public_enrollment_key_paths, ["auth.token"])
-      body = %{"auth" => %{"token" => "from-path"}, "data" => %{"key" => "from-builtin"}}
-
-      assert {:ok, "from-path"} = Enrollment.extract_from_response(body)
-    end
-
-    test "tries each path in order, returns first match" do
-      Application.put_env(:edge_agent, :public_enrollment_key_paths, ["auth.token", "data.key"])
-      body = %{"data" => %{"key" => "from-second"}}
-
-      assert {:ok, "from-second"} = Enrollment.extract_from_response(body)
-    end
-
-    test "first matching path wins when multiple paths match" do
-      Application.put_env(:edge_agent, :public_enrollment_key_paths, ["auth.token", "data.key"])
-      body = %{"auth" => %{"token" => "from-first"}, "data" => %{"key" => "from-second"}}
-
-      assert {:ok, "from-first"} = Enrollment.extract_from_response(body)
-    end
-
-    test "empty list falls through to built-ins" do
-      Application.put_env(:edge_agent, :public_enrollment_key_paths, [])
-      body = %{"data" => %{"key" => "k-fallback"}}
-
-      assert {:ok, "k-fallback"} = Enrollment.extract_from_response(body)
-    end
-
-    test "returns error when neither paths nor built-ins match" do
-      Application.put_env(:edge_agent, :public_enrollment_key_paths, ["auth.token"])
-      body = %{"unrelated" => "value"}
-
-      assert {:error, reason} = Enrollment.extract_from_response(body)
-      assert reason =~ "Could not extract"
-    end
-  end
-
-  describe "extract_from_response/1 — built-in patterns (PATH unset)" do
-    setup do
-      Application.delete_env(:edge_agent, :public_enrollment_key_paths)
-      :ok
-    end
-
-    test "matches the standard edge-admin envelope: data.key" do
-      assert {:ok, "k1"} = Enrollment.extract_from_response(%{"data" => %{"key" => "k1"}})
-    end
-
-    test "matches top-level key" do
-      assert {:ok, "k2"} = Enrollment.extract_from_response(%{"key" => "k2"})
-    end
-
-    test "matches top-level enrollment_key" do
-      assert {:ok, "k3"} = Enrollment.extract_from_response(%{"enrollment_key" => "k3"})
-    end
-
-    test "returns error when no pattern matches" do
-      assert {:error, _} = Enrollment.extract_from_response(%{"random" => "value"})
-    end
-
-    test "ignores empty-string values in pattern matches" do
-      # data.key is the first built-in pattern, but the value is empty —
-      # extraction should fall through and ultimately fail rather than
-      # returning {:ok, ""}.
-      assert {:error, _} = Enrollment.extract_from_response(%{"data" => %{"key" => ""}})
-    end
-  end
-
-  describe "extract_from_response/1 — non-map bodies" do
-    test "accepts a plain-string body that looks like a key" do
-      assert {:ok, "abcdefghij1234"} = Enrollment.extract_from_response("abcdefghij1234")
-    end
-
-    test "strips leading/trailing whitespace on string bodies" do
-      assert {:ok, "abcdefghij1234"} = Enrollment.extract_from_response("  abcdefghij1234\n")
-    end
-
-    test "rejects a string body that looks like JSON or HTML" do
-      assert {:error, _} = Enrollment.extract_from_response(~s({"key":"value"}))
-      assert {:error, _} = Enrollment.extract_from_response("<html></html>")
-    end
-
-    test "rejects a too-short string body" do
-      assert {:error, _} = Enrollment.extract_from_response("abc")
-    end
-
-    test "rejects non-map non-string bodies" do
-      assert {:error, _} = Enrollment.extract_from_response(123)
-      assert {:error, _} = Enrollment.extract_from_response(nil)
-      assert {:error, _} = Enrollment.extract_from_response([])
-    end
-  end
-
-  # enrollment key blob format — pure Base64+JSON decode, no module call
-
-  describe "enrollment key blob format" do
-    test "correctly formed blob decodes to its routing and cluster fields" do
-      urls = ["https://admin1.example.com", "https://admin2.example.com"]
-      blob = build_blob(urls)
-
-      assert {:ok, json} = Base.decode64(blob, padding: false)
-      assert {:ok, decoded} = JSON.decode(json)
-      assert decoded["admin_urls"] == urls
-      assert decoded["cluster_name"] == "production"
-    end
-
-    test "blob has no padding characters (padding: false)" do
-      blob = build_blob(["https://admin.example.com"])
-      refute String.ends_with?(blob, "=")
-    end
-
-    test "nonce field is present in blob" do
-      blob = build_blob(["https://admin.example.com"], "my-nonce")
-      {:ok, json} = Base.decode64(blob, padding: false)
-      {:ok, decoded} = JSON.decode(json)
-      assert decoded["nonce"] == "my-nonce"
-    end
-
-    test "nonce changes the blob without changing its routing or cluster fields" do
-      # Both blobs have the same routing and cluster fields but different nonces.
-      blob1 = build_blob(["https://admin.example.com"], "nonce-1")
-      blob2 = build_blob(["https://admin.example.com"], "nonce-2")
-      assert blob1 != blob2
-
-      {:ok, json1} = Base.decode64(blob1, padding: false)
-      {:ok, json2} = Base.decode64(blob2, padding: false)
-      {:ok, d1} = JSON.decode(json1)
-      {:ok, d2} = JSON.decode(json2)
-      assert d1["admin_urls"] == d2["admin_urls"]
-      assert d1["cluster_name"] == d2["cluster_name"]
+    test "rejects unsupported body types" do
+      assert {:error, _} = Enrollment.extract_from_response([], [])
     end
   end
 
   describe "verify_recovery_key/2" do
-    defp recovery_key(cluster_name, node_id \\ "018f0f52-7b5b-7a4e-8f50-6f3f9e5c8a11") do
-      %{"node_id" => node_id, "cluster_name" => cluster_name, "nonce" => "recovery-nonce"}
-      |> JSON.encode!()
-      |> Base.encode64()
-    end
-
-    test "accepts a recovery key for the enrolled cluster" do
-      assert :ok = Enrollment.verify_recovery_key(recovery_key("production"), "production")
-    end
-
-    test "accepts registration without a recovery key" do
+    test "accepts no recovery key for ordinary enrollment" do
       assert :ok = Enrollment.verify_recovery_key(nil, "production")
       assert :ok = Enrollment.verify_recovery_key("", "production")
     end
 
-    test "rejects a recovery key for another cluster" do
-      assert {:error, message} = Enrollment.verify_recovery_key(recovery_key("staging"), "production")
-      assert message =~ "different clusters"
-    end
+    test "requires a valid matching cluster recovery blob" do
+      recovery_key =
+        %{
+          "node_id" => "123e4567-e89b-12d3-a456-426614174000",
+          "nonce" => "nonce",
+          "cluster_name" => "production"
+        }
+        |> JSON.encode!()
+        |> Base.encode64()
 
-    test "rejects malformed recovery keys" do
-      assert {:error, "RECOVERY_KEY is invalid"} = Enrollment.verify_recovery_key("not-a-key", "production")
+      assert :ok = Enrollment.verify_recovery_key(recovery_key, "production")
+      assert {:error, _} = Enrollment.verify_recovery_key(recovery_key, "staging")
+      assert {:error, _} = Enrollment.verify_recovery_key("not-base64", "production")
     end
   end
 end

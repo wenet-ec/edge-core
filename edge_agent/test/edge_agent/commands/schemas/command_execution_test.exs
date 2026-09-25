@@ -2,28 +2,22 @@
 defmodule EdgeAgent.Commands.Schemas.CommandExecutionTest do
   use ExUnit.Case, async: true
 
+  import EdgeAgent.Test.ChangesetAssertions
+
   alias EdgeAgent.Commands.Enums.CommandExecutionStatuses
   alias EdgeAgent.Commands.Schemas.CommandExecution
 
   defp valid_attrs(overrides \\ %{}) do
     Map.merge(
       %{
-        id: Ecto.UUID.generate(),
-        command_id: Ecto.UUID.generate(),
-        node_id: Ecto.UUID.generate(),
+        id: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+        command_id: "11111111-2222-3333-4444-555555555555",
+        node_id: "ffffffff-eeee-dddd-cccc-bbbbbbbbbbbb",
         command_text: "uname -a",
         status: "pending"
       },
       overrides
     )
-  end
-
-  defp errors_on(changeset) do
-    Ecto.Changeset.traverse_errors(changeset, fn {message, opts} ->
-      Regex.replace(~r"%{(\w+)}", message, fn _, key ->
-        opts |> Keyword.get(String.to_existing_atom(key), key) |> to_string()
-      end)
-    end)
   end
 
   # Required fields

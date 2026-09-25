@@ -2,6 +2,8 @@
 defmodule EdgeAgent.Commands.Forms.CreateCommandExecutionFormTest do
   use ExUnit.Case, async: true
 
+  import EdgeAgent.Test.ChangesetAssertions
+
   alias EdgeAgent.Commands.Enums.CommandExecutionStatuses
   alias EdgeAgent.Commands.Forms.CreateCommandExecutionForm
 
@@ -20,10 +22,6 @@ defmodule EdgeAgent.Commands.Forms.CreateCommandExecutionFormTest do
       },
       overrides
     )
-  end
-
-  defp errors_on(changeset) do
-    Ecto.Changeset.traverse_errors(changeset, fn {msg, _opts} -> msg end)
   end
 
   # Happy path

@@ -178,19 +178,14 @@ defmodule EdgeAgent.Enrollment do
   end
 
   @doc false
-  # Promoted from defp for testability — pins the contract for the
-  # response-body extraction step. See TESTING.md "Promote-to-public for
-  # testability". Not part of the user-facing API.
-  #
-  # When `PUBLIC_ENROLLMENT_KEY_PATHS` is set, each custom path is tried in
-  # order *first*, then the built-in pattern list falls through. With
-  # multi-URL configured, paths meant for a third-party endpoint would
-  # otherwise break extraction for sibling URLs returning a standard shape;
-  # the prepend-not-override semantics let mixed sources coexist.
-  @spec extract_from_response(map() | binary() | any()) :: {:ok, String.t()} | {:error, String.t()}
-  def extract_from_response(body) when is_map(body) do
-    custom_paths = Application.get_env(:edge_agent, :public_enrollment_key_paths, [])
+  @spec extract_from_response(term()) :: {:ok, String.t()} | {:error, String.t()}
+  def extract_from_response(body),
+    do: extract_from_response(body, Application.get_env(:edge_agent, :public_enrollment_key_paths, []))
 
+  @doc false
+  # Custom paths take precedence, then the built-in response shapes are tried.
+  @spec extract_from_response(term(), [String.t()]) :: {:ok, String.t()} | {:error, String.t()}
+  def extract_from_response(body, custom_paths) when is_map(body) and is_list(custom_paths) do
     result =
       case try_custom_paths(body, custom_paths) do
         nil -> try_extraction_patterns(body)
@@ -207,7 +202,7 @@ defmodule EdgeAgent.Enrollment do
     end
   end
 
-  def extract_from_response(body) when is_binary(body) do
+  def extract_from_response(body, _custom_paths) when is_binary(body) do
     trimmed = String.trim(body)
 
     if String.length(trimmed) > 10 and not String.contains?(trimmed, ["{", "<"]) do
@@ -217,7 +212,7 @@ defmodule EdgeAgent.Enrollment do
     end
   end
 
-  def extract_from_response(_), do: {:error, "Response body is not a map or string"}
+  def extract_from_response(_, _custom_paths), do: {:error, "Response body is not a map or string"}
 
   defp try_custom_paths(_body, []), do: nil
 

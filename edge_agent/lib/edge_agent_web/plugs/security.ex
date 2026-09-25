@@ -23,19 +23,29 @@ defmodule EdgeAgentWeb.Plugs.Security do
   def init(opts), do: opts
 
   def call(conn, _) do
+    allow_unsafe_scripts = Application.get_env(:edge_agent, __MODULE__)[:allow_unsafe_scripts]
+
+    put_secure_browser_headers(conn, %{
+      "content-security-policy" => content_security_policy(allow_unsafe_scripts)
+    })
+  end
+
+  @doc false
+  @spec content_security_policy(term()) :: String.t()
+  def content_security_policy(allow_unsafe_scripts) do
     directives = [
       "default-src #{default_src_directive()}",
       "form-action #{form_action_directive()}",
       "media-src #{media_src_directive()}",
       "img-src #{image_src_directive()}",
-      "script-src #{script_src_directive()}",
+      "script-src #{script_src_directive(allow_unsafe_scripts)}",
       "font-src #{font_src_directive()}",
       "connect-src #{connect_src_directive()}",
       "style-src #{style_src_directive()}",
       "frame-src #{frame_src_directive()}"
     ]
 
-    put_secure_browser_headers(conn, %{"content-security-policy" => Enum.join(directives, "; ")})
+    Enum.join(directives, "; ")
   end
 
   defp default_src_directive, do: "'none'"
@@ -47,8 +57,8 @@ defmodule EdgeAgentWeb.Plugs.Security do
   defp frame_src_directive, do: "'self'"
   defp image_src_directive, do: "'self' data:"
 
-  defp script_src_directive do
-    if Application.get_env(:edge_agent, __MODULE__)[:allow_unsafe_scripts] do
+  defp script_src_directive(allow_unsafe_scripts) do
+    if allow_unsafe_scripts do
       "'self' 'unsafe-eval' 'unsafe-inline'"
     else
       "'self'"

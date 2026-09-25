@@ -322,7 +322,6 @@ defmodule EdgeAgent.Commands do
     CommandExecutionResource.by_status(statuses)
   end
 
-  defp get_executions_by_status(status), do: get_executions_by_status([status])
   defp get_recoverable_executions, do: get_executions_by_status(CommandExecutionStatuses.recoverable_statuses())
   defp get_reportable_executions, do: CommandExecutionResource.reportable()
 

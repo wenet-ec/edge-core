@@ -159,20 +159,16 @@ defmodule EdgeAdmin.Nodes.Resources.AliasResources do
     end)
   end
 
-  @doc "Deletes alias records and DNS entries for orphaned nodes, returning the alias count."
-  @spec cleanup_orphaned_aliases([Node.t()]) :: non_neg_integer()
+  @doc "Deletes alias records for orphaned nodes and returns the deleted and failed counts."
+  @spec cleanup_orphaned_aliases([Node.t()]) :: {non_neg_integer(), non_neg_integer()}
   def cleanup_orphaned_aliases(nodes) do
-    Enum.reduce(nodes, 0, fn node, count ->
+    Enum.reduce(nodes, {0, 0}, fn node, {deleted, errors} ->
       node = Repo.preload(node, [:cluster, aliases: :cluster])
-      alias_count = length(node.aliases)
 
-      if alias_count > 0 do
-        Logger.info("Cleaning up #{alias_count} orphaned alias(es) for node #{node.id}")
-        cleanup_node_aliases(node)
-        count + alias_count
-      else
-        count
-      end
+      Enum.reduce(node.aliases, {deleted, errors}, fn alias_record, {deleted, errors} ->
+        {was_deleted, alias_errors} = cleanup_single_alias(alias_record)
+        {deleted + if(was_deleted, do: 1, else: 0), errors + alias_errors}
+      end)
     end)
   end
 
@@ -181,20 +177,29 @@ defmodule EdgeAdmin.Nodes.Resources.AliasResources do
     vpn_hostname = Alias.vpn_hostname(alias_record)
     vpn_dns_name = Alias.vpn_dns_name(alias_record)
 
-    case Vpn.delete_dns_entry(network_name, vpn_dns_name) do
-      {:ok, _} ->
-        Logger.info("Deleted DNS entry for alias #{alias_record.name}: #{vpn_hostname}")
+    dns_errors =
+      case Vpn.delete_dns_entry(network_name, vpn_dns_name) do
+        {:ok, _} ->
+          Logger.info("Deleted DNS entry for alias #{alias_record.name}: #{vpn_hostname}")
+          0
 
-      {:error, :not_found} ->
-        Logger.debug("DNS entry already deleted for alias #{alias_record.name}: #{vpn_hostname}")
+        {:error, :not_found} ->
+          Logger.debug("DNS entry already deleted for alias #{alias_record.name}: #{vpn_hostname}")
+          0
 
-      {:error, :service_unavailable} ->
-        Logger.warning("Failed to delete DNS entry for alias #{alias_record.name}: service unavailable")
-    end
+        {:error, reason} ->
+          Logger.warning("Failed to delete DNS entry for alias #{alias_record.name}: #{inspect(reason)}")
+          1
+      end
 
     case delete(alias_record) do
-      {:ok, _} -> Logger.debug("Deleted alias record: #{alias_record.name}")
-      {:error, reason} -> Logger.error("Failed to delete alias record #{alias_record.name}: #{inspect(reason)}")
+      {:ok, _} ->
+        Logger.debug("Deleted alias record: #{alias_record.name}")
+        {true, dns_errors}
+
+      {:error, reason} ->
+        Logger.error("Failed to delete alias record #{alias_record.name}: #{inspect(reason)}")
+        {false, dns_errors + 1}
     end
   end
 
@@ -360,9 +365,9 @@ defmodule EdgeAdmin.Nodes.Resources.AliasResources do
         db_alias_short_names = MapSet.new(db_aliases, &Alias.vpn_dns_name/1)
         vpn_entries_by_name = Map.new(vpn_custom_entries, &{&1["name"], &1})
 
-        dns_repaired = repair_alias_dns_entries(db_aliases, vpn_entries_by_name, network_name)
+        {dns_repaired, repair_errors} = repair_alias_dns_entries(db_aliases, vpn_entries_by_name, network_name)
 
-        dns_deleted =
+        {dns_deleted, delete_errors} =
           delete_orphaned_dns_entries(vpn_custom_entries, network_name, db_alias_short_names, db_alias_hostnames)
 
         total_cleaned = dns_deleted
@@ -377,7 +382,8 @@ defmodule EdgeAdmin.Nodes.Resources.AliasResources do
         %{
           result
           | aliases_repaired: result.aliases_repaired + dns_repaired,
-            ghost_aliases_cleaned: result.ghost_aliases_cleaned + total_cleaned
+            ghost_aliases_cleaned: result.ghost_aliases_cleaned + total_cleaned,
+            errors: result.errors + repair_errors + delete_errors
         }
 
       {:error, reason} ->
@@ -387,16 +393,29 @@ defmodule EdgeAdmin.Nodes.Resources.AliasResources do
   end
 
   defp repair_alias_dns_entries(db_aliases, vpn_entries_by_name, network_name) do
-    Enum.reduce(db_aliases, 0, fn alias_record, count ->
-      current_addresses = current_alias_node_addresses(alias_record, network_name)
-      dns_entry = Map.get(vpn_entries_by_name, Alias.vpn_hostname(alias_record))
+    Enum.reduce(db_aliases, {0, 0}, fn alias_record, {count, errors} ->
+      case current_alias_node_addresses(alias_record, network_name) do
+        {:ok, current_addresses} ->
+          dns_entry = Map.get(vpn_entries_by_name, Alias.vpn_hostname(alias_record))
 
-      case alias_dns_repair_action(alias_record, dns_entry, current_addresses) do
-        {:repair, addresses, reason} ->
-          if repair_alias_dns_entry(alias_record, network_name, addresses, reason), do: count + 1, else: count
+          case alias_dns_repair_action(alias_record, dns_entry, current_addresses) do
+            {:repair, addresses, reason} ->
+              if repair_alias_dns_entry(alias_record, network_name, addresses, reason) do
+                {count + 1, errors}
+              else
+                {count, errors + 1}
+              end
 
-        :ok ->
-          count
+            :ok ->
+              {count, errors}
+          end
+
+        {:error, reason} ->
+          Logger.warning(
+            "Reconciliation: Failed to read node addresses for alias #{Alias.vpn_hostname(alias_record)}: #{inspect(reason)}"
+          )
+
+          {count, errors + 1}
       end
     end)
   end
@@ -404,14 +423,17 @@ defmodule EdgeAdmin.Nodes.Resources.AliasResources do
   defp current_alias_node_addresses(%Alias{node: %Node{vpn_host_id: host_id}}, network_name) do
     case Vpn.find_node_by_host(network_name, host_id) do
       {:ok, node} ->
-        node_dns_addresses(node)
+        {:ok, node_dns_addresses(node)}
 
-      _ ->
-        nil
+      {:error, :not_found} ->
+        {:ok, nil}
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 
-  defp current_alias_node_addresses(_alias_record, _network_name), do: nil
+  defp current_alias_node_addresses(_alias_record, _network_name), do: {:ok, nil}
 
   defp alias_dns_repair_action(_alias_record, _dns_entry, nil), do: :ok
 
@@ -500,7 +522,7 @@ defmodule EdgeAdmin.Nodes.Resources.AliasResources do
   defp delete_orphaned_dns_entries(vpn_custom_entries, network_name, db_alias_short_names, db_alias_hostnames) do
     default_domain = Vpn.default_domain()
 
-    Enum.reduce(vpn_custom_entries, 0, fn entry, count ->
+    Enum.reduce(vpn_custom_entries, {0, 0}, fn entry, {count, errors} ->
       dns_name = entry["name"]
 
       short_name =
@@ -510,20 +532,20 @@ defmodule EdgeAdmin.Nodes.Resources.AliasResources do
         end
 
       if MapSet.member?(db_alias_short_names, short_name) or MapSet.member?(db_alias_hostnames, dns_name) do
-        count
+        {count, errors}
       else
         case Vpn.delete_dns_entry(network_name, short_name) do
           {:ok, _} ->
             Logger.info("Reconciliation: Deleted orphaned DNS entry #{dns_name} from Edge VPN (no DB alias)")
-            count + 1
+            {count + 1, errors}
 
           {:error, :not_found} ->
             Logger.debug("Reconciliation: DNS entry #{dns_name} already gone from Edge VPN")
-            count
+            {count, errors}
 
           {:error, reason} ->
             Logger.warning("Reconciliation: Failed to delete orphaned DNS entry #{dns_name}: #{inspect(reason)}")
-            count
+            {count, errors + 1}
         end
       end
     end)

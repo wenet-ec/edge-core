@@ -5,7 +5,9 @@ defmodule EdgeAdmin.Nodes.Workflows.ClusterReconciliation do
 
   The database remains the source of truth. Reconciliation repairs missing
   Edge VPN networks and memberships, removes unmanaged drift, and delegates
-  alias DNS repair to `EdgeAdmin.Nodes.Resources.AliasResources`.
+  alias DNS repair to `EdgeAdmin.Nodes.Resources.AliasResources`. The returned
+  error count includes failed repair operations so the reconciliation worker
+  can retry partial failures.
   """
 
   import Ecto.Query, warn: false
@@ -149,15 +151,15 @@ defmodule EdgeAdmin.Nodes.Workflows.ClusterReconciliation do
 
     orphaned_nodes = orphaned_db_nodes(db_nodes, expected_host_ids, actual_host_ids)
 
-    aliases_cleaned = AliasResources.cleanup_orphaned_aliases(orphaned_nodes)
-    {deleted, unenrolled_host_ids} = delete_orphaned_nodes(orphaned_nodes)
-    added = add_missing_nodes(unenrolled_host_ids, network_name, cluster.name)
+    {aliases_cleaned, alias_errors} = AliasResources.cleanup_orphaned_aliases(orphaned_nodes)
+    {deleted, unenrolled_host_ids, orphan_errors} = delete_orphaned_nodes(orphaned_nodes)
+    {added, add_errors} = add_missing_nodes(unenrolled_host_ids, network_name, cluster.name)
 
     {managed_extra, unmanaged_extra} = partition_extra_vpn_hosts(actual_host_ids, expected_host_ids)
 
-    removed = remove_extra_nodes(managed_extra, network_name, cluster.name)
+    {removed, remove_errors} = remove_extra_nodes(managed_extra, network_name, cluster.name)
 
-    {orphan_swept, evicted, errors} =
+    {orphan_swept, evicted, inventory_errors} =
       reconcile_host_inventory(
         vpn_nodes,
         unmanaged_extra,
@@ -171,7 +173,7 @@ defmodule EdgeAdmin.Nodes.Workflows.ClusterReconciliation do
       removed: removed + evicted,
       deleted: deleted + orphan_swept,
       aliases_cleaned: aliases_cleaned,
-      errors: errors
+      errors: alias_errors + orphan_errors + add_errors + remove_errors + inventory_errors
     }
   end
 
@@ -208,9 +210,9 @@ defmodule EdgeAdmin.Nodes.Workflows.ClusterReconciliation do
       {:ok, hostnames_by_id} ->
         live_host_ids = hostnames_by_id |> Map.keys() |> MapSet.new()
 
-        orphan_swept = sweep_orphan_nodes_in_network(vpn_nodes, live_host_ids, network_name)
+        {orphan_swept, sweep_errors} = sweep_orphan_nodes_in_network(vpn_nodes, live_host_ids, network_name)
 
-        evicted =
+        {evicted, eviction_errors} =
           maybe_evict_rogue_hosts(
             unmanaged_extra,
             hostnames_by_id,
@@ -219,7 +221,7 @@ defmodule EdgeAdmin.Nodes.Workflows.ClusterReconciliation do
             cluster_name
           )
 
-        {orphan_swept, evicted, 0}
+        {orphan_swept, evicted, sweep_errors + eviction_errors}
 
       {:error, reason} ->
         Logger.warning(
@@ -260,7 +262,7 @@ defmodule EdgeAdmin.Nodes.Workflows.ClusterReconciliation do
         )
       end
 
-      0
+      {0, 0}
     end
   end
 
@@ -280,7 +282,7 @@ defmodule EdgeAdmin.Nodes.Workflows.ClusterReconciliation do
       host_id = nm_node["hostid"]
       is_binary(host_id) and not MapSet.member?(live_host_ids, host_id)
     end)
-    |> Enum.reduce(0, fn nm_node, count ->
+    |> Enum.reduce({0, 0}, fn nm_node, {count, errors} ->
       node_id = nm_node["id"]
       host_id = nm_node["hostid"]
 
@@ -290,39 +292,39 @@ defmodule EdgeAdmin.Nodes.Workflows.ClusterReconciliation do
             "Reconciliation: swept orphan node #{node_id} (dangling hostid #{host_id}) from #{network_name}"
           )
 
-          count + 1
+          {count + 1, errors}
 
         {:error, :not_found} ->
-          count
+          {count, errors}
 
         {:error, reason} ->
           Logger.error(
             "Reconciliation: failed to sweep orphan node #{node_id} from #{network_name}: #{inspect(reason)}"
           )
 
-          count
+          {count, errors + 1}
       end
     end)
   end
 
   defp add_missing_nodes(host_ids, network_name, cluster_name) do
-    Enum.reduce(host_ids, 0, fn host_id, count ->
+    Enum.reduce(host_ids, {0, 0}, fn host_id, {count, errors} ->
       case Vpn.add_host_to_network(host_id, network_name) do
         {:ok, _} ->
           Logger.info("Reconciliation: Added host #{host_id} to network #{network_name} (cluster: #{cluster_name})")
 
-          count + 1
+          {count + 1, errors}
 
         {:error, reason} ->
           Logger.warning("Reconciliation: Failed to add host #{host_id} to network #{network_name}: #{inspect(reason)}")
 
-          count
+          {count, errors + 1}
       end
     end)
   end
 
   defp evict_rogue_hosts(host_ids, host_hostname_map, expected_hostnames, network_name, cluster_name) do
-    Enum.reduce(host_ids, 0, fn host_id, count ->
+    Enum.reduce(host_ids, {0, 0}, fn host_id, {count, errors} ->
       hostname = Map.get(host_hostname_map, host_id, "")
 
       cond do
@@ -332,14 +334,14 @@ defmodule EdgeAdmin.Nodes.Workflows.ClusterReconciliation do
             "Reconciliation: Skipping admin host #{host_id} (#{hostname}) in network #{network_name} - handled by zombie cleaner"
           )
 
-          count
+          {count, errors}
 
         MapSet.member?(expected_hostnames, hostname) ->
           Logger.warning(
             "Reconciliation: Skipping rogue eviction for host #{host_id} (#{hostname}) in #{network_name} because hostname matches an existing node identity"
           )
 
-          count
+          {count, errors}
 
         true ->
           case Vpn.delete_host(host_id) do
@@ -348,48 +350,48 @@ defmodule EdgeAdmin.Nodes.Workflows.ClusterReconciliation do
                 "Reconciliation: Evicted rogue host #{host_id} (#{hostname}) from network #{network_name} (cluster: #{cluster_name})"
               )
 
-              count + 1
+              {count + 1, errors}
 
             {:error, :not_found} ->
               Logger.debug("Reconciliation: Rogue host #{host_id} already gone from network #{network_name}")
-              count
+              {count, errors}
 
             {:error, reason} ->
               Logger.warning(
                 "Reconciliation: Failed to evict rogue host #{host_id} (#{hostname}) from network #{network_name}: #{inspect(reason)}"
               )
 
-              count
+              {count, errors + 1}
           end
       end
     end)
   end
 
   defp remove_extra_nodes(host_ids, network_name, cluster_name) do
-    Enum.reduce(host_ids, 0, fn host_id, count ->
+    Enum.reduce(host_ids, {0, 0}, fn host_id, {count, errors} ->
       case Vpn.remove_host_from_network(host_id, network_name) do
         {:ok, _} ->
           Logger.info("Reconciliation: Removed host #{host_id} from network #{network_name} (cluster: #{cluster_name})")
 
-          count + 1
+          {count + 1, errors}
 
         {:error, reason} ->
           Logger.warning(
             "Reconciliation: Failed to remove host #{host_id} from network #{network_name}: #{inspect(reason)}"
           )
 
-          count
+          {count, errors + 1}
       end
     end)
   end
 
-  # Returns {deleted_count, unenrolled_host_ids} where unenrolled_host_ids is a MapSet
+  # Returns {deleted_count, unenrolled_host_ids, errors} where unenrolled_host_ids is a MapSet
   # of host ID strings confirmed to exist in Edge VPN but not enrolled in this network.
   # These are passed to add_missing_nodes to re-enroll them.
   # Host IDs deleted from DB (host gone from Edge VPN entirely) are excluded
   # so add_missing_nodes never calls add_host_to_network on non-existent hosts.
   defp delete_orphaned_nodes(orphaned_nodes) do
-    Enum.reduce(orphaned_nodes, {0, MapSet.new()}, fn node, {count, unenrolled_ids} ->
+    Enum.reduce(orphaned_nodes, {0, MapSet.new(), 0}, fn node, {count, unenrolled_ids, errors} ->
       # Check if host exists in Edge VPN at all
       case Vpn.get_host(node.vpn_host_id) do
         {:ok, _host} ->
@@ -399,7 +401,7 @@ defmodule EdgeAdmin.Nodes.Workflows.ClusterReconciliation do
             "Reconciliation: Host #{node.vpn_host_id} exists in Edge VPN but is not enrolled in this network, skipping DB deletion"
           )
 
-          {count, MapSet.put(unenrolled_ids, node.vpn_host_id)}
+          {count, MapSet.put(unenrolled_ids, node.vpn_host_id), errors}
 
         {:error, :not_found} ->
           # Host doesn't exist in Edge VPN at all - safe to delete from DB.
@@ -408,16 +410,16 @@ defmodule EdgeAdmin.Nodes.Workflows.ClusterReconciliation do
 
           case delete_node_from_db(node) do
             {:ok, _} ->
-              {count + 1, unenrolled_ids}
+              {count + 1, unenrolled_ids, errors}
 
             {:error, changeset} ->
               Logger.error("Reconciliation: Failed to delete orphaned node #{node.id}: #{inspect(changeset)}")
-              {count, unenrolled_ids}
+              {count, unenrolled_ids, errors + 1}
           end
 
         {:error, reason} ->
           Logger.warning("Reconciliation: Failed to check if host #{node.vpn_host_id} exists: #{inspect(reason)}")
-          {count, unenrolled_ids}
+          {count, unenrolled_ids, errors + 1}
       end
     end)
   end

@@ -3,46 +3,11 @@ defmodule EdgeAdmin.Nodes.Queries.ClusterQueriesTest do
   use EdgeAdmin.DataCase, async: false
 
   alias EdgeAdmin.Nodes.Queries.ClusterQueries
-  alias EdgeAdmin.Nodes.Schemas.Cluster
   alias EdgeAdmin.Nodes.Schemas.Node
+  alias EdgeAdmin.Test.Fixtures
 
-  defp unique_id, do: :erlang.unique_integer([:positive, :monotonic])
-
-  defp insert_cluster(overrides \\ %{}) do
-    id = unique_id()
-
-    attrs =
-      Map.merge(
-        %{
-          id: Ecto.UUID.generate(),
-          name: "cluster-#{id}",
-          ipv4_range: "100.100.#{rem(id, 256)}.0/24",
-          ipv6_range: "fd7a:91c2:4e8b:#{rem(id, 65_536)}::/64"
-        },
-        overrides
-      )
-
-    Repo.insert!(struct(Cluster, attrs))
-  end
-
-  defp insert_node(cluster_id) do
-    Repo.insert!(%Node{
-      id: Ecto.UUID.generate(),
-      cluster_id: cluster_id,
-      vpn_host_id: Ecto.UUID.generate(),
-      status: :healthy,
-      version: "0.1.0",
-      http_port: 44_000,
-      ssh_port: 40_022,
-      host_metrics_port: 9_100,
-      wireguard_metrics_port: 9_586,
-      http_proxy_port: 8_080,
-      socks5_proxy_port: 1_080,
-      api_token: Ecto.UUID.generate(),
-      proxy_password: Ecto.UUID.generate(),
-      ingress_public_key: unique_ingress_public_key()
-    })
-  end
+  defp insert_cluster(overrides \\ %{}), do: Fixtures.insert_cluster!(overrides)
+  defp insert_node(cluster_id), do: Fixtures.insert_node!(cluster_id)
 
   defp ids(query), do: query |> Repo.all() |> Enum.map(& &1.id) |> Enum.sort()
 

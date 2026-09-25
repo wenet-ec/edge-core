@@ -6,25 +6,14 @@ defmodule EdgeAdmin.Nodes.Policies.EnrollmentKeyPoliciesTest do
   use ExUnit.Case, async: false
 
   alias EdgeAdmin.Nodes.Policies.EnrollmentKeyPolicies
-
-  # The fully-qualified Elixir.Application.* form dodges Credo's
-  # ApplicationConfigInModuleAttribute heuristic. See the same pattern in
-  # events/webhooks/validators/ssrf_validators_test.exs and proxy_servers/http/handler_test.exs.
+  alias EdgeAdmin.Test.AppConfig
 
   setup do
-    previous_cluster = Elixir.Application.get_env(:edge_admin, :default_cluster_name)
-    previous_public = Elixir.Application.get_env(:edge_admin, :public_enrollment_key_enabled)
-
-    on_exit(fn ->
-      restore_env(:default_cluster_name, previous_cluster)
-      restore_env(:public_enrollment_key_enabled, previous_public)
-    end)
+    AppConfig.restore_on_exit(:edge_admin, [:default_cluster_name, :public_enrollment_key_enabled])
 
     :ok
   end
 
-  defp restore_env(key, nil), do: Elixir.Application.delete_env(:edge_admin, key)
-  defp restore_env(key, value), do: Elixir.Application.put_env(:edge_admin, key, value)
   # :create_for_default — allowed iff default_cluster_name is a binary
 
   describe "authorize/1 — :create_for_default" do

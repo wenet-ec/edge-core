@@ -19,13 +19,13 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetricsTest do
   alias EdgeAdmin.Metrics.Schemas.AdminMetrics.Ssh
   alias EdgeAdmin.Metrics.Schemas.AdminMetrics.Vpn
   alias EdgeAdmin.Metrics.Schemas.AdminMetrics.Webhook
+
+  @timestamp ~U[2026-01-01 00:00:00Z]
   # AdminMetrics.from_raw_metrics/1
 
   describe "from_raw_metrics/1" do
-    test "produces a struct with fresh timestamp and every sub-struct populated" do
-      before = DateTime.utc_now()
-      result = AdminMetrics.from_raw_metrics(%{})
-      after_ = DateTime.utc_now()
+    test "builds every sub-struct with the supplied timestamp" do
+      result = AdminMetrics.from_raw_metrics(%{}, @timestamp)
 
       assert %AdminMetrics{} = result
       assert %App{} = result.application
@@ -44,8 +44,7 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetricsTest do
       assert %EventBroker{} = result.event_broker
       assert %Webhook{} = result.webhook
       assert is_list(result.oban_queues)
-      assert DateTime.compare(result.timestamp, before) in [:gt, :eq]
-      assert DateTime.compare(result.timestamp, after_) in [:lt, :eq]
+      assert result.timestamp == @timestamp
     end
   end
 

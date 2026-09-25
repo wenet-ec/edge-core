@@ -5,22 +5,24 @@ defmodule EdgeAdminWeb.Plugs.ApiKeyAuthTest do
   import Plug.Conn
   import Plug.Test
 
+  alias EdgeAdmin.Test.AppConfig
   alias EdgeAdminWeb.Plugs.ApiKeyAuth
 
   @opts ApiKeyAuth.init([])
 
   setup do
-    Application.put_env(:edge_admin, :all_auth_enabled, true)
-    Application.put_env(:edge_admin, :api_auth_enabled, true)
-    Application.delete_env(:edge_admin, :master_key)
-    Application.delete_env(:edge_admin, :api_key)
+    AppConfig.restore_on_exit(:edge_admin, [
+      :all_auth_enabled,
+      :api_auth_enabled,
+      :master_key,
+      :api_key
+    ])
 
-    on_exit(fn ->
-      Application.delete_env(:edge_admin, :all_auth_enabled)
-      Application.put_env(:edge_admin, :api_auth_enabled, true)
-      Application.delete_env(:edge_admin, :master_key)
-      Application.delete_env(:edge_admin, :api_key)
-    end)
+    Elixir.Application.put_env(:edge_admin, :all_auth_enabled, true)
+    Elixir.Application.put_env(:edge_admin, :api_auth_enabled, true)
+    Elixir.Application.delete_env(:edge_admin, :master_key)
+    Elixir.Application.delete_env(:edge_admin, :api_key)
+    :ok
   end
 
   defp build_conn(auth_header \\ nil) do
@@ -35,20 +37,20 @@ defmodule EdgeAdminWeb.Plugs.ApiKeyAuthTest do
 
   describe "auth disabled" do
     test "passes through regardless of header" do
-      Application.put_env(:edge_admin, :api_auth_enabled, false)
+      Elixir.Application.put_env(:edge_admin, :api_auth_enabled, false)
       conn = ApiKeyAuth.call(build_conn(), @opts)
       refute conn.halted
     end
 
     test "passes through even with wrong key" do
-      Application.put_env(:edge_admin, :api_auth_enabled, false)
-      Application.put_env(:edge_admin, :api_key, "real-key")
+      Elixir.Application.put_env(:edge_admin, :api_auth_enabled, false)
+      Elixir.Application.put_env(:edge_admin, :api_key, "real-key")
       conn = "Bearer wrong-key" |> build_conn() |> ApiKeyAuth.call(@opts)
       refute conn.halted
     end
 
     test "passes through with no header" do
-      Application.put_env(:edge_admin, :api_auth_enabled, false)
+      Elixir.Application.put_env(:edge_admin, :api_auth_enabled, false)
       conn = nil |> build_conn() |> ApiKeyAuth.call(@opts)
       refute conn.halted
     end
@@ -56,8 +58,8 @@ defmodule EdgeAdminWeb.Plugs.ApiKeyAuthTest do
 
   describe "auth enabled — valid master key" do
     test "passes through with correct master key" do
-      Application.put_env(:edge_admin, :master_key, "secret-master-key")
-      Application.put_env(:edge_admin, :api_key, "secret-api-key")
+      Elixir.Application.put_env(:edge_admin, :master_key, "secret-master-key")
+      Elixir.Application.put_env(:edge_admin, :api_key, "secret-api-key")
       conn = "Bearer secret-master-key" |> build_conn() |> ApiKeyAuth.call(@opts)
       refute conn.halted
       assert conn.status != 401
@@ -66,16 +68,16 @@ defmodule EdgeAdminWeb.Plugs.ApiKeyAuthTest do
 
   describe "auth enabled — valid api key" do
     test "passes through with correct api key" do
-      Application.put_env(:edge_admin, :master_key, "secret-master-key")
-      Application.put_env(:edge_admin, :api_key, "secret-api-key")
+      Elixir.Application.put_env(:edge_admin, :master_key, "secret-master-key")
+      Elixir.Application.put_env(:edge_admin, :api_key, "secret-api-key")
       conn = "Bearer secret-api-key" |> build_conn() |> ApiKeyAuth.call(@opts)
       refute conn.halted
       assert conn.status != 401
     end
 
     test "passes through when api key equals master key (default fallback)" do
-      Application.put_env(:edge_admin, :master_key, "secret-master-key")
-      Application.put_env(:edge_admin, :api_key, "secret-master-key")
+      Elixir.Application.put_env(:edge_admin, :master_key, "secret-master-key")
+      Elixir.Application.put_env(:edge_admin, :api_key, "secret-master-key")
       conn = "Bearer secret-master-key" |> build_conn() |> ApiKeyAuth.call(@opts)
       refute conn.halted
     end
@@ -83,48 +85,48 @@ defmodule EdgeAdminWeb.Plugs.ApiKeyAuthTest do
 
   describe "auth enabled — invalid key" do
     test "halts with 401 when key is wrong" do
-      Application.put_env(:edge_admin, :master_key, "secret-master-key")
-      Application.put_env(:edge_admin, :api_key, "secret-api-key")
+      Elixir.Application.put_env(:edge_admin, :master_key, "secret-master-key")
+      Elixir.Application.put_env(:edge_admin, :api_key, "secret-api-key")
       conn = "Bearer wrong-key" |> build_conn() |> ApiKeyAuth.call(@opts)
       assert conn.halted
       assert conn.status == 401
     end
 
     test "halts with 401 when no Authorization header" do
-      Application.put_env(:edge_admin, :master_key, "secret-master-key")
-      Application.put_env(:edge_admin, :api_key, "secret-api-key")
+      Elixir.Application.put_env(:edge_admin, :master_key, "secret-master-key")
+      Elixir.Application.put_env(:edge_admin, :api_key, "secret-api-key")
       conn = nil |> build_conn() |> ApiKeyAuth.call(@opts)
       assert conn.halted
       assert conn.status == 401
     end
 
     test "halts with 401 when scheme is not Bearer" do
-      Application.put_env(:edge_admin, :master_key, "secret-master-key")
-      Application.put_env(:edge_admin, :api_key, "secret-api-key")
+      Elixir.Application.put_env(:edge_admin, :master_key, "secret-master-key")
+      Elixir.Application.put_env(:edge_admin, :api_key, "secret-api-key")
       conn = "Token secret-api-key" |> build_conn() |> ApiKeyAuth.call(@opts)
       assert conn.halted
       assert conn.status == 401
     end
 
     test "halts with 401 when key has extra whitespace" do
-      Application.put_env(:edge_admin, :master_key, "secret-master-key")
-      Application.put_env(:edge_admin, :api_key, "secret-api-key")
+      Elixir.Application.put_env(:edge_admin, :master_key, "secret-master-key")
+      Elixir.Application.put_env(:edge_admin, :api_key, "secret-api-key")
       conn = "Bearer secret-api-key " |> build_conn() |> ApiKeyAuth.call(@opts)
       assert conn.halted
       assert conn.status == 401
     end
 
     test "halts with 401 when Authorization is empty string" do
-      Application.put_env(:edge_admin, :master_key, "secret-master-key")
-      Application.put_env(:edge_admin, :api_key, "secret-api-key")
+      Elixir.Application.put_env(:edge_admin, :master_key, "secret-master-key")
+      Elixir.Application.put_env(:edge_admin, :api_key, "secret-api-key")
       conn = "" |> build_conn() |> ApiKeyAuth.call(@opts)
       assert conn.halted
       assert conn.status == 401
     end
 
     test "response body contains error key" do
-      Application.put_env(:edge_admin, :master_key, "secret-master-key")
-      Application.put_env(:edge_admin, :api_key, "secret-api-key")
+      Elixir.Application.put_env(:edge_admin, :master_key, "secret-master-key")
+      Elixir.Application.put_env(:edge_admin, :api_key, "secret-api-key")
       conn = "Bearer wrong" |> build_conn() |> ApiKeyAuth.call(@opts)
       body = JSON.decode!(conn.resp_body)
       assert Map.has_key?(body, "error")
@@ -133,17 +135,17 @@ defmodule EdgeAdminWeb.Plugs.ApiKeyAuthTest do
 
   describe "API_AUTH_ENABLED precedence" do
     test "specific API flag overrides disabled global auth" do
-      Application.put_env(:edge_admin, :all_auth_enabled, false)
-      Application.put_env(:edge_admin, :api_auth_enabled, true)
-      Application.put_env(:edge_admin, :api_key, "secret")
+      Elixir.Application.put_env(:edge_admin, :all_auth_enabled, false)
+      Elixir.Application.put_env(:edge_admin, :api_auth_enabled, true)
+      Elixir.Application.put_env(:edge_admin, :api_key, "secret")
       conn = nil |> build_conn() |> ApiKeyAuth.call(@opts)
       assert conn.halted
       assert conn.status == 401
     end
 
     test "when specific flag is not set, auth defaults to enabled" do
-      Application.delete_env(:edge_admin, :api_auth_enabled)
-      Application.put_env(:edge_admin, :api_key, "secret")
+      Elixir.Application.delete_env(:edge_admin, :api_auth_enabled)
+      Elixir.Application.put_env(:edge_admin, :api_key, "secret")
       conn = nil |> build_conn() |> ApiKeyAuth.call(@opts)
       assert conn.halted
       assert conn.status == 401

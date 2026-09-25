@@ -6,7 +6,7 @@ defmodule EdgeAdmin.Ssh.Views.SshPublicKeyViewTest do
   alias EdgeAdmin.Ssh.Views.SshPublicKeyView
 
   defp key_fixture(overrides \\ %{}) do
-    now = DateTime.truncate(DateTime.utc_now(), :second)
+    now = ~U[2026-01-01 00:00:00Z]
 
     base = %SshPublicKey{
       id: "key-uuid-1",

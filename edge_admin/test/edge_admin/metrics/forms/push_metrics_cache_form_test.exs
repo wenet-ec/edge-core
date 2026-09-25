@@ -2,6 +2,8 @@
 defmodule EdgeAdmin.Metrics.Forms.PushMetricsCacheFormTest do
   use ExUnit.Case, async: true
 
+  import EdgeAdmin.Test.ChangesetAssertions, only: [errors_on: 1]
+
   alias EdgeAdmin.Metrics.Forms.PushMetricsCacheForm
 
   defp valid_attrs(overrides \\ %{}) do
@@ -9,10 +11,6 @@ defmodule EdgeAdmin.Metrics.Forms.PushMetricsCacheFormTest do
       %{"metrics_type" => "host", "metrics_text" => "# HELP node_cpu_seconds_total\nnode_cpu_seconds_total 1.0"},
       overrides
     )
-  end
-
-  defp errors_on(changeset) do
-    Ecto.Changeset.traverse_errors(changeset, fn {msg, _opts} -> msg end)
   end
 
   # changeset/1 — valid cases

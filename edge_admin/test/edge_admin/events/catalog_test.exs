@@ -12,7 +12,7 @@ defmodule EdgeAdmin.Events.CatalogTest do
   alias EdgeAdmin.Ssh.Schemas.SshUsername
   # Fixtures
 
-  defp now, do: DateTime.truncate(DateTime.utc_now(), :second)
+  defp now, do: ~U[2026-01-01 00:00:00Z]
 
   defp cluster_fixture, do: %Cluster{id: "cluster-uuid-1", name: "prod"}
 

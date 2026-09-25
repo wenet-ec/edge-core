@@ -27,7 +27,6 @@ defmodule EdgeAdmin.DataCase do
       import Ecto
       import Ecto.Changeset
       import Ecto.Query
-      import EdgeAdmin.DataCase
 
       alias EdgeAdmin.Repo
     end
@@ -44,27 +43,5 @@ defmodule EdgeAdmin.DataCase do
   def setup_sandbox(tags) do
     pid = Sandbox.start_owner!(@repo_impl, shared: not tags[:async])
     on_exit(fn -> Sandbox.stop_owner(pid) end)
-  end
-
-  @doc """
-  A helper that transforms changeset errors into a map of messages.
-
-      assert {:error, changeset} = Accounts.create_user(%{password: "short"})
-      assert "password is too short" in errors_on(changeset).password
-      assert %{password: ["password is too short"]} = errors_on(changeset)
-  """
-  def errors_on(changeset) do
-    Ecto.Changeset.traverse_errors(changeset, fn {message, opts} ->
-      Regex.replace(~r"%{(\w+)}", message, fn _, key ->
-        opts |> Keyword.get(String.to_existing_atom(key), key) |> to_string()
-      end)
-    end)
-  end
-
-  @doc "Returns a unique canonical WireGuard public key for node fixtures."
-  @spec unique_ingress_public_key() :: String.t()
-  def unique_ingress_public_key do
-    key_id = :erlang.unique_integer([:positive, :monotonic])
-    Base.encode64(<<key_id::unsigned-big-integer-size(64), 0::size(192)>>)
   end
 end

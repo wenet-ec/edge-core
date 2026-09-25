@@ -1,94 +1,31 @@
-# edge_admin/test/edge_admin/commands/filters/execution_filters_test.exs
+# edge_admin/test/edge_admin/commands/filters/command_execution_filters_test.exs
 defmodule EdgeAdmin.Commands.Filters.CommandExecutionFiltersTest do
   use EdgeAdmin.DataCase, async: false
 
   import Ecto.Query
 
   alias EdgeAdmin.Commands.Filters.CommandExecutionFilters
-  alias EdgeAdmin.Commands.Schemas.Command
   alias EdgeAdmin.Commands.Schemas.CommandExecution
-  alias EdgeAdmin.Nodes.Schemas.Cluster
-  alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.Repo
+  alias EdgeAdmin.Test.Fixtures
 
-  defp insert_cluster(overrides \\ %{}) do
-    attrs =
-      Map.merge(
-        %{
-          id: Ecto.UUID.generate(),
-          name: "cluster-#{unique_id()}",
-          ipv4_range: unique_ipv4_range(),
-          ipv6_range: unique_ipv6_range()
-        },
-        overrides
-      )
+  defp insert_cluster(overrides \\ %{}), do: Fixtures.insert_cluster!(overrides)
+  defp insert_node(cluster_id), do: Fixtures.insert_node!(cluster_id)
 
-    Repo.insert!(struct(Cluster, attrs))
-  end
-
-  # See cluster_filters_test for rationale: monotonic ints, not random, so
-  # birthday-paradox collisions on the small `100.64.X.0/24` space disappear.
-  defp unique_id, do: :erlang.unique_integer([:positive, :monotonic])
-
-  defp unique_ipv4_range do
-    n = unique_id()
-    octet2 = 64 + rem(div(n, 256), 64)
-    octet3 = rem(n, 256)
-    "100.#{octet2}.#{octet3}.0/24"
-  end
-
-  defp unique_ipv6_range, do: "fd7a:91c2:4e8b:#{rem(unique_id(), 65_536)}::/64"
-
-  defp insert_node(cluster_id) do
-    Repo.insert!(
-      struct(Node, %{
-        id: Ecto.UUID.generate(),
-        cluster_id: cluster_id,
-        vpn_host_id: Ecto.UUID.generate(),
-        status: :healthy,
-        version: "0.1.0",
-        http_port: 44_000,
-        ssh_port: 40_022,
-        host_metrics_port: 9100,
-        wireguard_metrics_port: 9586,
-        http_proxy_port: 8080,
-        socks5_proxy_port: 1080,
-        api_token: Ecto.UUID.generate(),
-        proxy_password: Ecto.UUID.generate(),
-        ingress_public_key: unique_ingress_public_key()
-      })
-    )
-  end
-
-  defp insert_command do
-    Repo.insert!(
-      struct(Command, %{
-        id: Ecto.UUID.generate(),
-        command_text: "echo hello",
-        targeting: %{}
-      })
-    )
-  end
+  defp insert_command, do: Fixtures.insert_command!()
 
   defp insert_execution(node_id, opts \\ []) do
     cluster_id = Keyword.get(opts, :cluster_id, nil)
     output = Keyword.get(opts, :output, nil)
     command_id = Keyword.get(opts, :command_id, insert_command().id)
 
-    # Use Ecto.Changeset.change/2 to write nil cluster_id / output explicitly
-    # (struct insert + nil with no schema default is fine for these fields,
-    # but using change/2 keeps the pattern uniform with the EnrollmentKey
-    # filters test where it actually matters).
-    %CommandExecution{}
-    |> Ecto.Changeset.change(%{
-      id: Ecto.UUID.generate(),
+    Fixtures.insert_command_execution!(%{
       command_id: command_id,
       node_id: node_id,
       cluster_id: cluster_id,
       status: :pending,
       output: output
     })
-    |> Repo.insert!()
   end
 
   # Base query mirroring list_command_executions/1's join shape:

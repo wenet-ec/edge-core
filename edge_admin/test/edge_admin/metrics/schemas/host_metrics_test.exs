@@ -10,15 +10,13 @@ defmodule EdgeAdmin.Metrics.Schemas.HostMetricsTest do
 
   # 1 GiB in bytes
   @gib 1_073_741_824
+  @timestamp ~U[2026-01-01 00:00:00Z]
   # HostMetrics.from_raw_metrics/2
 
   describe "from_raw_metrics/2" do
-    test "produces a struct with node_id, cluster_name, fresh timestamp, and all sub-structs" do
+    test "builds all sub-structs with the supplied timestamp" do
       raw = %{"cluster_name" => "cluster-a"}
-
-      before = DateTime.utc_now()
-      result = HostMetrics.from_raw_metrics(raw, "node-abc")
-      after_ = DateTime.utc_now()
+      result = HostMetrics.from_raw_metrics(raw, "node-abc", @timestamp)
 
       assert %HostMetrics{} = result
       assert result.node_id == "node-abc"
@@ -27,12 +25,11 @@ defmodule EdgeAdmin.Metrics.Schemas.HostMetricsTest do
       assert %Memory{} = result.memory
       assert %Disk{} = result.disk
       assert %Uptime{} = result.uptime
-      assert DateTime.compare(result.timestamp, before) in [:gt, :eq]
-      assert DateTime.compare(result.timestamp, after_) in [:lt, :eq]
+      assert result.timestamp == @timestamp
     end
 
     test "passes nil cluster_name through when missing" do
-      result = HostMetrics.from_raw_metrics(%{}, "node-abc")
+      result = HostMetrics.from_raw_metrics(%{}, "node-abc", @timestamp)
       assert result.cluster_name == nil
     end
   end

@@ -1,13 +1,13 @@
 # edge_admin/test/edge_admin_mcp/server_test.exs
 defmodule EdgeAdminMcp.ServerTest do
-  # async: true — Mox in private mode scopes stubs per test process, so
-  # parallel tests don't race even when they touch the same mock.
+  # These tests mutate global application configuration.
   use ExUnit.Case, async: false
 
   import Mox
 
   alias Anubis.Server.Context
   alias Anubis.Server.Frame
+  alias EdgeAdmin.Test.AppConfig
   alias EdgeAdminMcp.Middlewares.DegradedMode
   alias EdgeAdminMcp.Middlewares.McpAuth
   alias EdgeAdminMcp.ToolRegistry
@@ -22,15 +22,11 @@ defmodule EdgeAdminMcp.ServerTest do
   setup :verify_on_exit!
 
   setup do
-    Application.put_env(:edge_admin, :mcp_auth_enabled, true)
-    Application.put_env(:edge_admin, :master_key, "master-key")
-    Application.put_env(:edge_admin, :mcp_key, "mcp-key")
-
-    on_exit(fn ->
-      Application.delete_env(:edge_admin, :mcp_auth_enabled)
-      Application.delete_env(:edge_admin, :master_key)
-      Application.delete_env(:edge_admin, :mcp_key)
-    end)
+    AppConfig.restore_on_exit(:edge_admin, [:mcp_auth_enabled, :master_key, :mcp_key])
+    Elixir.Application.put_env(:edge_admin, :mcp_auth_enabled, true)
+    Elixir.Application.put_env(:edge_admin, :master_key, "master-key")
+    Elixir.Application.put_env(:edge_admin, :mcp_key, "mcp-key")
+    :ok
   end
 
   defp request(name) do

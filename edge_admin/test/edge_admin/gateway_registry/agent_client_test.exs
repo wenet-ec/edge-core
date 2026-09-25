@@ -3,23 +3,19 @@ defmodule EdgeAdmin.GatewayRegistry.AgentClientTest do
   use ExUnit.Case, async: false
 
   alias EdgeAdmin.GatewayRegistry.AgentClient
+  alias EdgeAdmin.Test.AppConfig
 
   @keys [:command_delivery_timeout, :metrics_scrape_timeout, :health_check_timeout]
 
-  setup do
-    previous = Map.new(@keys, &{&1, Elixir.Application.get_env(:edge_admin, &1)})
+  setup_all do
+    AppConfig.restore_on_exit(:edge_admin, @keys)
+    :ok
+  end
 
+  setup do
     Elixir.Application.put_env(:edge_admin, :command_delivery_timeout, 11_000)
     Elixir.Application.put_env(:edge_admin, :metrics_scrape_timeout, 7_000)
     Elixir.Application.put_env(:edge_admin, :health_check_timeout, 3_000)
-
-    on_exit(fn ->
-      Enum.each(previous, fn {key, value} ->
-        if is_nil(value),
-          do: Elixir.Application.delete_env(:edge_admin, key),
-          else: Elixir.Application.put_env(:edge_admin, key, value)
-      end)
-    end)
 
     :ok
   end

@@ -31,7 +31,7 @@ defmodule EdgeAdmin.Nodes.Views.NodeViewTest do
 
   defp node_fixture(overrides \\ %{}) do
     cluster = cluster_fixture()
-    now = DateTime.truncate(DateTime.utc_now(), :second)
+    now = ~U[2026-01-01 00:00:00Z]
 
     base = %Node{
       id: "node-uuid-1",

@@ -6,7 +6,7 @@ defmodule EdgeAdmin.SelfUpdates.Views.SelfUpdateRequestViewTest do
   alias EdgeAdmin.SelfUpdates.Views.SelfUpdateRequestView
 
   defp request_fixture(overrides \\ %{}) do
-    now = DateTime.truncate(DateTime.utc_now(), :second)
+    now = ~U[2026-01-01 00:00:00Z]
 
     base = %SelfUpdateRequest{
       id: "request-uuid-1",

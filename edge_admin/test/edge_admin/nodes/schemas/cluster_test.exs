@@ -2,15 +2,13 @@
 defmodule EdgeAdmin.Nodes.Schemas.ClusterTest do
   use ExUnit.Case, async: true
 
+  import EdgeAdmin.Test.ChangesetAssertions, only: [errors_on: 1]
+
   alias Ecto.Association.NotLoaded
   alias EdgeAdmin.Commands.Schemas.CommandExecution
   alias EdgeAdmin.Nodes.Schemas.Alias
   alias EdgeAdmin.Nodes.Schemas.Cluster
   # helpers
-
-  defp errors_on(changeset) do
-    Ecto.Changeset.traverse_errors(changeset, fn {msg, _opts} -> msg end)
-  end
 
   defp build_changeset(attrs) do
     Cluster.changeset(%Cluster{}, Map.put_new(attrs, "ipv6_range", "fd7a:91c2:4e8b:2::/64"))

@@ -1,13 +1,18 @@
 # edge_admin/test/edge_admin_web/plugs/degraded_mode_test.exs
 defmodule EdgeAdminWeb.Plugs.DegradedModeTest do
-  use EdgeAdminWeb.ConnCase, async: true
+  use ExUnit.Case, async: true
 
   import Mox
+  import Phoenix.ConnTest
   import Plug.Conn
 
   alias EdgeAdminWeb.Plugs.DegradedMode
 
   setup :verify_on_exit!
+
+  setup do
+    {:ok, conn: build_conn()}
+  end
 
   # Phoenix.Controller.render/3 needs params fetched + _format set — simulate the router pipeline
   defp prepared(%{conn: conn}) do

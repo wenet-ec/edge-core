@@ -2,11 +2,9 @@
 defmodule EdgeAdmin.Nodes.Forms.ChangeNodeClusterFormTest do
   use ExUnit.Case, async: true
 
-  alias EdgeAdmin.Nodes.Forms.ChangeNodeClusterForm
+  import EdgeAdmin.Test.ChangesetAssertions, only: [errors_on: 1]
 
-  defp errors_on(changeset) do
-    Ecto.Changeset.traverse_errors(changeset, fn {msg, _opts} -> msg end)
-  end
+  alias EdgeAdmin.Nodes.Forms.ChangeNodeClusterForm
 
   describe "changeset/1 — valid cases" do
     test "valid cluster name returns a normalized map" do

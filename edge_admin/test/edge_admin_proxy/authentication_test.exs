@@ -5,10 +5,23 @@ defmodule EdgeAdminProxy.AuthenticationTest do
 
   import Mox
 
+  alias EdgeAdmin.Test.AppConfig
   alias EdgeAdminProxy.Authentication
 
   # Mox requires that mocks are verified after each test
   setup :verify_on_exit!
+
+  setup_all do
+    AppConfig.restore_on_exit(:edge_admin, [:proxy_auth_enabled, :proxy_key, :edge_vpn_default_domain])
+    :ok
+  end
+
+  setup do
+    Elixir.Application.delete_env(:edge_admin, :proxy_auth_enabled)
+    Elixir.Application.delete_env(:edge_admin, :proxy_key)
+    Elixir.Application.delete_env(:edge_admin, :edge_vpn_default_domain)
+    :ok
+  end
 
   # Stub a node struct with just what Authentication returns
   defp stub_node(id \\ "abc-123") do
@@ -16,22 +29,21 @@ defmodule EdgeAdminProxy.AuthenticationTest do
   end
 
   defp with_auth_disabled(fun) do
-    Application.put_env(:edge_admin, :proxy_auth_enabled, false)
+    Elixir.Application.put_env(:edge_admin, :proxy_auth_enabled, false)
     fun.()
   after
-    Application.delete_env(:edge_admin, :proxy_auth_enabled)
-  end
-
-  defp with_proxy_key(key, fun) do
-    Application.put_env(:edge_admin, :proxy_auth_enabled, true)
-    Application.put_env(:edge_admin, :proxy_key, key)
-    fun.()
-  after
-    Application.delete_env(:edge_admin, :proxy_auth_enabled)
-    Application.delete_env(:edge_admin, :proxy_key)
+    Elixir.Application.delete_env(:edge_admin, :proxy_auth_enabled)
   end
 
   # Password authentication
+  defp with_proxy_key(key, fun) do
+    Elixir.Application.put_env(:edge_admin, :proxy_auth_enabled, true)
+    Elixir.Application.put_env(:edge_admin, :proxy_key, key)
+    fun.()
+  after
+    Elixir.Application.delete_env(:edge_admin, :proxy_auth_enabled)
+    Elixir.Application.delete_env(:edge_admin, :proxy_key)
+  end
 
   describe "authenticate_and_parse/2 - password" do
     test "wrong password returns invalid_credentials" do
@@ -55,12 +67,11 @@ defmodule EdgeAdminProxy.AuthenticationTest do
     end
   end
 
-  # Direct routing mode (username "_" or "")
-
   describe "authenticate_and_parse/2 - direct routing" do
+    # Direct routing mode (username "_" or "")
     setup do
-      Application.put_env(:edge_admin, :proxy_auth_enabled, false)
-      on_exit(fn -> Application.delete_env(:edge_admin, :proxy_auth_enabled) end)
+      Elixir.Application.put_env(:edge_admin, :proxy_auth_enabled, false)
+      on_exit(fn -> Elixir.Application.delete_env(:edge_admin, :proxy_auth_enabled) end)
     end
 
     test "underscore username routes direct" do
@@ -72,21 +83,20 @@ defmodule EdgeAdminProxy.AuthenticationTest do
     end
   end
 
-  # DNS parsing - format validation
-
   describe "authenticate_and_parse/2 - DNS format" do
     setup do
-      Application.put_env(:edge_admin, :proxy_auth_enabled, false)
-      Application.put_env(:edge_admin, :edge_vpn_default_domain, "nm.internal")
+      Elixir.Application.put_env(:edge_admin, :proxy_auth_enabled, false)
+      Elixir.Application.put_env(:edge_admin, :edge_vpn_default_domain, "nm.internal")
 
       on_exit(fn ->
-        Application.delete_env(:edge_admin, :proxy_auth_enabled)
-        Application.delete_env(:edge_admin, :edge_vpn_default_domain)
+        Elixir.Application.delete_env(:edge_admin, :proxy_auth_enabled)
+        Elixir.Application.delete_env(:edge_admin, :edge_vpn_default_domain)
       end)
     end
 
     test "invalid DNS format returns error without hitting DB" do
       # No Mox expectation set - any DB call would crash the test
+      # DNS parsing - format validation
       assert {:error, :invalid_dns_format} =
                Authentication.authenticate_and_parse("not-a-valid-hostname", "any")
     end
@@ -134,9 +144,9 @@ defmodule EdgeAdminProxy.AuthenticationTest do
     end
 
     test "custom domain in config is respected" do
-      original = Application.get_env(:edge_admin, :edge_vpn_default_domain)
-      on_exit(fn -> Application.put_env(:edge_admin, :edge_vpn_default_domain, original) end)
-      Application.put_env(:edge_admin, :edge_vpn_default_domain, "custom.vpn")
+      original = Elixir.Application.get_env(:edge_admin, :edge_vpn_default_domain)
+      on_exit(fn -> Elixir.Application.put_env(:edge_admin, :edge_vpn_default_domain, original) end)
+      Elixir.Application.put_env(:edge_admin, :edge_vpn_default_domain, "custom.vpn")
 
       # DNS: node-xyz.cluster-prod.custom.vpn → identifier "xyz"
       stub(EdgeAdmin.NodesMock, :list_proxy_chain_identifiers, fn "prod" ->
@@ -151,16 +161,14 @@ defmodule EdgeAdminProxy.AuthenticationTest do
     end
   end
 
-  # Node/cluster lookup
-
   describe "authenticate_and_parse/2 - node lookup" do
     setup do
-      Application.put_env(:edge_admin, :proxy_auth_enabled, false)
-      Application.put_env(:edge_admin, :edge_vpn_default_domain, "nm.internal")
+      Elixir.Application.put_env(:edge_admin, :proxy_auth_enabled, false)
+      Elixir.Application.put_env(:edge_admin, :edge_vpn_default_domain, "nm.internal")
 
       on_exit(fn ->
-        Application.delete_env(:edge_admin, :proxy_auth_enabled)
-        Application.delete_env(:edge_admin, :edge_vpn_default_domain)
+        Elixir.Application.delete_env(:edge_admin, :proxy_auth_enabled)
+        Elixir.Application.delete_env(:edge_admin, :edge_vpn_default_domain)
       end)
     end
 
@@ -183,6 +191,7 @@ defmodule EdgeAdminProxy.AuthenticationTest do
     test "alias resolves to the node it points to" do
       node = stub_node("abc123")
 
+      # Node/cluster lookup
       # DNS: node-web.cluster-test.nm.internal → identifier "web"
       expect(EdgeAdmin.NodesMock, :list_proxy_chain_identifiers, fn "test" ->
         {:ok, %{"abc123" => node, "web" => node}}

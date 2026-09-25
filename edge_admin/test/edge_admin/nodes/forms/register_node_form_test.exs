@@ -2,12 +2,10 @@
 defmodule EdgeAdmin.Nodes.Forms.RegisterNodeFormTest do
   use ExUnit.Case, async: true
 
+  import EdgeAdmin.Test.ChangesetAssertions, only: [errors_on: 1]
+
   alias EdgeAdmin.Nodes.Forms.RegisterNodeForm
   # helpers
-
-  defp errors_on(changeset) do
-    Ecto.Changeset.traverse_errors(changeset, fn {msg, _opts} -> msg end)
-  end
 
   defp valid_attrs(overrides \\ %{}) do
     Map.merge(

@@ -2,6 +2,8 @@
 defmodule EdgeAdmin.Events.Webhooks.Schemas.WebhookTest do
   use ExUnit.Case, async: true
 
+  import EdgeAdmin.Test.ChangesetAssertions, only: [errors_on: 1]
+
   alias EdgeAdmin.Events.Webhooks.Schemas.Webhook
 
   defp valid_attrs(overrides \\ %{}) do
@@ -13,14 +15,6 @@ defmodule EdgeAdmin.Events.Webhooks.Schemas.WebhookTest do
       },
       overrides
     )
-  end
-
-  defp errors_on(changeset) do
-    Ecto.Changeset.traverse_errors(changeset, fn {message, opts} ->
-      Regex.replace(~r"%{(\w+)}", message, fn _, key ->
-        opts |> Keyword.get(String.to_existing_atom(key), key) |> to_string()
-      end)
-    end)
   end
 
   # Required fields

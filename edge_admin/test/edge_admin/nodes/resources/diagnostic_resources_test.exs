@@ -3,48 +3,15 @@ defmodule EdgeAdmin.Nodes.Resources.DiagnosticResourcesTest do
   use EdgeAdmin.DataCase, async: false
 
   alias EdgeAdmin.Nodes.Resources.DiagnosticResources
-  alias EdgeAdmin.Nodes.Schemas.Cluster
-  alias EdgeAdmin.Nodes.Schemas.Node
-  alias EdgeAdmin.Nodes.Schemas.NodeDiagnostic
-  alias EdgeAdmin.Repo
+  alias EdgeAdmin.Test.Fixtures
 
   defp insert_node! do
-    sequence = System.unique_integer([:positive, :monotonic])
-
-    cluster =
-      Repo.insert!(%Cluster{
-        id: Ecto.UUID.generate(),
-        name: "diagnostics-#{sequence}",
-        ipv4_range: "100.64.#{rem(sequence, 200)}.0/24",
-        ipv6_range: "fd7a:91c2:4e8b:#{rem(sequence, 65_536)}::/64"
-      })
-
-    public_key = Base.encode64(<<rem(sequence, 256), :binary.copy(<<0>>, 31)::binary>>)
-
-    Repo.insert!(%Node{
-      id: Ecto.UUID.generate(),
-      cluster_id: cluster.id,
-      vpn_host_id: Ecto.UUID.generate(),
-      version: "edge-1.0.0",
-      http_port: 44_000,
-      ssh_port: 40_022,
-      host_metrics_port: 9100,
-      wireguard_metrics_port: 9586,
-      http_proxy_port: 8080,
-      socks5_proxy_port: 1080,
-      api_token: Ecto.UUID.generate(),
-      proxy_password: "proxy-#{sequence}",
-      ingress_public_key: public_key
-    })
+    cluster = Fixtures.insert_cluster!(%{name: Fixtures.unique_name("diagnostics")})
+    Fixtures.insert_node!(cluster.id, %{version: "edge-1.0.0"})
   end
 
   defp insert_diagnostic!(node, updated_at) do
-    Repo.insert!(%NodeDiagnostic{
-      node_id: node.id,
-      report: %{"overall" => "pass"},
-      inserted_at: updated_at,
-      updated_at: updated_at
-    })
+    Fixtures.insert_node_diagnostic!(node.id, %{inserted_at: updated_at, updated_at: updated_at})
   end
 
   test "returns reports at the freshness cutoff and excludes older reports" do

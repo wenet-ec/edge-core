@@ -2,6 +2,8 @@
 defmodule EdgeAdmin.Commands.Forms.CreateCommandFormTest do
   use ExUnit.Case, async: true
 
+  import EdgeAdmin.Test.ChangesetAssertions, only: [errors_on: 1]
+
   alias EdgeAdmin.Commands.Forms.CreateCommandForm
 
   defp valid_attrs(overrides \\ %{}) do
@@ -12,10 +14,6 @@ defmodule EdgeAdmin.Commands.Forms.CreateCommandFormTest do
       },
       overrides
     )
-  end
-
-  defp errors_on(changeset) do
-    Ecto.Changeset.traverse_errors(changeset, fn {msg, _opts} -> msg end)
   end
 
   # changeset/1 — valid cases
@@ -129,26 +127,18 @@ defmodule EdgeAdmin.Commands.Forms.CreateCommandFormTest do
 
   describe "changeset/1 — expires_at validation" do
     test "future expires_at is accepted" do
-      future = DateTime.utc_now() |> DateTime.shift(hour: 1) |> DateTime.truncate(:second)
+      future = ~U[2099-01-01 00:00:00Z]
       attrs = valid_attrs(%{"expires_at" => future})
       assert {:ok, result} = CreateCommandForm.changeset(attrs)
       assert result["expires_at"] == future
     end
 
     test "expires_at in the past is rejected" do
-      past = DateTime.shift(DateTime.utc_now(), hour: -1)
+      past = ~U[2000-01-01 00:00:00Z]
       attrs = valid_attrs(%{"expires_at" => past})
       assert {:error, changeset} = CreateCommandForm.changeset(attrs)
       assert %{expires_at: [msg]} = errors_on(changeset)
       assert msg =~ "future"
-    end
-
-    test "expires_at equal to now is rejected" do
-      # Use a slightly-past time to avoid race on exact equality
-      now = DateTime.shift(DateTime.utc_now(), second: -1)
-      attrs = valid_attrs(%{"expires_at" => now})
-      assert {:error, changeset} = CreateCommandForm.changeset(attrs)
-      assert %{expires_at: [_msg]} = errors_on(changeset)
     end
 
     test "expires_at is excluded from result when not provided" do

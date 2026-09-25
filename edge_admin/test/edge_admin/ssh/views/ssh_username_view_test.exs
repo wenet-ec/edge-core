@@ -7,7 +7,7 @@ defmodule EdgeAdmin.Ssh.Views.SshUsernameViewTest do
   alias EdgeAdmin.Ssh.Views.SshUsernameView
 
   defp public_key(overrides \\ %{}) do
-    now = DateTime.truncate(DateTime.utc_now(), :second)
+    now = ~U[2026-01-01 00:00:00Z]
 
     base = %SshPublicKey{
       id: "key-uuid",
@@ -21,7 +21,7 @@ defmodule EdgeAdmin.Ssh.Views.SshUsernameViewTest do
   end
 
   defp username_fixture(overrides \\ %{}) do
-    now = DateTime.truncate(DateTime.utc_now(), :second)
+    now = ~U[2026-01-01 00:00:00Z]
 
     base = %SshUsername{
       id: "username-uuid-1",

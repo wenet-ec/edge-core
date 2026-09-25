@@ -10,7 +10,6 @@ defmodule EdgeAdminMcp.Middlewares.DegradedMode do
   alias EdgeAdminMcp.ToolRegistry
 
   @metadata_module Application.compile_env(:edge_admin, :metadata_module, EdgeAdmin.AdminClustering.Metadata)
-  @compile {:no_warn_undefined, @metadata_module}
 
   @spec call(map(), Frame.t()) :: :ok | {:error, term(), Frame.t()}
   def call(request, %Frame{} = frame) do
@@ -27,7 +26,7 @@ defmodule EdgeAdminMcp.Middlewares.DegradedMode do
   defp check(_request), do: :ok
 
   defp check_tool(name) do
-    if ToolRegistry.degraded_behavior(name) == :block and @metadata_module.degraded?() do
+    if ToolRegistry.degraded_behavior(name) == :block and degraded?() do
       :degraded
     else
       :ok
@@ -37,4 +36,7 @@ defmodule EdgeAdminMcp.Middlewares.DegradedMode do
   defp degraded_response do
     Response.tool() |> Response.error(ToolError.message(:degraded_mode)) |> Response.to_protocol()
   end
+
+  @spec degraded?() :: boolean()
+  defp degraded?, do: apply(@metadata_module, :degraded?, [])
 end

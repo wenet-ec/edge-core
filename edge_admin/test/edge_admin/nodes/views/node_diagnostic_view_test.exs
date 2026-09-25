@@ -28,7 +28,7 @@ defmodule EdgeAdmin.Nodes.Views.NodeDiagnosticViewTest do
 
   describe "render_push/1" do
     test "renders the push acknowledgement" do
-      updated_at = DateTime.truncate(DateTime.utc_now(), :second)
+      updated_at = ~U[2026-01-01 00:00:00Z]
 
       diagnostic = %NodeDiagnostic{id: "diagnostic-uuid-1", node_id: "node-uuid-1", updated_at: updated_at}
 

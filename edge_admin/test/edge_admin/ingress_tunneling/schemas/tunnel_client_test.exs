@@ -2,16 +2,14 @@
 defmodule EdgeAdmin.IngressTunneling.Schemas.TunnelClientTest do
   use ExUnit.Case, async: true
 
+  import EdgeAdmin.Test.ChangesetAssertions, only: [errors_on: 1]
+
   alias EdgeAdmin.IngressTunneling.Schemas.TunnelClient
 
   @wireguard_key Base.encode64(:binary.copy(<<1>>, 32))
 
   defp valid_attrs(overrides \\ %{}) do
     Map.merge(%{public_key: @wireguard_key, private_key: @wireguard_key}, overrides)
-  end
-
-  defp errors_on(changeset) do
-    Ecto.Changeset.traverse_errors(changeset, fn {message, _opts} -> message end)
   end
 
   test "accepts a canonical Tunnel WireGuard keypair" do

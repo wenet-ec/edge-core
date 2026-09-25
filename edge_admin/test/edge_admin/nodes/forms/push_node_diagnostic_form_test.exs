@@ -2,6 +2,8 @@
 defmodule EdgeAdmin.Nodes.Forms.PushNodeDiagnosticFormTest do
   use ExUnit.Case, async: true
 
+  import EdgeAdmin.Test.ChangesetAssertions, only: [errors_on: 1]
+
   alias EdgeAdmin.Nodes.Forms.PushNodeDiagnosticForm
 
   defp valid_attrs(overrides \\ %{}) do
@@ -89,9 +91,5 @@ defmodule EdgeAdmin.Nodes.Forms.PushNodeDiagnosticFormTest do
   test "rejects non-map parameters" do
     assert {:error, changeset} = PushNodeDiagnosticForm.changeset("not a map")
     assert %{base: ["invalid parameters - expected a map"]} = errors_on(changeset)
-  end
-
-  defp errors_on(changeset) do
-    Ecto.Changeset.traverse_errors(changeset, fn {message, _opts} -> message end)
   end
 end

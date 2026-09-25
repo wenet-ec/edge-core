@@ -3,17 +3,15 @@ defmodule EdgeAdmin.Events.Webhooks.Validators.SsrfValidatorsTest do
   use ExUnit.Case, async: false
 
   alias EdgeAdmin.Events.Webhooks.Validators.SsrfValidators
+  alias EdgeAdmin.Test.AppConfig
+
+  setup_all do
+    AppConfig.restore_on_exit(:edge_admin, [:webhook_allow_private_ips])
+    :ok
+  end
 
   setup do
-    # Tests run against the production setting (SSRF on) regardless of the
-    # surrounding test environment, then restore the original on exit.
-    original = Elixir.Application.get_env(:edge_admin, :webhook_allow_private_ips, false)
     Elixir.Application.put_env(:edge_admin, :webhook_allow_private_ips, false)
-
-    on_exit(fn ->
-      Elixir.Application.put_env(:edge_admin, :webhook_allow_private_ips, original)
-    end)
-
     :ok
   end
 

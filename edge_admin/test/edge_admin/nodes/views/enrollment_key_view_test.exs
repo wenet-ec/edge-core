@@ -8,7 +8,7 @@ defmodule EdgeAdmin.Nodes.Views.EnrollmentKeyViewTest do
 
   defp key_fixture(overrides \\ %{}) do
     cluster = %Cluster{id: "cluster-uuid-1", name: "prod"}
-    now = DateTime.truncate(DateTime.utc_now(), :second)
+    now = ~U[2026-01-01 00:00:00Z]
 
     base = %EnrollmentKey{
       id: "key-uuid-1",

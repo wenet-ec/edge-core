@@ -1,9 +1,10 @@
 # edge_admin/test/edge_admin/metrics/parsers/admin_metrics_parser_test.exs
 defmodule EdgeAdmin.Metrics.Parsers.AdminMetricsParserTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
 
   alias EdgeAdmin.Metrics.Parsers.AdminMetricsParser
   alias EdgeAdmin.Metrics.Schemas.AdminMetrics
+  alias EdgeAdmin.Test.AppConfig
   # Fixtures
 
   defp sample_prometheus_text do
@@ -512,21 +513,14 @@ defmodule EdgeAdmin.Metrics.Parsers.AdminMetricsParserTest do
     end
 
     test "event_broker.enabled reflects the application config" do
-      original = Elixir.Application.get_env(:edge_admin, :event_broker_enabled)
+      AppConfig.restore_on_exit(:edge_admin, [:event_broker_enabled])
 
-      try do
-        Elixir.Application.put_env(:edge_admin, :event_broker_enabled, true)
-        raw = AdminMetricsParser.parse(sample_prometheus_text())
-        assert AdminMetrics.from_raw_metrics(raw).event_broker.enabled == true
+      Elixir.Application.put_env(:edge_admin, :event_broker_enabled, true)
+      raw = AdminMetricsParser.parse(sample_prometheus_text())
+      assert AdminMetrics.from_raw_metrics(raw).event_broker.enabled == true
 
-        Elixir.Application.put_env(:edge_admin, :event_broker_enabled, false)
-        assert AdminMetrics.from_raw_metrics(raw).event_broker.enabled == false
-      after
-        case original do
-          nil -> Elixir.Application.delete_env(:edge_admin, :event_broker_enabled)
-          val -> Elixir.Application.put_env(:edge_admin, :event_broker_enabled, val)
-        end
-      end
+      Elixir.Application.put_env(:edge_admin, :event_broker_enabled, false)
+      assert AdminMetrics.from_raw_metrics(raw).event_broker.enabled == false
     end
 
     test "oban_queues is a list of ObanQueue structs" do

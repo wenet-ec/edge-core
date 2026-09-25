@@ -2,6 +2,8 @@
 defmodule EdgeAdmin.SelfUpdates.Schemas.SelfUpdateRequestTest do
   use ExUnit.Case, async: true
 
+  import EdgeAdmin.Test.ChangesetAssertions, only: [errors_on: 1]
+
   alias EdgeAdmin.SelfUpdates.Enums.SelfUpdateRequestStatuses
   alias EdgeAdmin.SelfUpdates.Schemas.SelfUpdateRequest
 
@@ -12,14 +14,6 @@ defmodule EdgeAdmin.SelfUpdates.Schemas.SelfUpdateRequestTest do
       },
       overrides
     )
-  end
-
-  defp errors_on(changeset) do
-    Ecto.Changeset.traverse_errors(changeset, fn {message, opts} ->
-      Regex.replace(~r"%{(\w+)}", message, fn _, key ->
-        opts |> Keyword.get(String.to_existing_atom(key), key) |> to_string()
-      end)
-    end)
   end
 
   describe "changeset/2" do

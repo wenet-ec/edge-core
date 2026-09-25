@@ -1,12 +1,15 @@
 # edge_admin/test/edge_admin_proxy/http/handler_test.exs
 defmodule EdgeAdminProxy.Http.HandlerTest do
-  # async: false because tests touch :via_pseudonym application env. The
-  # Handler reads it lazily on every call, so racing test writes would cross
-  # talk between cases.
   use ExUnit.Case, async: false
 
+  alias EdgeAdmin.Test.AppConfig
   alias EdgeAdminProxy.Http.Handler
+
   # validate_proxy_form/2
+  setup_all do
+    AppConfig.restore_on_exit(:edge_admin, [:via_pseudonym])
+    :ok
+  end
 
   describe "validate_proxy_form/2" do
     test "CONNECT bypasses URI shape (uri carries host:port, not a URI)" do
@@ -20,24 +23,15 @@ defmodule EdgeAdminProxy.Http.HandlerTest do
 
     test "non-CONNECT rejects origin-form URI (no scheme/host)" do
       assert Handler.validate_proxy_form("GET", "/path") == {:error, :origin_form_uri}
+      # check_loop/1 — uses via_pseudonym/0 from app env
       assert Handler.validate_proxy_form("GET", "") == {:error, :origin_form_uri}
     end
   end
 
-  # check_loop/1 — uses via_pseudonym/0 from app env
-
   describe "check_loop/1" do
     setup do
-      previous = Elixir.Application.get_env(:edge_admin, :via_pseudonym)
-      Application.put_env(:edge_admin, :via_pseudonym, "edge-admin")
-
-      on_exit(fn ->
-        if is_nil(previous) do
-          Application.delete_env(:edge_admin, :via_pseudonym)
-        else
-          Application.put_env(:edge_admin, :via_pseudonym, previous)
-        end
-      end)
+      Elixir.Application.delete_env(:edge_admin, :via_pseudonym)
+      Elixir.Application.put_env(:edge_admin, :via_pseudonym, "edge-admin")
 
       :ok
     end
@@ -62,9 +56,9 @@ defmodule EdgeAdminProxy.Http.HandlerTest do
       assert Handler.check_loop([{"via", "1.0 first, 1.1 edge-admin, 1.1 last"}]) ==
                {:error, :loop_detected}
     end
-  end
 
-  # get_header/2
+    # get_header/2
+  end
 
   describe "get_header/2" do
     test "case-insensitive on header name" do
@@ -84,8 +78,6 @@ defmodule EdgeAdminProxy.Http.HandlerTest do
     end
   end
 
-  # reconcile_host_header/3
-
   describe "reconcile_host_header/3" do
     test "elides port for HTTP default 80" do
       [{"host", host_value} | _] = Handler.reconcile_host_header([], "example.com", 80)
@@ -103,6 +95,7 @@ defmodule EdgeAdminProxy.Http.HandlerTest do
     end
 
     test "drops any prior Host headers regardless of case" do
+      # reconcile_host_header/3
       headers = [{"Host", "old.example.com"}, {"host", "older.example.com"}, {"x-other", "keep"}]
       result = Handler.reconcile_host_header(headers, "new.example.com", 80)
 
@@ -110,8 +103,6 @@ defmodule EdgeAdminProxy.Http.HandlerTest do
       assert [{"host", "new.example.com"}, {"x-other", "keep"}] = result
     end
   end
-
-  # filter_hop_by_hop_headers/1
 
   describe "filter_hop_by_hop_headers/1" do
     test "strips RFC 7230 hop-by-hop names regardless of case" do
@@ -169,22 +160,21 @@ defmodule EdgeAdminProxy.Http.HandlerTest do
         {"X-BAR", "2"}
       ]
 
+      # filter_hop_by_hop_headers/1
       assert Handler.filter_hop_by_hop_headers(headers) == []
     end
   end
 
-  # add_via_header/2
-
   describe "add_via_header/2" do
     setup do
       previous = Elixir.Application.get_env(:edge_admin, :via_pseudonym)
-      Application.put_env(:edge_admin, :via_pseudonym, "edge-admin")
+      Elixir.Application.put_env(:edge_admin, :via_pseudonym, "edge-admin")
 
       on_exit(fn ->
         if is_nil(previous) do
-          Application.delete_env(:edge_admin, :via_pseudonym)
+          Elixir.Application.delete_env(:edge_admin, :via_pseudonym)
         else
-          Application.put_env(:edge_admin, :via_pseudonym, previous)
+          Elixir.Application.put_env(:edge_admin, :via_pseudonym, previous)
         end
       end)
 
@@ -209,8 +199,6 @@ defmodule EdgeAdminProxy.Http.HandlerTest do
     end
   end
 
-  # parse_http_version/1
-
   describe "parse_http_version/1" do
     test "strips HTTP/ prefix for known versions" do
       assert Handler.parse_http_version("HTTP/1.0") == "1.0"
@@ -228,14 +216,13 @@ defmodule EdgeAdminProxy.Http.HandlerTest do
     end
   end
 
-  # vpn_target?/1
-
   describe "vpn_target?/1" do
     setup do
-      Application.put_env(:edge_admin, :edge_vpn_default_domain, "nm.internal")
+      Elixir.Application.put_env(:edge_admin, :edge_vpn_default_domain, "nm.internal")
 
+      # add_via_header/2
       on_exit(fn ->
-        Application.delete_env(:edge_admin, :edge_vpn_default_domain)
+        Elixir.Application.delete_env(:edge_admin, :edge_vpn_default_domain)
       end)
 
       :ok
@@ -252,8 +239,6 @@ defmodule EdgeAdminProxy.Http.HandlerTest do
       refute Handler.vpn_target?("10.0.0.5")
     end
   end
-
-  # build_http_request/4
 
   describe "build_http_request/4" do
     test "produces request line + headers + blank-line terminator" do
@@ -281,14 +266,13 @@ defmodule EdgeAdminProxy.Http.HandlerTest do
     end
   end
 
-  # parse_http_uri/1
-
   describe "parse_http_uri/1" do
     test "http with explicit port and path" do
       assert Handler.parse_http_uri("http://example.com:8080/path") ==
                {:ok, "example.com", 8080, "/path"}
     end
 
+    # parse_http_version/1
     test "http defaults port to 80 and path to '/' when missing" do
       assert Handler.parse_http_uri("http://example.com") == {:ok, "example.com", 80, "/"}
     end
@@ -308,8 +292,6 @@ defmodule EdgeAdminProxy.Http.HandlerTest do
     end
   end
 
-  # parse_host_port/1
-
   describe "parse_host_port/1" do
     test "splits host:port" do
       assert Handler.parse_host_port("example.com:443") == {:ok, "example.com", 443}
@@ -324,42 +306,49 @@ defmodule EdgeAdminProxy.Http.HandlerTest do
       assert Handler.parse_host_port("example.com:abc") == {:error, :invalid_port}
     end
 
+    # vpn_target?/1
+    # Documents actual behaviour: Integer.parse("443x") returns {443, "x"},
+    # so this passes through with the parsed prefix. Not a bug worth fixing
+    # at this layer (defence-in-depth catches it elsewhere), but lock it in
+    # so a behaviour change is visible.
     test "Integer.parse is forgiving — partial numeric ports succeed" do
-      # Documents actual behaviour: Integer.parse("443x") returns {443, "x"},
-      # so this passes through with the parsed prefix. Not a bug worth fixing
-      # at this layer (defence-in-depth catches it elsewhere), but lock it in
-      # so a behaviour change is visible.
       assert Handler.parse_host_port("example.com:443x") == {:ok, "example.com", 443}
     end
   end
 
-  # via_pseudonym/0
-
   describe "via_pseudonym/0" do
     test "defaults to 'edge-admin' when env unset" do
       previous = Elixir.Application.get_env(:edge_admin, :via_pseudonym)
-      Application.delete_env(:edge_admin, :via_pseudonym)
+      Elixir.Application.delete_env(:edge_admin, :via_pseudonym)
 
       try do
         assert Handler.via_pseudonym() == "edge-admin"
       after
-        if previous, do: Application.put_env(:edge_admin, :via_pseudonym, previous)
+        if previous, do: Elixir.Application.put_env(:edge_admin, :via_pseudonym, previous)
       end
     end
 
     test "uses configured value when set" do
       previous = Elixir.Application.get_env(:edge_admin, :via_pseudonym)
-      Application.put_env(:edge_admin, :via_pseudonym, "custom-proxy")
+      Elixir.Application.put_env(:edge_admin, :via_pseudonym, "custom-proxy")
+
+      # build_http_request/4
 
       try do
         assert Handler.via_pseudonym() == "custom-proxy"
       after
         if is_nil(previous) do
-          Application.delete_env(:edge_admin, :via_pseudonym)
+          Elixir.Application.delete_env(:edge_admin, :via_pseudonym)
         else
-          Application.put_env(:edge_admin, :via_pseudonym, previous)
+          Elixir.Application.put_env(:edge_admin, :via_pseudonym, previous)
         end
       end
     end
   end
+
+  # parse_http_uri/1
+
+  # parse_host_port/1
+
+  # via_pseudonym/0
 end

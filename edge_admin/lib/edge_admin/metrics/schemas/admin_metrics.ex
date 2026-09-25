@@ -47,9 +47,13 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetrics do
   @doc """
   Converts parsed raw metrics map to structured AdminMetrics.
   """
-  def from_raw_metrics(raw_metrics) do
+  @spec from_raw_metrics(map()) :: t()
+  def from_raw_metrics(raw_metrics), do: from_raw_metrics(raw_metrics, DateTime.utc_now())
+
+  @spec from_raw_metrics(map(), DateTime.t()) :: t()
+  def from_raw_metrics(raw_metrics, %DateTime{} = timestamp) do
     %__MODULE__{
-      timestamp: DateTime.utc_now(),
+      timestamp: timestamp,
       application: Application.from_raw(raw_metrics),
       metadata: Metadata.from_raw(raw_metrics),
       membership: Membership.from_raw(raw_metrics),

@@ -5,21 +5,10 @@ defmodule EdgeAdmin.Commands.Filters.CommandFiltersTest do
   alias EdgeAdmin.Commands.Filters.CommandFilters
   alias EdgeAdmin.Commands.Schemas.Command
   alias EdgeAdmin.Repo
+  alias EdgeAdmin.Test.Fixtures
 
   defp insert_command(overrides \\ %{}) do
-    attrs =
-      Map.merge(
-        %{
-          id: Ecto.UUID.generate(),
-          command_text: "echo hello",
-          targeting: %{},
-          timeout: nil,
-          expires_at: nil
-        },
-        overrides
-      )
-
-    Repo.insert!(struct(Command, attrs))
+    Fixtures.insert_command!(overrides)
   end
 
   defp ids(query), do: query |> Repo.all() |> Enum.map(& &1.id) |> Enum.sort()
@@ -76,11 +65,8 @@ defmodule EdgeAdmin.Commands.Filters.CommandFiltersTest do
 
   describe "apply_has_expires_at/2" do
     test "true matches commands with expires_at set, regardless of past/future" do
-      # Use a past expiry so we don't depend on the schema's
-      # validate_expires_at — but we're using struct() insertion that bypasses
-      # the changeset, so any timestamp works.
-      past = DateTime.utc_now() |> DateTime.shift(hour: -1) |> DateTime.truncate(:second)
-      future = DateTime.utc_now() |> DateTime.shift(hour: 1) |> DateTime.truncate(:second)
+      past = ~U[2000-01-01 00:00:00Z]
+      future = ~U[2099-01-01 00:00:00Z]
 
       past_key = insert_command(%{expires_at: past})
       future_key = insert_command(%{expires_at: future})
@@ -92,7 +78,7 @@ defmodule EdgeAdmin.Commands.Filters.CommandFiltersTest do
     end
 
     test "false matches commands with no expiry set" do
-      future = DateTime.utc_now() |> DateTime.shift(hour: 1) |> DateTime.truncate(:second)
+      future = ~U[2099-01-01 00:00:00Z]
 
       _has_expiry = insert_command(%{expires_at: future})
       no_expiry = insert_command(%{expires_at: nil})
@@ -103,7 +89,7 @@ defmodule EdgeAdmin.Commands.Filters.CommandFiltersTest do
     end
 
     test "string 'true' / 'false' are ignored" do
-      future = DateTime.utc_now() |> DateTime.shift(hour: 1) |> DateTime.truncate(:second)
+      future = ~U[2099-01-01 00:00:00Z]
       with_exp = insert_command(%{expires_at: future})
       without = insert_command(%{expires_at: nil})
 

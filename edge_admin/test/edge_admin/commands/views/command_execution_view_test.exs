@@ -9,7 +9,7 @@ defmodule EdgeAdmin.Commands.Views.CommandExecutionViewTest do
   alias EdgeAdmin.Nodes.Schemas.Cluster
 
   defp execution_fixture(overrides \\ %{}) do
-    now = DateTime.truncate(DateTime.utc_now(), :second)
+    now = ~U[2026-01-01 00:00:00Z]
     expiry = DateTime.shift(now, hour: 1)
 
     cluster = %Cluster{id: "cluster-uuid-1", name: "prod"}
@@ -68,7 +68,7 @@ defmodule EdgeAdmin.Commands.Views.CommandExecutionViewTest do
     end
 
     test "completed execution carries output, exit_code, and timestamps" do
-      now = DateTime.truncate(DateTime.utc_now(), :second)
+      now = ~U[2026-01-01 00:00:00Z]
 
       execution =
         execution_fixture(%{

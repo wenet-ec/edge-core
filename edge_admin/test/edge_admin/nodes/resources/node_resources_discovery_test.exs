@@ -3,44 +3,23 @@ defmodule EdgeAdmin.Nodes.Resources.NodeResourcesDiscoveryTest do
   use EdgeAdmin.DataCase, async: false
 
   alias EdgeAdmin.Nodes.Resources.NodeResources
-  alias EdgeAdmin.Nodes.Schemas.Cluster
-  alias EdgeAdmin.Nodes.Schemas.Node
-  alias EdgeAdmin.Repo
+  alias EdgeAdmin.Test.Fixtures
 
   defp insert_cluster!(name) do
-    sequence = System.unique_integer([:positive, :monotonic])
-
-    Repo.insert!(%Cluster{
-      id: Ecto.UUID.generate(),
-      name: name,
-      ipv4_range: "100.64.#{rem(sequence, 200)}.0/24",
-      ipv6_range: "fd7a:91c2:4e8b:#{rem(sequence, 65_536)}::/64"
-    })
+    Fixtures.insert_cluster!(%{name: name})
   end
 
   defp insert_node!(cluster, attrs) do
     defaults = %{
-      id: Ecto.UUID.generate(),
-      cluster_id: cluster.id,
-      vpn_host_id: Ecto.UUID.generate(),
       status: :healthy,
       last_seen_at: ~U[2026-02-01 12:00:00Z],
       version: "edge-1.2.3",
-      http_port: 44_000,
-      ssh_port: 40_022,
-      host_metrics_port: 9100,
-      wireguard_metrics_port: 9586,
-      http_proxy_port: 8080,
-      socks5_proxy_port: 1080,
-      api_token: Ecto.UUID.generate(),
-      proxy_password: Ecto.UUID.generate(),
-      ingress_public_key: unique_ingress_public_key(),
       self_update_enabled: true,
       inserted_at: ~U[2026-02-01 12:00:00Z],
       updated_at: ~U[2026-02-02 12:00:00Z]
     }
 
-    Repo.insert!(struct(Node, Map.merge(defaults, attrs)))
+    Fixtures.insert_node!(cluster.id, Map.merge(defaults, attrs))
   end
 
   test "includes every status without applying a default pagination limit" do

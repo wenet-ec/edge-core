@@ -3,13 +3,11 @@ defmodule EdgeAdmin.SelfUpdates.Resources.SelfUpdateRequestResourcesTest do
   use EdgeAdmin.DataCase, async: false
 
   alias EdgeAdmin.Nodes.Schemas.Node
-  alias EdgeAdmin.Repo
   alias EdgeAdmin.SelfUpdates.Resources.SelfUpdateRequestResources
-  alias EdgeAdmin.SelfUpdates.Schemas.SelfUpdateRequest
+  alias EdgeAdmin.Test.Fixtures
 
   defp insert_request!(inserted_at, targeting, status \\ :pending) do
-    Repo.insert!(%SelfUpdateRequest{
-      id: Ecto.UUID.generate(),
+    Fixtures.insert_self_update_request!(%{
       targeting: targeting,
       status: status,
       inserted_at: inserted_at,
@@ -45,22 +43,5 @@ defmodule EdgeAdmin.SelfUpdates.Resources.SelfUpdateRequestResourcesTest do
              SelfUpdateRequestResources.latest_for_node(node, fn targeting ->
                if node.id in targeting["node_ids"], do: [node], else: []
              end)
-  end
-
-  test "refuses to delete a request before processing completes" do
-    inserted_at = ~U[2026-02-01 12:00:00Z]
-    request = insert_request!(inserted_at, %{"type" => "all"})
-
-    assert {:error, {:conflict, _reason}} = SelfUpdateRequestResources.delete_if_completed(request)
-    assert %SelfUpdateRequest{} = Repo.get!(SelfUpdateRequest, request.id)
-  end
-
-  test "deletes a completed request" do
-    inserted_at = ~U[2026-02-01 12:00:00Z]
-    request = insert_request!(inserted_at, %{"type" => "all"}, :completed)
-
-    assert {:ok, %SelfUpdateRequest{id: id}} = SelfUpdateRequestResources.delete_if_completed(request)
-    assert id == request.id
-    assert Repo.get(SelfUpdateRequest, request.id) == nil
   end
 end

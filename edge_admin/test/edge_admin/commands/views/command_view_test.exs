@@ -6,7 +6,7 @@ defmodule EdgeAdmin.Commands.Views.CommandViewTest do
   alias EdgeAdmin.Commands.Views.CommandView
 
   defp command_fixture(overrides \\ %{}) do
-    now = DateTime.truncate(DateTime.utc_now(), :second)
+    now = ~U[2026-01-01 00:00:00Z]
 
     base = %Command{
       id: "command-uuid-1",

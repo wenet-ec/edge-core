@@ -14,15 +14,14 @@ defmodule EdgeAdmin.Metrics.Schemas.AgentMetricsTest do
   alias EdgeAdmin.Metrics.Schemas.AgentMetrics.SettingsConfig
   alias EdgeAdmin.Metrics.Schemas.AgentMetrics.Ssh
   alias EdgeAdmin.Metrics.Schemas.AgentMetrics.Vpn
+
+  @timestamp ~U[2026-01-01 00:00:00Z]
   # AgentMetrics.from_raw_metrics/2
 
   describe "from_raw_metrics/2" do
-    test "produces a struct with node_id, cluster_name, fresh timestamp, and all sub-structs" do
+    test "builds all sub-structs with the supplied timestamp" do
       raw = %{"cluster_name" => "cluster-a"}
-
-      before = DateTime.utc_now()
-      result = AgentMetrics.from_raw_metrics(raw, "node-abc")
-      after_ = DateTime.utc_now()
+      result = AgentMetrics.from_raw_metrics(raw, "node-abc", @timestamp)
 
       assert %AgentMetrics{} = result
       assert result.node_id == "node-abc"
@@ -38,8 +37,7 @@ defmodule EdgeAdmin.Metrics.Schemas.AgentMetricsTest do
       assert %Diagnostics{} = result.diagnostics
       assert %SettingsConfig{} = result.settings_config
       assert is_list(result.oban_queues)
-      assert DateTime.compare(result.timestamp, before) in [:gt, :eq]
-      assert DateTime.compare(result.timestamp, after_) in [:lt, :eq]
+      assert result.timestamp == @timestamp
     end
   end
 

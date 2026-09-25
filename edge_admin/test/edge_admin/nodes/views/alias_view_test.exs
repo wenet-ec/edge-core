@@ -8,7 +8,7 @@ defmodule EdgeAdmin.Nodes.Views.AliasViewTest do
 
   defp alias_fixture(overrides \\ %{}) do
     cluster = %Cluster{id: "cluster-uuid-1", name: "prod"}
-    now = DateTime.truncate(DateTime.utc_now(), :second)
+    now = ~U[2026-01-01 00:00:00Z]
 
     base = %Alias{
       id: "alias-uuid-1",

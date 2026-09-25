@@ -2,11 +2,9 @@
 defmodule EdgeAdmin.Ssh.Forms.VerifySshCredentialsFormTest do
   use ExUnit.Case, async: true
 
-  alias EdgeAdmin.Ssh.Forms.VerifySshCredentialsForm
+  import EdgeAdmin.Test.ChangesetAssertions, only: [errors_on: 1]
 
-  defp errors_on(changeset) do
-    Ecto.Changeset.traverse_errors(changeset, fn {msg, _opts} -> msg end)
-  end
+  alias EdgeAdmin.Ssh.Forms.VerifySshCredentialsForm
 
   # changeset/1 — valid cases
 

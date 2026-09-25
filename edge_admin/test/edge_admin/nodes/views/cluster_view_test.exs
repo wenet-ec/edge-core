@@ -7,7 +7,7 @@ defmodule EdgeAdmin.Nodes.Views.ClusterViewTest do
   alias EdgeAdmin.Nodes.Views.ClusterView
 
   defp cluster_fixture(overrides \\ %{}) do
-    now = DateTime.truncate(DateTime.utc_now(), :second)
+    now = ~U[2026-01-01 00:00:00Z]
 
     base = %Cluster{
       id: "cluster-uuid-1",

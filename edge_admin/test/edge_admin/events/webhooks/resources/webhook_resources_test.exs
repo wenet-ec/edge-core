@@ -3,26 +3,10 @@ defmodule EdgeAdmin.Events.Webhooks.Resources.WebhookResourcesTest do
   use EdgeAdmin.DataCase, async: false
 
   alias EdgeAdmin.Events.Webhooks.Resources.WebhookResources
-  alias EdgeAdmin.Events.Webhooks.Schemas.Webhook
-  alias EdgeAdmin.Repo
+  alias EdgeAdmin.Test.Fixtures
 
   defp insert_webhook!(attrs) do
-    now = DateTime.truncate(DateTime.utc_now(), :second)
-
-    %Webhook{}
-    |> Webhook.changeset(
-      Map.merge(
-        %{
-          url: "https://203.0.113.10/#{System.unique_integer([:positive])}",
-          secret: String.duplicate("x", 32),
-          subscribed_events: ["edge.node.registered"],
-          inserted_at: now,
-          updated_at: now
-        },
-        attrs
-      )
-    )
-    |> Repo.insert!()
+    Fixtures.insert_webhook!(attrs)
   end
 
   describe "list/1" do

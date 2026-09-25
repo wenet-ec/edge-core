@@ -2,6 +2,8 @@
 defmodule EdgeAdmin.Nodes.Schemas.EnrollmentKeyTest do
   use ExUnit.Case, async: true
 
+  import EdgeAdmin.Test.ChangesetAssertions, only: [errors_on: 1]
+
   alias EdgeAdmin.Nodes.Schemas.EnrollmentKey
   # helpers
 
@@ -30,21 +32,17 @@ defmodule EdgeAdmin.Nodes.Schemas.EnrollmentKeyTest do
     )
   end
 
-  defp errors_on(changeset) do
-    Ecto.Changeset.traverse_errors(changeset, fn {message, _opts} -> message end)
-  end
-
   # changeset/2
 
   describe "changeset/2" do
     test "accepts a future expiry" do
-      future = DateTime.shift(DateTime.utc_now(), hour: 1)
+      future = ~U[2099-01-01 00:00:00Z]
 
       assert EnrollmentKey.changeset(%EnrollmentKey{}, valid_attrs(%{expires_at: future})).valid?
     end
 
     test "rejects a past expiry" do
-      past = DateTime.shift(DateTime.utc_now(), hour: -1)
+      past = ~U[2000-01-01 00:00:00Z]
       changeset = EnrollmentKey.changeset(%EnrollmentKey{}, valid_attrs(%{expires_at: past}))
 
       refute changeset.valid?
@@ -93,12 +91,12 @@ defmodule EdgeAdmin.Nodes.Schemas.EnrollmentKeyTest do
     end
 
     test "expires_at in the future → false (not expired)" do
-      future = DateTime.shift(DateTime.utc_now(), hour: 1)
+      future = ~U[2099-01-01 00:00:00Z]
       refute EnrollmentKey.expired?(key(%{expires_at: future}))
     end
 
     test "expires_at in the past → true (expired)" do
-      past = DateTime.shift(DateTime.utc_now(), hour: -1)
+      past = ~U[2000-01-01 00:00:00Z]
       assert EnrollmentKey.expired?(key(%{expires_at: past}))
     end
   end

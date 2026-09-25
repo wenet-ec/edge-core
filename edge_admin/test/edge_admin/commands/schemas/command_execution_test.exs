@@ -2,6 +2,8 @@
 defmodule EdgeAdmin.Commands.Schemas.CommandExecutionTest do
   use ExUnit.Case, async: true
 
+  import EdgeAdmin.Test.ChangesetAssertions, only: [errors_on: 1]
+
   alias Ecto.Association.NotLoaded
   alias EdgeAdmin.Commands.Enums.CommandExecutionStatuses
   alias EdgeAdmin.Commands.Schemas.Command
@@ -56,10 +58,6 @@ defmodule EdgeAdmin.Commands.Schemas.CommandExecutionTest do
     end
   end
 
-  defp errors_on(changeset) do
-    Ecto.Changeset.traverse_errors(changeset, fn {message, _opts} -> message end)
-  end
-
   # command_text/1
 
   describe "command_text/1" do
@@ -101,7 +99,7 @@ defmodule EdgeAdmin.Commands.Schemas.CommandExecutionTest do
 
   describe "expires_at/1" do
     test "returns expires_at from preloaded command" do
-      now = DateTime.truncate(DateTime.utc_now(), :second)
+      now = ~U[2026-01-01 00:00:00Z]
       assert CommandExecution.expires_at(execution_with_command(30_000, now)) == now
     end
 

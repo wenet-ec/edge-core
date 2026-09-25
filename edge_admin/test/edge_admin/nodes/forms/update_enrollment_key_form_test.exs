@@ -2,12 +2,10 @@
 defmodule EdgeAdmin.Nodes.Forms.UpdateEnrollmentKeyFormTest do
   use ExUnit.Case, async: true
 
+  import EdgeAdmin.Test.ChangesetAssertions, only: [errors_on: 1]
+
   alias EdgeAdmin.Nodes.Forms.UpdateEnrollmentKeyForm
   # helpers
-
-  defp errors_on(changeset) do
-    Ecto.Changeset.traverse_errors(changeset, fn {msg, _opts} -> msg end)
-  end
 
   # changeset/1 — valid cases
 
@@ -71,7 +69,7 @@ defmodule EdgeAdmin.Nodes.Forms.UpdateEnrollmentKeyFormTest do
 
   describe "changeset/1 — expiry validation" do
     test "past expires_at is rejected" do
-      past = DateTime.shift(DateTime.utc_now(), hour: -1)
+      past = ~U[2000-01-01 00:00:00Z]
 
       assert {:error, changeset} = UpdateEnrollmentKeyForm.changeset(%{expires_at: past})
       assert "must be in the future" in errors_on(changeset).expires_at

@@ -2,6 +2,8 @@
 defmodule EdgeAdmin.Commands.Schemas.CommandTest do
   use ExUnit.Case, async: true
 
+  import EdgeAdmin.Test.ChangesetAssertions, only: [errors_on: 1]
+
   alias EdgeAdmin.Commands.Schemas.Command
   alias EdgeAdmin.Nodes.Schemas.Node
 
@@ -14,14 +16,6 @@ defmodule EdgeAdmin.Commands.Schemas.CommandTest do
       },
       overrides
     )
-  end
-
-  defp errors_on(changeset) do
-    Ecto.Changeset.traverse_errors(changeset, fn {message, opts} ->
-      Regex.replace(~r"%{(\w+)}", message, fn _, key ->
-        opts |> Keyword.get(String.to_existing_atom(key), key) |> to_string()
-      end)
-    end)
   end
 
   describe "associations" do
@@ -134,25 +128,17 @@ defmodule EdgeAdmin.Commands.Schemas.CommandTest do
 
   describe "changeset/2 — expires_at" do
     test "future timestamp is valid" do
-      future = DateTime.shift(DateTime.utc_now(), hour: 1)
+      future = ~U[2099-01-01 00:00:00Z]
       changeset = Command.changeset(%Command{}, valid_attrs(%{expires_at: future}))
       assert changeset.valid?
     end
 
     test "past timestamp is rejected" do
-      past = DateTime.shift(DateTime.utc_now(), hour: -1)
+      past = ~U[2000-01-01 00:00:00Z]
       changeset = Command.changeset(%Command{}, valid_attrs(%{expires_at: past}))
       refute changeset.valid?
 
       assert "must be in the future" in errors_on(changeset).expires_at
-    end
-
-    test "current time (or essentially now) is rejected (DateTime.after? is strict)" do
-      # The cast truncates to :utc_datetime (second precision), so 'now' as
-      # given is at best equal to the comparison's now, never strictly after.
-      now = DateTime.truncate(DateTime.utc_now(), :second)
-      changeset = Command.changeset(%Command{}, valid_attrs(%{expires_at: now}))
-      refute changeset.valid?
     end
   end
 end

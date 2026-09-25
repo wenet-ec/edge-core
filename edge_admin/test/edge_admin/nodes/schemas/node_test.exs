@@ -2,6 +2,8 @@
 defmodule EdgeAdmin.Nodes.Schemas.NodeTest do
   use ExUnit.Case, async: true
 
+  import EdgeAdmin.Test.ChangesetAssertions, only: [errors_on: 1]
+
   alias EdgeAdmin.Metrics.Schemas.NodeMetricsCache
   alias EdgeAdmin.Nodes.Enums.NodeStatuses
   alias EdgeAdmin.Nodes.Schemas.Cluster
@@ -55,10 +57,6 @@ defmodule EdgeAdmin.Nodes.Schemas.NodeTest do
 
       overrides
     )
-  end
-
-  defp errors_on(changeset) do
-    Ecto.Changeset.traverse_errors(changeset, fn {message, _opts} -> message end)
   end
 
   describe "changeset/2" do

@@ -2,78 +2,17 @@
 defmodule EdgeAdmin.Ssh.Resources.SshQueriesTest do
   use EdgeAdmin.DataCase, async: false
 
-  alias EdgeAdmin.Nodes.Schemas.Cluster
-  alias EdgeAdmin.Nodes.Schemas.Node
-  alias EdgeAdmin.Repo
   alias EdgeAdmin.Ssh.Resources.SshPublicKeyResources
   alias EdgeAdmin.Ssh.Resources.SshUsernameResources
-  alias EdgeAdmin.Ssh.Schemas.SshPublicKey
-  alias EdgeAdmin.Ssh.Schemas.SshUsername
+  alias EdgeAdmin.Test.Fixtures
 
-  defp unique_id, do: :erlang.unique_integer([:positive, :monotonic])
+  defp insert_cluster(overrides \\ %{}), do: Fixtures.insert_cluster!(overrides)
+  defp insert_node(cluster_id), do: Fixtures.insert_node!(cluster_id)
 
-  defp insert_cluster(overrides \\ %{}) do
-    number = unique_id()
+  defp insert_ssh_username(node_id, opts \\ []), do: Fixtures.insert_ssh_username!(node_id, Map.new(opts))
 
-    attrs =
-      Map.merge(
-        %{
-          id: Ecto.UUID.generate(),
-          name: "cluster-#{number}",
-          ipv4_range: "100.#{64 + rem(div(number, 256), 64)}.#{rem(number, 256)}.0/24",
-          ipv6_range: "fd7a:91c2:4e8b:#{rem(number, 65_536)}::/64"
-        },
-        overrides
-      )
-
-    Repo.insert!(struct(Cluster, attrs))
-  end
-
-  defp insert_node(cluster_id) do
-    Repo.insert!(
-      struct(Node, %{
-        id: Ecto.UUID.generate(),
-        cluster_id: cluster_id,
-        vpn_host_id: Ecto.UUID.generate(),
-        status: :healthy,
-        version: "0.1.0",
-        http_port: 44_000,
-        ssh_port: 40_022,
-        host_metrics_port: 9100,
-        wireguard_metrics_port: 9586,
-        http_proxy_port: 8080,
-        socks5_proxy_port: 1080,
-        api_token: Ecto.UUID.generate(),
-        proxy_password: Ecto.UUID.generate(),
-        ingress_public_key: unique_ingress_public_key()
-      })
-    )
-  end
-
-  defp insert_ssh_username(node_id, opts \\ []) do
-    username = Keyword.get(opts, :username, "user-#{unique_id()}")
-
-    %SshUsername{}
-    |> Ecto.Changeset.change(%{
-      id: Ecto.UUID.generate(),
-      node_id: node_id,
-      username: username
-    })
-    |> Repo.insert!()
-  end
-
-  defp insert_public_key(ssh_username_id, opts \\ []) do
-    key_name = Keyword.get(opts, :key_name, "key-#{unique_id()}")
-
-    %SshPublicKey{}
-    |> Ecto.Changeset.change(%{
-      id: Ecto.UUID.generate(),
-      ssh_username_id: ssh_username_id,
-      key_name: key_name,
-      public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFakeKeyForFilterTestOnly user@example.com"
-    })
-    |> Repo.insert!()
-  end
+  defp insert_public_key(ssh_username_id, opts \\ []),
+    do: Fixtures.insert_ssh_public_key!(ssh_username_id, Map.new(opts))
 
   defp ids(records), do: records |> Enum.map(& &1.id) |> Enum.sort()
 

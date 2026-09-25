@@ -472,13 +472,17 @@ defmodule EdgeAdminWeb.Live.QuantumDashboard do
   # Public for unit testing. Pure data — no HEEx pattern-matching inside cond
   # branches (which leak). Renders the "next run" cell payload from a job map.
   @spec next_run_payload(map()) :: :dash | {:ok, map()} | {:error, String.t()}
-  def next_run_payload(%{state: :inactive}), do: :dash
-  def next_run_payload(%{next_run_naive: nil}), do: :dash
-  def next_run_payload(%{next_run_naive: {:error, reason}}), do: {:error, reason}
+  def next_run_payload(job), do: next_run_payload(job, DateTime.utc_now())
 
-  def next_run_payload(%{next_run_naive: {:ok, naive_dt, job_tz}}) do
+  @doc false
+  @spec next_run_payload(map(), DateTime.t()) :: :dash | {:ok, map()} | {:error, String.t()}
+  def next_run_payload(%{state: :inactive}, _now), do: :dash
+  def next_run_payload(%{next_run_naive: nil}, _now), do: :dash
+  def next_run_payload(%{next_run_naive: {:error, reason}}, _now), do: {:error, reason}
+
+  def next_run_payload(%{next_run_naive: {:ok, naive_dt, job_tz}}, %DateTime{} = now) do
     {:ok, dt} = DateTime.from_naive(naive_dt, "Etc/UTC")
-    naive_now = naive_now_in_tz(DateTime.utc_now(), job_tz)
+    naive_now = naive_now_in_tz(now, job_tz)
     seconds_until = NaiveDateTime.diff(naive_dt, naive_now, :second)
 
     {:ok,
@@ -492,7 +496,7 @@ defmodule EdgeAdminWeb.Live.QuantumDashboard do
   end
 
   # Catch-all: any unexpected shape becomes a visible error rather than a render crash.
-  def next_run_payload(other), do: {:error, "unexpected next_run shape: #{inspect(other)}"}
+  def next_run_payload(other, _now), do: {:error, "unexpected next_run shape: #{inspect(other)}"}
 
   @doc false
   # Public for unit testing. Renders a non-negative seconds delta as a relative
@@ -518,12 +522,15 @@ defmodule EdgeAdminWeb.Live.QuantumDashboard do
   # Public for unit testing. Returns the CSS class for the next-run cell:
   # "text-muted" / "next-run-error" / "next-run-soon" / "" (default).
   @spec next_run_class(map()) :: String.t()
-  def next_run_class(%{state: :inactive}), do: "text-muted"
-  def next_run_class(%{next_run_naive: nil}), do: "text-muted"
-  def next_run_class(%{next_run_naive: {:error, _}}), do: "next-run-error"
+  def next_run_class(job), do: next_run_class(job, DateTime.utc_now())
 
-  def next_run_class(%{next_run_naive: {:ok, naive_dt, job_tz}}) do
-    now = DateTime.utc_now()
+  @doc false
+  @spec next_run_class(map(), DateTime.t()) :: String.t()
+  def next_run_class(%{state: :inactive}, _now), do: "text-muted"
+  def next_run_class(%{next_run_naive: nil}, _now), do: "text-muted"
+  def next_run_class(%{next_run_naive: {:error, _}}, _now), do: "next-run-error"
+
+  def next_run_class(%{next_run_naive: {:ok, naive_dt, job_tz}}, %DateTime{} = now) do
     naive_now = naive_now_in_tz(now, job_tz)
     seconds = NaiveDateTime.diff(naive_dt, naive_now, :second)
     if seconds <= 60 * 30, do: "next-run-soon", else: ""

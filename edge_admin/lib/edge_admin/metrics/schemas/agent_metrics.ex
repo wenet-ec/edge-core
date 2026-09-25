@@ -39,11 +39,15 @@ defmodule EdgeAdmin.Metrics.Schemas.AgentMetrics do
   @doc """
   Converts parsed raw metrics map to structured AgentMetrics.
   """
-  def from_raw_metrics(raw_metrics, node_id) do
+  @spec from_raw_metrics(map(), String.t()) :: t()
+  def from_raw_metrics(raw_metrics, node_id), do: from_raw_metrics(raw_metrics, node_id, DateTime.utc_now())
+
+  @spec from_raw_metrics(map(), String.t(), DateTime.t()) :: t()
+  def from_raw_metrics(raw_metrics, node_id, %DateTime{} = timestamp) do
     %__MODULE__{
       node_id: node_id,
       cluster_name: raw_metrics["cluster_name"],
-      timestamp: DateTime.utc_now(),
+      timestamp: timestamp,
       application: Application.from_raw(raw_metrics),
       bootstrap: Bootstrap.from_raw(raw_metrics),
       commands: Commands.from_raw(raw_metrics),

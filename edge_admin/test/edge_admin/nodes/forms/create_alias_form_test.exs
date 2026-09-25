@@ -2,12 +2,10 @@
 defmodule EdgeAdmin.Nodes.Forms.CreateAliasFormTest do
   use ExUnit.Case, async: true
 
+  import EdgeAdmin.Test.ChangesetAssertions, only: [errors_on: 1]
+
   alias EdgeAdmin.Nodes.Forms.CreateAliasForm
   # helpers
-
-  defp errors_on(changeset) do
-    Ecto.Changeset.traverse_errors(changeset, fn {msg, _opts} -> msg end)
-  end
 
   # changeset/1 — valid cases
 

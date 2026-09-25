@@ -4,37 +4,20 @@ defmodule EdgeAdmin.IngressTunneling.Resources.TunnelConnectionResourcesTest do
 
   alias EdgeAdmin.IngressTunneling.Resources.TunnelClientResources
   alias EdgeAdmin.IngressTunneling.Resources.TunnelConnectionResources
-  alias EdgeAdmin.Nodes.Schemas.Cluster
-  alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.Repo
+  alias EdgeAdmin.Test.Fixtures
 
   defp insert_cluster do
-    unique = :erlang.unique_integer([:positive, :monotonic])
-
-    Repo.insert!(%Cluster{
-      id: Ecto.UUID.generate(),
-      name: "ingress-tunnel-#{unique}",
-      ipv4_range: "100.100.#{rem(unique, 256)}.0/24",
-      ipv6_range: "fd7a:91c2:4e8b:#{rem(unique, 65_536)}::/64"
-    })
+    Fixtures.insert_cluster!(%{name: Fixtures.unique_name("ingress-tunnel")})
   end
 
   defp insert_ingress(cluster_id) do
-    Repo.insert!(%Node{
-      id: Ecto.UUID.generate(),
-      cluster_id: cluster_id,
-      vpn_host_id: Ecto.UUID.generate(),
-      status: :healthy,
+    Fixtures.insert_node!(cluster_id, %{
       version: "1.0.0",
-      http_port: 44_000,
-      ssh_port: 40_022,
       host_metrics_port: 49_100,
       wireguard_metrics_port: 49_586,
       http_proxy_port: 43_128,
-      socks5_proxy_port: 41_080,
-      api_token: Ecto.UUID.generate(),
-      proxy_password: Ecto.UUID.generate(),
-      ingress_public_key: 32 |> :crypto.strong_rand_bytes() |> Base.encode64()
+      socks5_proxy_port: 41_080
     })
   end
 

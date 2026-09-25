@@ -4,14 +4,14 @@ defmodule EdgeAdminWeb.Plugs.SecurityTest do
 
   import Plug.Test
 
+  alias EdgeAdmin.Test.AppConfig
   alias EdgeAdminWeb.Plugs.Security
 
   @opts Security.init([])
 
   setup do
-    on_exit(fn ->
-      Application.delete_env(:edge_admin, Security)
-    end)
+    AppConfig.restore_on_exit(:edge_admin, [Security])
+    :ok
   end
 
   defp call(path), do: :get |> conn(path) |> Security.call(@opts)
@@ -34,7 +34,7 @@ defmodule EdgeAdminWeb.Plugs.SecurityTest do
     end
 
     test "script-src is 'self' only when allow_unsafe_scripts not set" do
-      Application.delete_env(:edge_admin, Security)
+      Elixir.Application.delete_env(:edge_admin, Security)
       conn = call("/api/v1/nodes")
       policy = csp(conn)
       assert policy =~ "script-src 'self'"
@@ -42,7 +42,7 @@ defmodule EdgeAdminWeb.Plugs.SecurityTest do
     end
 
     test "script-src includes unsafe directives when allow_unsafe_scripts is true" do
-      Application.put_env(:edge_admin, Security, allow_unsafe_scripts: true)
+      Elixir.Application.put_env(:edge_admin, Security, allow_unsafe_scripts: true)
       conn = call("/api/v1/nodes")
       policy = csp(conn)
       assert policy =~ "'unsafe-eval'"

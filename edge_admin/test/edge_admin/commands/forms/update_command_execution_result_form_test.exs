@@ -2,15 +2,9 @@
 defmodule EdgeAdmin.Commands.Forms.UpdateCommandExecutionResultFormTest do
   use ExUnit.Case, async: true
 
-  alias EdgeAdmin.Commands.Forms.UpdateCommandExecutionResultForm
+  import EdgeAdmin.Test.ChangesetAssertions, only: [errors_on: 1]
 
-  defp errors_on(changeset) do
-    Ecto.Changeset.traverse_errors(changeset, fn {msg, opts} ->
-      Regex.replace(~r"%{(\w+)}", msg, fn _, key ->
-        opts |> Keyword.get(String.to_existing_atom(key), key) |> to_string()
-      end)
-    end)
-  end
+  alias EdgeAdmin.Commands.Forms.UpdateCommandExecutionResultForm
 
   # changeset/1 — valid cases
 

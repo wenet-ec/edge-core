@@ -6,7 +6,7 @@ defmodule EdgeAdmin.Events.Webhooks.Views.WebhookViewTest do
   alias EdgeAdmin.Events.Webhooks.Views.WebhookView
 
   defp webhook_fixture(overrides \\ %{}) do
-    now = DateTime.truncate(DateTime.utc_now(), :second)
+    now = ~U[2026-01-01 00:00:00Z]
 
     base = %Webhook{
       id: "webhook-uuid-1",

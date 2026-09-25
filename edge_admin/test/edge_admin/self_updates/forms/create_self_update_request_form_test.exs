@@ -2,6 +2,8 @@
 defmodule EdgeAdmin.SelfUpdates.Forms.CreateSelfUpdateRequestFormTest do
   use ExUnit.Case, async: true
 
+  import EdgeAdmin.Test.ChangesetAssertions, only: [errors_on: 1]
+
   alias EdgeAdmin.SelfUpdates.Forms.CreateSelfUpdateRequestForm
 
   defp valid_attrs(overrides \\ %{}) do
@@ -9,10 +11,6 @@ defmodule EdgeAdmin.SelfUpdates.Forms.CreateSelfUpdateRequestFormTest do
       %{"targeting" => %{"type" => "all"}},
       overrides
     )
-  end
-
-  defp errors_on(changeset) do
-    Ecto.Changeset.traverse_errors(changeset, fn {msg, _opts} -> msg end)
   end
 
   # changeset/1 — valid cases

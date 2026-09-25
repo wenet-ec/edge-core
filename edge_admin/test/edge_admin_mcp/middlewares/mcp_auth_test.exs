@@ -2,18 +2,15 @@
 defmodule EdgeAdminMcp.Middlewares.McpAuthTest do
   use ExUnit.Case, async: false
 
+  alias EdgeAdmin.Test.AppConfig
   alias EdgeAdminMcp.Middlewares.McpAuth
 
   setup do
-    Application.put_env(:edge_admin, :mcp_auth_enabled, true)
-    Application.put_env(:edge_admin, :master_key, "master-key")
-    Application.put_env(:edge_admin, :mcp_key, "mcp-key")
-
-    on_exit(fn ->
-      Application.delete_env(:edge_admin, :mcp_auth_enabled)
-      Application.delete_env(:edge_admin, :master_key)
-      Application.delete_env(:edge_admin, :mcp_key)
-    end)
+    AppConfig.restore_on_exit(:edge_admin, [:mcp_auth_enabled, :master_key, :mcp_key])
+    Elixir.Application.put_env(:edge_admin, :mcp_auth_enabled, true)
+    Elixir.Application.put_env(:edge_admin, :master_key, "master-key")
+    Elixir.Application.put_env(:edge_admin, :mcp_key, "mcp-key")
+    :ok
   end
 
   test "accepts the MCP and master bearer tokens" do
@@ -31,7 +28,7 @@ defmodule EdgeAdminMcp.Middlewares.McpAuthTest do
   end
 
   test "auth disabled treats the request as authenticated" do
-    Application.put_env(:edge_admin, :mcp_auth_enabled, false)
+    Elixir.Application.put_env(:edge_admin, :mcp_auth_enabled, false)
     assert McpAuth.status(%{}) == :authenticated
   end
 end

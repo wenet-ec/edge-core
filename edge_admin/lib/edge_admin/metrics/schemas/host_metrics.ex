@@ -27,11 +27,15 @@ defmodule EdgeAdmin.Metrics.Schemas.HostMetrics do
   @doc """
   Converts parsed raw metrics map to structured HostMetrics.
   """
-  def from_raw_metrics(raw_metrics, node_id) do
+  @spec from_raw_metrics(map(), String.t()) :: t()
+  def from_raw_metrics(raw_metrics, node_id), do: from_raw_metrics(raw_metrics, node_id, DateTime.utc_now())
+
+  @spec from_raw_metrics(map(), String.t(), DateTime.t()) :: t()
+  def from_raw_metrics(raw_metrics, node_id, %DateTime{} = timestamp) do
     %__MODULE__{
       node_id: node_id,
       cluster_name: raw_metrics["cluster_name"],
-      timestamp: DateTime.utc_now(),
+      timestamp: timestamp,
       cpu: CPU.from_raw(raw_metrics),
       memory: Memory.from_raw(raw_metrics),
       disk: Disk.from_raw(raw_metrics),

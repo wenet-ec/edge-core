@@ -90,14 +90,25 @@ defmodule EdgeAdmin.Events do
   @doc false
   @spec build_envelope(event()) :: map()
   def build_envelope(event) do
+    build_envelope(
+      event,
+      Uniq.UUID.uuid4(),
+      DateTime.utc_now(),
+      Application.get_env(:edge_admin, :core_name, "default")
+    )
+  end
+
+  @doc false
+  @spec build_envelope(event(), String.t(), DateTime.t(), String.t() | nil) :: map()
+  def build_envelope(event, id, time, corename) do
     %{
       "specversion" => "1.0",
-      "id" => Uniq.UUID.uuid4(),
+      "id" => id,
       "source" => "https://github.com/wenet-ec/edge-core",
       "type" => Catalog.event_type(event),
-      "time" => DateTime.to_iso8601(DateTime.utc_now()),
+      "time" => DateTime.to_iso8601(time),
       "datacontenttype" => "application/json",
-      "corename" => Application.get_env(:edge_admin, :core_name, "default"),
+      "corename" => corename,
       "data" => Catalog.to_data(event)
     }
   end

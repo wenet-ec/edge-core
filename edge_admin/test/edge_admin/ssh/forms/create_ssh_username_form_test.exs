@@ -2,14 +2,12 @@
 defmodule EdgeAdmin.Ssh.Forms.CreateSshUsernameFormTest do
   use ExUnit.Case, async: true
 
+  import EdgeAdmin.Test.ChangesetAssertions, only: [errors_on: 1]
+
   alias EdgeAdmin.Ssh.Forms.CreateSshUsernameForm
   # fixtures
 
   @valid_key "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIP5B9NcAkWDeryLofh8tn2lNrOnpkCuMUuY5Ytj4VMJC test-comment"
-
-  defp errors_on(changeset) do
-    Ecto.Changeset.traverse_errors(changeset, fn {msg, _opts} -> msg end)
-  end
 
   defp valid_attrs(overrides \\ %{}) do
     Map.merge(%{"username" => "deploy"}, overrides)

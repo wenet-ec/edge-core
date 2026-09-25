@@ -10,7 +10,6 @@ defmodule EdgeAdminProxy.Routing do
   require Logger
 
   @nodes_module Application.compile_env(:edge_admin, :nodes_module, EdgeAdmin.Nodes)
-  @compile {:no_warn_undefined, @nodes_module}
 
   @doc """
   Parses a proxy username into direct routing or a node-backed chain route.
@@ -39,7 +38,7 @@ defmodule EdgeAdminProxy.Routing do
   end
 
   defp lookup_node_in_cluster(cluster_name, identifier, node_dns) do
-    case @nodes_module.list_proxy_chain_identifiers(cluster_name) do
+    case list_proxy_chain_identifiers(cluster_name) do
       {:ok, identifiers_map} ->
         case Map.get(identifiers_map, identifier) do
           nil ->
@@ -55,5 +54,10 @@ defmodule EdgeAdminProxy.Routing do
         Logger.warning("Cluster not found for proxy chaining: #{cluster_name}")
         {:error, :cluster_not_found}
     end
+  end
+
+  @spec list_proxy_chain_identifiers(String.t()) :: {:ok, map()} | {:error, :not_found}
+  defp list_proxy_chain_identifiers(cluster_name) do
+    apply(@nodes_module, :list_proxy_chain_identifiers, [cluster_name])
   end
 end

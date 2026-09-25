@@ -2,11 +2,9 @@
 defmodule EdgeAdmin.Events.Webhooks.Forms.CreateWebhookFormTest do
   use ExUnit.Case, async: true
 
-  alias EdgeAdmin.Events.Webhooks.Forms.CreateWebhookForm
+  import EdgeAdmin.Test.ChangesetAssertions, only: [errors_on: 1]
 
-  defp errors_on(changeset) do
-    Ecto.Changeset.traverse_errors(changeset, fn {msg, _opts} -> msg end)
-  end
+  alias EdgeAdmin.Events.Webhooks.Forms.CreateWebhookForm
 
   # 203.0.113.0/24 is TEST-NET-3 (RFC 5737) — guaranteed public range, never
   # routed, no DNS lookup. Avoids tying tests to outbound DNS while still

@@ -5,6 +5,7 @@ defmodule EdgeAdmin.Events.Webhooks.Filters.WebhookFiltersTest do
   alias EdgeAdmin.Events.Webhooks.Filters.WebhookFilters
   alias EdgeAdmin.Events.Webhooks.Schemas.Webhook
   alias EdgeAdmin.Repo
+  alias EdgeAdmin.Test.Fixtures
   # pop_event_type/1 — extracts the event_type filter out of params, accepting
   # only string values (rejects anything else, returns nil + remaining params).
 
@@ -39,22 +40,7 @@ defmodule EdgeAdmin.Events.Webhooks.Filters.WebhookFiltersTest do
   end
 
   defp insert_webhook!(attrs) do
-    now = DateTime.truncate(DateTime.utc_now(), :second)
-
-    %Webhook{}
-    |> Webhook.changeset(
-      Map.merge(
-        %{
-          url: "https://203.0.113.10/#{System.unique_integer([:positive])}",
-          secret: String.duplicate("x", 32),
-          subscribed_events: ["edge.node.registered"],
-          inserted_at: now,
-          updated_at: now
-        },
-        attrs
-      )
-    )
-    |> Repo.insert!()
+    Fixtures.insert_webhook!(attrs)
   end
 
   describe "filter_by_event_type/2" do

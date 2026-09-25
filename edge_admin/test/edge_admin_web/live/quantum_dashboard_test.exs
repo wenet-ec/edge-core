@@ -3,6 +3,9 @@ defmodule EdgeAdminWeb.Live.QuantumDashboardTest do
   use ExUnit.Case, async: true
 
   alias EdgeAdminWeb.Live.QuantumDashboard
+
+  @now ~U[2026-01-01 00:00:00Z]
+  @naive_now DateTime.to_naive(@now)
   # humanize_ago/1 — non-negative seconds → past-tense relative string
 
   describe "humanize_ago/1" do
@@ -146,23 +149,23 @@ defmodule EdgeAdminWeb.Live.QuantumDashboardTest do
 
   describe "next_run_payload/1" do
     test "inactive job → :dash" do
-      assert QuantumDashboard.next_run_payload(%{state: :inactive}) == :dash
+      assert QuantumDashboard.next_run_payload(%{state: :inactive}, @now) == :dash
     end
 
     test "next_run_naive: nil → :dash" do
-      assert QuantumDashboard.next_run_payload(%{next_run_naive: nil}) == :dash
+      assert QuantumDashboard.next_run_payload(%{next_run_naive: nil}, @now) == :dash
     end
 
     test "next_run_naive: {:error, reason} → {:error, reason}" do
-      assert QuantumDashboard.next_run_payload(%{next_run_naive: {:error, "boom"}}) ==
+      assert QuantumDashboard.next_run_payload(%{next_run_naive: {:error, "boom"}}, @now) ==
                {:error, "boom"}
     end
 
     test "next_run_naive: {:ok, naive, tz} → {:ok, %{iso, naive, rel}}" do
-      future = NaiveDateTime.add(NaiveDateTime.utc_now(), 600, :second)
+      future = NaiveDateTime.add(@naive_now, 600, :second)
 
       assert {:ok, %{iso: iso, naive: naive_str, rel: rel}} =
-               QuantumDashboard.next_run_payload(%{next_run_naive: {:ok, future, :utc}})
+               QuantumDashboard.next_run_payload(%{next_run_naive: {:ok, future, :utc}}, @now)
 
       # ISO is the UTC datetime stringified.
       assert is_binary(iso)
@@ -173,13 +176,11 @@ defmodule EdgeAdminWeb.Live.QuantumDashboardTest do
       # of the truncated value.
       assert naive_str == NaiveDateTime.to_string(NaiveDateTime.truncate(future, :second))
 
-      # rel is humanize_in/1 of the seconds delta. Avoid pinning the exact
-      # minute boundary because real time passes while the test runs.
-      assert rel in ["in 9m", "in 10m"]
+      assert rel == "in 10m"
     end
 
     test "unexpected shape → {:error, descriptive message}" do
-      assert {:error, msg} = QuantumDashboard.next_run_payload(%{state: :something_else})
+      assert {:error, msg} = QuantumDashboard.next_run_payload(%{state: :something_else}, @now)
       assert msg =~ "unexpected next_run shape"
     end
   end
@@ -188,46 +189,42 @@ defmodule EdgeAdminWeb.Live.QuantumDashboardTest do
 
   describe "next_run_class/1" do
     test "inactive job → 'text-muted'" do
-      assert QuantumDashboard.next_run_class(%{state: :inactive}) == "text-muted"
+      assert QuantumDashboard.next_run_class(%{state: :inactive}, @now) == "text-muted"
     end
 
     test "next_run_naive: nil → 'text-muted'" do
-      assert QuantumDashboard.next_run_class(%{next_run_naive: nil}) == "text-muted"
+      assert QuantumDashboard.next_run_class(%{next_run_naive: nil}, @now) == "text-muted"
     end
 
     test "next_run_naive: error → 'next-run-error'" do
-      assert QuantumDashboard.next_run_class(%{next_run_naive: {:error, "x"}}) ==
+      assert QuantumDashboard.next_run_class(%{next_run_naive: {:error, "x"}}, @now) ==
                "next-run-error"
     end
 
     test "next run within 30 minutes → 'next-run-soon'" do
-      soon = NaiveDateTime.add(NaiveDateTime.utc_now(), 600, :second)
+      soon = NaiveDateTime.add(@naive_now, 600, :second)
 
-      assert QuantumDashboard.next_run_class(%{next_run_naive: {:ok, soon, :utc}}) ==
+      assert QuantumDashboard.next_run_class(%{next_run_naive: {:ok, soon, :utc}}, @now) ==
                "next-run-soon"
     end
 
     test "next run at the 30-minute boundary → 'next-run-soon' (≤, not <)" do
-      at_boundary = NaiveDateTime.add(NaiveDateTime.utc_now(), 1800, :second)
+      at_boundary = NaiveDateTime.add(@naive_now, 1800, :second)
 
-      # NaiveDateTime.diff truncates fractional seconds; subtract one to dodge
-      # the rare case where a few microseconds tick past during the test.
-      at_boundary_safe = NaiveDateTime.add(at_boundary, -1, :second)
-
-      assert QuantumDashboard.next_run_class(%{next_run_naive: {:ok, at_boundary_safe, :utc}}) ==
+      assert QuantumDashboard.next_run_class(%{next_run_naive: {:ok, at_boundary, :utc}}, @now) ==
                "next-run-soon"
     end
 
     test "next run more than 30 minutes out → '' (default)" do
-      far = NaiveDateTime.add(NaiveDateTime.utc_now(), 3600, :second)
+      far = NaiveDateTime.add(@naive_now, 3600, :second)
 
-      assert QuantumDashboard.next_run_class(%{next_run_naive: {:ok, far, :utc}}) == ""
+      assert QuantumDashboard.next_run_class(%{next_run_naive: {:ok, far, :utc}}, @now) == ""
     end
 
     test "next run already in the past → 'next-run-soon' (negative seconds <= 30min)" do
-      past = NaiveDateTime.add(NaiveDateTime.utc_now(), -60, :second)
+      past = NaiveDateTime.add(@naive_now, -60, :second)
 
-      assert QuantumDashboard.next_run_class(%{next_run_naive: {:ok, past, :utc}}) ==
+      assert QuantumDashboard.next_run_class(%{next_run_naive: {:ok, past, :utc}}, @now) ==
                "next-run-soon"
     end
   end

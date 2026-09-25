@@ -5,22 +5,24 @@ defmodule EdgeAdminWeb.Plugs.MetricsAuthTest do
   import Plug.Conn
   import Plug.Test
 
+  alias EdgeAdmin.Test.AppConfig
   alias EdgeAdminWeb.Plugs.MetricsAuth
 
   @opts MetricsAuth.init([])
 
   setup do
-    Application.put_env(:edge_admin, :all_auth_enabled, true)
-    Application.put_env(:edge_admin, :metrics_auth_enabled, true)
-    Application.delete_env(:edge_admin, :master_key)
-    Application.delete_env(:edge_admin, :metrics_key)
+    AppConfig.restore_on_exit(:edge_admin, [
+      :all_auth_enabled,
+      :metrics_auth_enabled,
+      :master_key,
+      :metrics_key
+    ])
 
-    on_exit(fn ->
-      Application.delete_env(:edge_admin, :all_auth_enabled)
-      Application.put_env(:edge_admin, :metrics_auth_enabled, true)
-      Application.delete_env(:edge_admin, :master_key)
-      Application.delete_env(:edge_admin, :metrics_key)
-    end)
+    Elixir.Application.put_env(:edge_admin, :all_auth_enabled, true)
+    Elixir.Application.put_env(:edge_admin, :metrics_auth_enabled, true)
+    Elixir.Application.delete_env(:edge_admin, :master_key)
+    Elixir.Application.delete_env(:edge_admin, :metrics_key)
+    :ok
   end
 
   defp build_conn(auth_header \\ nil) do
@@ -35,15 +37,15 @@ defmodule EdgeAdminWeb.Plugs.MetricsAuthTest do
 
   describe "auth disabled" do
     test "passes through with no header" do
-      Application.put_env(:edge_admin, :metrics_auth_enabled, false)
+      Elixir.Application.put_env(:edge_admin, :metrics_auth_enabled, false)
       conn = MetricsAuth.call(build_conn(), @opts)
       refute conn.halted
     end
 
     test "passes through with wrong key" do
-      Application.put_env(:edge_admin, :metrics_auth_enabled, false)
-      Application.put_env(:edge_admin, :master_key, "master")
-      Application.put_env(:edge_admin, :metrics_key, "metrics")
+      Elixir.Application.put_env(:edge_admin, :metrics_auth_enabled, false)
+      Elixir.Application.put_env(:edge_admin, :master_key, "master")
+      Elixir.Application.put_env(:edge_admin, :metrics_key, "metrics")
       conn = "Bearer garbage" |> build_conn() |> MetricsAuth.call(@opts)
       refute conn.halted
     end
@@ -51,8 +53,8 @@ defmodule EdgeAdminWeb.Plugs.MetricsAuthTest do
 
   describe "auth enabled — master key" do
     test "passes through with correct master key" do
-      Application.put_env(:edge_admin, :master_key, "master-key")
-      Application.put_env(:edge_admin, :metrics_key, "metrics-key")
+      Elixir.Application.put_env(:edge_admin, :master_key, "master-key")
+      Elixir.Application.put_env(:edge_admin, :metrics_key, "metrics-key")
       conn = "Bearer master-key" |> build_conn() |> MetricsAuth.call(@opts)
       refute conn.halted
     end
@@ -60,8 +62,8 @@ defmodule EdgeAdminWeb.Plugs.MetricsAuthTest do
 
   describe "auth enabled — metrics key" do
     test "passes through with correct metrics key" do
-      Application.put_env(:edge_admin, :master_key, "master-key")
-      Application.put_env(:edge_admin, :metrics_key, "metrics-key")
+      Elixir.Application.put_env(:edge_admin, :master_key, "master-key")
+      Elixir.Application.put_env(:edge_admin, :metrics_key, "metrics-key")
       conn = "Bearer metrics-key" |> build_conn() |> MetricsAuth.call(@opts)
       refute conn.halted
     end
@@ -69,32 +71,32 @@ defmodule EdgeAdminWeb.Plugs.MetricsAuthTest do
 
   describe "auth enabled — invalid" do
     test "halts with 401 when no Authorization header" do
-      Application.put_env(:edge_admin, :master_key, "master-key")
-      Application.put_env(:edge_admin, :metrics_key, "metrics-key")
+      Elixir.Application.put_env(:edge_admin, :master_key, "master-key")
+      Elixir.Application.put_env(:edge_admin, :metrics_key, "metrics-key")
       conn = nil |> build_conn() |> MetricsAuth.call(@opts)
       assert conn.halted
       assert conn.status == 401
     end
 
     test "halts with 401 when key is wrong" do
-      Application.put_env(:edge_admin, :master_key, "master-key")
-      Application.put_env(:edge_admin, :metrics_key, "metrics-key")
+      Elixir.Application.put_env(:edge_admin, :master_key, "master-key")
+      Elixir.Application.put_env(:edge_admin, :metrics_key, "metrics-key")
       conn = "Bearer wrong-key" |> build_conn() |> MetricsAuth.call(@opts)
       assert conn.halted
       assert conn.status == 401
     end
 
     test "halts with 401 when scheme is not Bearer" do
-      Application.put_env(:edge_admin, :master_key, "master-key")
-      Application.put_env(:edge_admin, :metrics_key, "metrics-key")
+      Elixir.Application.put_env(:edge_admin, :master_key, "master-key")
+      Elixir.Application.put_env(:edge_admin, :metrics_key, "metrics-key")
       conn = "Token master-key" |> build_conn() |> MetricsAuth.call(@opts)
       assert conn.halted
       assert conn.status == 401
     end
 
     test "master key does not accidentally match metrics key" do
-      Application.put_env(:edge_admin, :master_key, "master-key")
-      Application.put_env(:edge_admin, :metrics_key, "metrics-key")
+      Elixir.Application.put_env(:edge_admin, :master_key, "master-key")
+      Elixir.Application.put_env(:edge_admin, :metrics_key, "metrics-key")
       # Send master key value but expect it would still work (it's omnipotent)
       # This test documents that master_key IS accepted
       conn = "Bearer master-key" |> build_conn() |> MetricsAuth.call(@opts)
@@ -102,24 +104,24 @@ defmodule EdgeAdminWeb.Plugs.MetricsAuthTest do
     end
 
     test "metrics key does not grant master access (documents scoping)" do
-      Application.put_env(:edge_admin, :master_key, "master-key")
-      Application.put_env(:edge_admin, :metrics_key, "metrics-key")
+      Elixir.Application.put_env(:edge_admin, :master_key, "master-key")
+      Elixir.Application.put_env(:edge_admin, :metrics_key, "metrics-key")
       # metrics_key passes MetricsAuth — both keys accepted here
       conn = "Bearer metrics-key" |> build_conn() |> MetricsAuth.call(@opts)
       refute conn.halted
     end
 
     test "response body contains error key on failure" do
-      Application.put_env(:edge_admin, :master_key, "master-key")
-      Application.put_env(:edge_admin, :metrics_key, "metrics-key")
+      Elixir.Application.put_env(:edge_admin, :master_key, "master-key")
+      Elixir.Application.put_env(:edge_admin, :metrics_key, "metrics-key")
       conn = "Bearer garbage" |> build_conn() |> MetricsAuth.call(@opts)
       body = JSON.decode!(conn.resp_body)
       assert Map.has_key?(body, "error")
     end
 
     test "halts with 401 when Authorization is empty string" do
-      Application.put_env(:edge_admin, :master_key, "master-key")
-      Application.put_env(:edge_admin, :metrics_key, "metrics-key")
+      Elixir.Application.put_env(:edge_admin, :master_key, "master-key")
+      Elixir.Application.put_env(:edge_admin, :metrics_key, "metrics-key")
       conn = "" |> build_conn() |> MetricsAuth.call(@opts)
       assert conn.halted
       assert conn.status == 401
@@ -128,18 +130,18 @@ defmodule EdgeAdminWeb.Plugs.MetricsAuthTest do
 
   describe "METRICS_AUTH_ENABLED defaults to true" do
     test "when :metrics_auth_enabled not set, auth is enforced" do
-      Application.delete_env(:edge_admin, :metrics_auth_enabled)
-      Application.put_env(:edge_admin, :master_key, "master-key")
-      Application.put_env(:edge_admin, :metrics_key, "metrics-key")
+      Elixir.Application.delete_env(:edge_admin, :metrics_auth_enabled)
+      Elixir.Application.put_env(:edge_admin, :master_key, "master-key")
+      Elixir.Application.put_env(:edge_admin, :metrics_key, "metrics-key")
       conn = nil |> build_conn() |> MetricsAuth.call(@opts)
       assert conn.halted
       assert conn.status == 401
     end
 
     test "specific metrics flag overrides disabled global auth" do
-      Application.put_env(:edge_admin, :all_auth_enabled, false)
-      Application.put_env(:edge_admin, :metrics_auth_enabled, true)
-      Application.put_env(:edge_admin, :metrics_key, "metrics-key")
+      Elixir.Application.put_env(:edge_admin, :all_auth_enabled, false)
+      Elixir.Application.put_env(:edge_admin, :metrics_auth_enabled, true)
+      Elixir.Application.put_env(:edge_admin, :metrics_key, "metrics-key")
       conn = nil |> build_conn() |> MetricsAuth.call(@opts)
       assert conn.halted
       assert conn.status == 401

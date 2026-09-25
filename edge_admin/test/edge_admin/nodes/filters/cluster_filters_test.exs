@@ -10,60 +10,11 @@ defmodule EdgeAdmin.Nodes.Filters.ClusterFiltersTest do
   alias EdgeAdmin.Nodes.Schemas.Cluster
   alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.Repo
+  alias EdgeAdmin.Test.Fixtures
   # Fixtures
 
-  # Unique fixture identifiers per VM. `:erlang.unique_integer([:positive, :monotonic])`
-  # never repeats within a process, eliminating the birthday-paradox flake we got with
-  # `:rand.uniform/1` on small ranges like `/24` over `100.64.X.0`.
-  defp unique_id, do: :erlang.unique_integer([:positive, :monotonic])
-
-  # Walks the 16_384 `/24` blocks inside CGNAT (`100.64.0.0/10`):
-  #   second octet ∈ 64..127, third octet ∈ 0..255.
-  defp unique_ipv4_range do
-    n = unique_id()
-    octet2 = 64 + rem(div(n, 256), 64)
-    octet3 = rem(n, 256)
-    "100.#{octet2}.#{octet3}.0/24"
-  end
-
-  defp unique_ipv6_range, do: "fd7a:91c2:4e8b:#{rem(unique_id(), 65_536)}::/64"
-
-  defp insert_cluster(overrides \\ %{}) do
-    attrs =
-      Map.merge(
-        %{
-          id: Ecto.UUID.generate(),
-          name: "cluster-#{unique_id()}",
-          ipv4_range: unique_ipv4_range(),
-          ipv6_range: unique_ipv6_range(),
-          node_limit: nil
-        },
-        overrides
-      )
-
-    Repo.insert!(struct(Cluster, attrs))
-  end
-
-  defp insert_node(cluster_id) do
-    attrs = %{
-      id: Ecto.UUID.generate(),
-      cluster_id: cluster_id,
-      vpn_host_id: Ecto.UUID.generate(),
-      status: :healthy,
-      version: "0.1.0",
-      http_port: 44_000,
-      ssh_port: 40_022,
-      host_metrics_port: 9100,
-      wireguard_metrics_port: 9586,
-      http_proxy_port: 8080,
-      socks5_proxy_port: 1080,
-      api_token: Ecto.UUID.generate(),
-      proxy_password: Ecto.UUID.generate(),
-      ingress_public_key: unique_ingress_public_key()
-    }
-
-    Repo.insert!(struct(Node, attrs))
-  end
+  defp insert_cluster(overrides \\ %{}), do: Fixtures.insert_cluster!(overrides)
+  defp insert_node(cluster_id), do: Fixtures.insert_node!(cluster_id)
 
   # Returns the IDs of clusters yielded by a query, sorted, so tests don't
   # depend on result ordering.
@@ -179,12 +130,10 @@ defmodule EdgeAdmin.Nodes.Filters.ClusterFiltersTest do
 
   describe "apply_node_count/2 (>=, >, <=, <, ==, !=)" do
     setup do
-      # Pin distinct IP ranges so the unique index on ipv4_range can't bite
-      # us (random rolls collide ~3% of the time across 4 clusters).
-      empty = insert_cluster(%{ipv4_range: "10.10.0.0/24"})
-      one = insert_cluster(%{ipv4_range: "10.10.1.0/24"})
-      two = insert_cluster(%{ipv4_range: "10.10.2.0/24"})
-      five = insert_cluster(%{ipv4_range: "10.10.3.0/24"})
+      empty = insert_cluster()
+      one = insert_cluster()
+      two = insert_cluster()
+      five = insert_cluster()
 
       insert_node(one.id)
 

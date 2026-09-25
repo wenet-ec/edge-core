@@ -2,12 +2,10 @@
 defmodule EdgeAdmin.Nodes.Forms.CreateClusterFormTest do
   use ExUnit.Case, async: true
 
+  import EdgeAdmin.Test.ChangesetAssertions, only: [errors_on: 1]
+
   alias EdgeAdmin.Nodes.Forms.CreateClusterForm
   # helpers
-
-  defp errors_on(changeset) do
-    Ecto.Changeset.traverse_errors(changeset, fn {msg, _opts} -> msg end)
-  end
 
   defp valid_attrs(overrides \\ %{}) do
     Map.merge(%{"name" => "prod", "ipv4_range" => "100.64.1.0/24"}, overrides)

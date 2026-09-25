@@ -2,6 +2,8 @@
 defmodule EdgeAdmin.IngressTunneling.Schemas.TunnelConnectionTest do
   use ExUnit.Case, async: true
 
+  import EdgeAdmin.Test.ChangesetAssertions, only: [errors_on: 1]
+
   alias EdgeAdmin.IngressTunneling.Schemas.TunnelConnection
 
   defp valid_attrs(overrides \\ %{}) do
@@ -16,10 +18,6 @@ defmodule EdgeAdmin.IngressTunneling.Schemas.TunnelConnectionTest do
       },
       overrides
     )
-  end
-
-  defp errors_on(changeset) do
-    Ecto.Changeset.traverse_errors(changeset, fn {message, _opts} -> message end)
   end
 
   test "accepts a connection with one IPv4 /32 and one IPv6 /128" do

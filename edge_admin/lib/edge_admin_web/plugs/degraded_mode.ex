@@ -23,7 +23,6 @@ defmodule EdgeAdminWeb.Plugs.DegradedMode do
   # config/test.exs before compilation. Runtime swaps are NOT supported — change
   # the config and recompile.
   @metadata_module Application.compile_env(:edge_admin, :metadata_module, EdgeAdmin.AdminClustering.Metadata)
-  @compile {:no_warn_undefined, @metadata_module}
 
   def init(mode), do: mode
 
@@ -32,7 +31,7 @@ defmodule EdgeAdminWeb.Plugs.DegradedMode do
   end
 
   def call(conn, :block) do
-    if @metadata_module.degraded?() do
+    if degraded?() do
       conn
       |> put_status(:service_unavailable)
       |> put_view(json: EdgeAdminWeb.Controllers.ErrorJSON)
@@ -42,4 +41,7 @@ defmodule EdgeAdminWeb.Plugs.DegradedMode do
       conn
     end
   end
+
+  @spec degraded?() :: boolean()
+  defp degraded?, do: apply(@metadata_module, :degraded?, [])
 end

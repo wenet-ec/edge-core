@@ -2,6 +2,8 @@
 defmodule EdgeAdmin.Nodes.Schemas.NodeDiagnosticTest do
   use ExUnit.Case, async: true
 
+  import EdgeAdmin.Test.ChangesetAssertions, only: [errors_on: 1]
+
   alias EdgeAdmin.Nodes.Schemas.NodeDiagnostic
 
   defp valid_attrs(overrides) do
@@ -33,9 +35,5 @@ defmodule EdgeAdmin.Nodes.Schemas.NodeDiagnosticTest do
              constraint.field == :node_id and constraint.type == :foreign_key and
                constraint.error_type == :foreign
            end)
-  end
-
-  defp errors_on(changeset) do
-    Ecto.Changeset.traverse_errors(changeset, fn {message, _opts} -> message end)
   end
 end

@@ -2,6 +2,8 @@
 defmodule EdgeAdmin.Metrics.Schemas.NodeMetricsCacheTest do
   use ExUnit.Case, async: true
 
+  import EdgeAdmin.Test.ChangesetAssertions, only: [errors_on: 1]
+
   alias EdgeAdmin.Metrics.Schemas.NodeMetricsCache
 
   defp valid_attrs(overrides \\ %{}) do
@@ -71,15 +73,5 @@ defmodule EdgeAdmin.Metrics.Schemas.NodeMetricsCacheTest do
                  constraint.error_type == :foreign
              end)
     end
-  end
-
-  # Mirrors Phoenix's Ecto.Changeset error helper without pulling in DataCase
-  # (we don't want to start the Repo for these pure-changeset tests).
-  defp errors_on(changeset) do
-    Ecto.Changeset.traverse_errors(changeset, fn {message, opts} ->
-      Regex.replace(~r"%{(\w+)}", message, fn _, key ->
-        opts |> Keyword.get(String.to_existing_atom(key), key) |> to_string()
-      end)
-    end)
   end
 end

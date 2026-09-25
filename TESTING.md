@@ -92,6 +92,17 @@ Two test base modules:
 
 Use whichever the function under test requires. Default to `ExUnit.Case`.
 
+Admin and Agent tests share database fixtures through `EdgeAdmin.Test.Fixtures`
+and `EdgeAgent.Test.Fixtures` in their respective `test/support/fixtures.ex`
+files. Use them for common persisted records and generate distinct values for
+unique constraints. Pass explicit attributes when the test is about that
+attribute; do not repeat generic fixture builders locally.
+
+Use each application's `Test.ChangesetAssertions.errors_on/1` for changeset
+error messages. Tests that change global application configuration must be
+`async: false` and restore prior values with the application's
+`Test.AppConfig.restore_on_exit/2` helper.
+
 ### Adapter parity
 
 Admin runs against PostgreSQL by default and SQLite when
@@ -112,11 +123,10 @@ suite is adapter-agnostic by design:
 
 ### Avoiding test pollution
 
-When inserting multiple rows that share a unique constraint (cluster IP
-ranges, names, keys), pin distinct values explicitly rather than rolling
-random ones. With 4+ inserts in one test, random rolls collide often
-enough to flake CI. The unit-tested filter suite uses fixed `10.10.x.0/24`
-ranges in a setup block for this reason.
+Use the application's shared fixture module for generic persisted records.
+Fixtures generate distinct values for unique constraints; tests should pass
+explicit values for fields whose exact value is part of the assertion. Do not
+use a shared hard-coded unique value as a generic default.
 
 ## The mock exception
 
@@ -169,8 +179,8 @@ A unit test should:
 - Pin a contract that would silently regress if changed.
 - Read like documentation of the function's behaviour.
 - Run in milliseconds.
-- Be deterministic (no time-of-day dependencies, no random IPs colliding —
-  pin them when fixtures share a unique constraint).
+- Be deterministic: inject time when it affects the result and use shared,
+  collision-free fixtures for rows with unique constraints.
 - Catch a real bug class, not just exercise pattern-match plumbing.
 
 If a test exists only because we want code coverage, it's noise. Tests

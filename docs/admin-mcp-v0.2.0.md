@@ -122,7 +122,7 @@ Shell jobs fanned out across the fleet. Creating a command produces one `command
 | `list_commands` | List Commands | 🔍 | Filter/sort/paginate. Filters: `command_text`, `has_timeout`, `timeout_gte/lte`, `has_expires_at`, `expires_at_*`, `inserted_at_*`, `updated_at_*`. |
 | `get_command` | Get Command | 🔍 | Required: `command_id`. |
 | `create_command` | Create Command | | Required: `command_text` (multi-line shell supported), `targeting` (see below). Optional: `timeout` (ms), `expires_at` (ISO8601, future). |
-| `delete_command` | Delete Command | ⚠️ | Required: `command_id`. Only deletes commands where every execution is terminal. |
+| `delete_command` | Delete Command | ⚠️ | Required: `command_id`. Only deletes commands where every execution is finalized. Cancelled/expired executions need an Agent exit code first. |
 
 **Targeting** (required nested object on `create_command`):
 
@@ -138,10 +138,10 @@ Both `nodes` and `clusters` forms accept optional `node_filters` / `cluster_filt
 | --- | --- | --- | --- |
 | `list_command_executions` | List Command Executions | 🔍 | Filter/sort/paginate. Filters: `command_id_in` (array), `node_id_in` (array), `status_in` (array: `pending`/`sent`/`completed`/`cancelled`/`expired`/`dropped`), `target_all`, `exit_code`, `exit_code_gte/lte`, `output` (wildcard text search), `has_output`, `cluster_name` (wildcard), `cluster_name_in` (array), `has_cluster`, `inserted_at_*`, `updated_at_*`, `sent_at_*`, `completed_at_*`, `cancelled_at_*`. |
 | `get_command_execution` | Get Command Execution | 🔍 | Required: `execution_id`. Returns status, output, exit code, timestamps. |
-| `cancel_command_execution` | Cancel Command Execution | ⚠️ | Required: `execution_id`. `pending` → cancelled immediately and returns the execution. `sent` → cancellation accepted by the agent (best-effort); re-fetch later for its final state. Terminal statuses return 409. |
-| `delete_command_execution` | Delete Command Execution | ⚠️ | Required: `execution_id`. Only terminal executions can be deleted. |
+| `cancel_command_execution` | Cancel Command Execution | ⚠️ | Required: `execution_id`. `pending` → cancelled immediately and returns the execution. `sent` → cancellation accepted by the agent (best-effort); re-fetch later for its final state. Non-cancellable states return 409. |
+| `delete_command_execution` | Delete Command Execution | ⚠️ | Required: `execution_id`. Only finalized executions can be deleted. Cancelled/expired executions need an Agent exit code first. |
 
-`completed` is the only terminal *success* status — read `exit_code` to distinguish success (0) from failure (non-zero).
+`completed` is the reported success/failure status — read `exit_code` to distinguish success (0) from failure (non-zero). A cancelled or expired execution is finalized after the Agent reports its exit code; completed and dropped executions are finalized immediately.
 
 ---
 

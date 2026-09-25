@@ -520,7 +520,7 @@ config :edge_admin, Oban,
     crontab: [
       # Fan out active-cluster reconciliation and retired-cluster deletion work
       {cluster_reconciliation_schedule, EdgeAdmin.Nodes.Workers.ScheduleClusterReconciliationWorker},
-      # Delete finalised command executions older than retention
+      # Delete finalized command executions older than retention
       {execution_pruning_schedule, EdgeAdmin.Commands.Workers.PruneCommandExecutionsWorker}
     ]
   ],

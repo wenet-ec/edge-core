@@ -3,9 +3,9 @@ defmodule EdgeAdminMcp.Tools.Commands.DeleteCommand do
   @moduledoc """
   Delete a command and all its executions.
 
-  Only commands whose executions are all in a terminal status
-  (`completed`, `cancelled`, `expired`, or `dropped`) can be deleted. Returns a
-  conflict error if any execution is still `pending` or `sent`.
+  Only commands whose executions are all finalized can be deleted. A
+  `cancelled` or `expired` execution is finalized after Admin accepts an Agent
+  result; until then, deletion returns a conflict error.
   """
   use EdgeAdminMcp, :tool
 

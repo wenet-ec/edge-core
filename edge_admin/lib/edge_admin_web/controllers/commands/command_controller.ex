@@ -108,15 +108,16 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandController do
     description: """
     Delete a command and all its related command executions (cascaded deletion).
 
-    Only commands where ALL executions are completed can be deleted.
-    Attempting to delete a command with pending or sent executions will return 409.
+    A command can be deleted only when all its executions are finalized. A
+    cancelled or expired execution is finalized after Admin accepts an Agent
+    result; otherwise deletion returns 409.
     """,
     parameters: [PathParams.uuid(:id, "Command ID")],
     responses: %{
       204 => {"Command deleted successfully", "", nil},
       400 => {"Invalid path parameters", "application/json", CommonSchemas.BadRequestResponse},
       404 => {"Command not found", "application/json", CommonSchemas.NotFoundResponse},
-      409 => {"Cannot delete command with non-terminal executions", "application/json", CommonSchemas.ConflictResponse}
+      409 => {"Cannot delete command with non-finalized executions", "application/json", CommonSchemas.ConflictResponse}
     }
   )
 

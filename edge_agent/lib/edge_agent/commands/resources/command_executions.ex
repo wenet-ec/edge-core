@@ -44,8 +44,8 @@ defmodule EdgeAgent.Commands.Resources.CommandExecutions do
   @spec recoverable() :: [CommandExecution.t()]
   def recoverable, do: by_status(CommandExecutionStatuses.recoverable_statuses())
 
-  @spec completed() :: [CommandExecution.t()]
-  def completed, do: by_status(:completed)
+  @spec reportable() :: [CommandExecution.t()]
+  def reportable, do: by_status([:completed, :expired])
 
   @spec claim(CommandExecution.t()) :: {:ok, CommandExecution.t()} | :stale
   def claim(%CommandExecution{id: id}) do

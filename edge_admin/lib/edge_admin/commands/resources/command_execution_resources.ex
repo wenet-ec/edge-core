@@ -6,7 +6,7 @@ defmodule EdgeAdmin.Commands.Resources.CommandExecutionResources do
   import EdgeAdmin.Query, only: [case_insensitive_like: 2]
 
   alias Ecto.Query.CastError
-  alias EdgeAdmin.Commands.Checks.CommandExecutionTerminalCheck
+  alias EdgeAdmin.Commands.Checks.CommandExecutionFinalizedCheck
   alias EdgeAdmin.Commands.Filters.CommandExecutionFilters
   alias EdgeAdmin.Commands.Schemas.CommandExecution
   alias EdgeAdmin.Repo
@@ -63,10 +63,10 @@ defmodule EdgeAdmin.Commands.Resources.CommandExecutionResources do
           {:ok, CommandExecution.t()} | {:error, Ecto.Changeset.t()}
   def delete(%CommandExecution{} = execution), do: Repo.delete(execution)
 
-  @doc "Deletes an execution only when it is in a terminal state."
-  @spec delete_if_terminal(CommandExecution.t()) ::
+  @doc "Deletes an execution only when it is finalized."
+  @spec delete_if_finalized(CommandExecution.t()) ::
           {:ok, CommandExecution.t()} | {:error, {:conflict, String.t()} | Ecto.Changeset.t()}
-  def delete_if_terminal(%CommandExecution{} = execution) do
-    with :ok <- CommandExecutionTerminalCheck.check(execution), do: delete(execution)
+  def delete_if_finalized(%CommandExecution{} = execution) do
+    with :ok <- CommandExecutionFinalizedCheck.check(execution), do: delete(execution)
   end
 end

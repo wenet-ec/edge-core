@@ -180,7 +180,7 @@ defmodule EdgeAdmin.Nodes do
   3. Delete from DB. Cascade behaviour:
      - `ssh_usernames` → `:delete_all` (and their `ssh_public_keys` cascade transitively)
      - `aliases` → `:delete_all`
-     - non-terminal `command_executions` → `dropped`, then `:nilify_all`
+     - pending/sent `command_executions` → `dropped`, then `:nilify_all`
   4. Emit event for metadata recomputation
 
   If Edge VPN deletion fails (except :not_found), operation stops and returns error.

@@ -55,7 +55,7 @@ defmodule EdgeAdmin.Commands.Workflows.CommandExecutionLifecycleTest do
   end
 
   describe "drop_node_command_executions/2" do
-    test "drops only non-terminal executions and preserves their event snapshots" do
+    test "drops only pending and sent executions and preserves their event snapshots" do
       cluster = insert_cluster()
       node = insert_node(cluster)
       pending_command = insert_command()

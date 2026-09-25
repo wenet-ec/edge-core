@@ -8,8 +8,9 @@ defmodule EdgeAdmin.Commands.Enums.CommandExecutionStatuses do
   """
 
   @statuses [:pending, :sent, :completed, :cancelled, :expired, :dropped]
-  @terminal_statuses [:completed, :cancelled, :expired, :dropped]
   @cancellable_statuses [:pending, :sent]
+  @finalized_without_completion_timestamp_statuses [:completed, :dropped]
+  @completion_timestamp_dependent_finalization_statuses [:cancelled, :expired]
 
   @type t :: :pending | :sent | :completed | :cancelled | :expired | :dropped
 
@@ -17,13 +18,26 @@ defmodule EdgeAdmin.Commands.Enums.CommandExecutionStatuses do
   @spec statuses() :: [t()]
   def statuses, do: @statuses
 
-  @doc "Statuses that represent a finished execution."
-  @spec terminal_statuses() :: [t()]
-  def terminal_statuses, do: @terminal_statuses
-
   @doc "Statuses from which a cancellation request is accepted."
   @spec cancellable_statuses() :: [t()]
   def cancellable_statuses, do: @cancellable_statuses
+
+  @doc "Statuses whose finalization does not depend on an Admin-recorded result timestamp."
+  @spec finalized_without_completion_timestamp_statuses() :: [t()]
+  def finalized_without_completion_timestamp_statuses, do: @finalized_without_completion_timestamp_statuses
+
+  @doc "Statuses whose finalization requires Admin to record an Agent result timestamp."
+  @spec completion_timestamp_dependent_finalization_statuses() :: [t()]
+  def completion_timestamp_dependent_finalization_statuses, do: @completion_timestamp_dependent_finalization_statuses
+
+  @doc "Whether the status and Admin-recorded result timestamp represent a finalized execution."
+  @spec finalized?(t() | nil, DateTime.t() | nil) :: boolean()
+  def finalized?(status, _completed_at) when status in @finalized_without_completion_timestamp_statuses, do: true
+
+  def finalized?(status, completed_at) when status in @completion_timestamp_dependent_finalization_statuses,
+    do: not is_nil(completed_at)
+
+  def finalized?(_status, _completed_at), do: false
 
   @doc "Wire-format strings sorted to match `statuses/0`."
   @spec status_strings() :: [String.t()]

@@ -172,9 +172,9 @@ defmodule EdgeAgent.Commands do
   end
 
   @doc """
-  Reports all completed but unreported executions back to admin.
+  Reports all completed or expired executions back to Admin.
 
-  Attempts to report completed executions in FIFO order (oldest first).
+  Attempts to report results in FIFO order (oldest first).
   Stops on network errors and retries later. Deletes executions after successful report
   or when admin returns 404/422 (execution no longer exists or already completed).
   """
@@ -182,15 +182,15 @@ defmodule EdgeAgent.Commands do
   def report_unreported_executions do
     Logger.info("Starting unreported executions report")
 
-    completed_executions = get_completed_executions()
+    reportable_executions = get_reportable_executions()
 
-    if Enum.empty?(completed_executions) do
-      Logger.debug("No completed executions found")
+    if Enum.empty?(reportable_executions) do
+      Logger.debug("No reportable executions found")
       :ok
     else
-      Logger.info("Reporting #{length(completed_executions)} completed executions")
-      batch_size = length(completed_executions)
-      result = report_executions(completed_executions)
+      Logger.info("Reporting #{length(reportable_executions)} execution results")
+      batch_size = length(reportable_executions)
+      result = report_executions(reportable_executions)
 
       status =
         case result do
@@ -324,7 +324,7 @@ defmodule EdgeAgent.Commands do
 
   defp get_executions_by_status(status), do: get_executions_by_status([status])
   defp get_recoverable_executions, do: get_executions_by_status(CommandExecutionStatuses.recoverable_statuses())
-  defp get_completed_executions, do: get_executions_by_status(:completed)
+  defp get_reportable_executions, do: CommandExecutionResource.reportable()
 
   @doc """
   Cancels a command execution.

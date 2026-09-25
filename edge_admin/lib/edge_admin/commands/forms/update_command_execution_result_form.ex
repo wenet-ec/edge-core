@@ -8,7 +8,7 @@ defmodule EdgeAdmin.Commands.Forms.UpdateCommandExecutionResultForm do
   """
   use EdgeAdmin.Form
 
-  # Agent-reported terminal statuses. `commands.ex` may further override
+  # Agent-reported result statuses. `commands.ex` may further override
   # `:completed` to `:cancelled` based on exit_code 143 (SIGTERM).
   @agent_reported_statuses [:completed, :expired]
 

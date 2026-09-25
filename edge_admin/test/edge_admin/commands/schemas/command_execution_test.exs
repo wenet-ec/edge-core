@@ -8,6 +8,8 @@ defmodule EdgeAdmin.Commands.Schemas.CommandExecutionTest do
   alias EdgeAdmin.Commands.Schemas.CommandExecution
   alias EdgeAdmin.Nodes.Schemas.Cluster
 
+  @admin_completed_at ~U[2026-09-25 00:00:00Z]
+
   defp execution_with_command(timeout, expires_at) do
     %CommandExecution{
       command: %Command{command_text: "uname -a", timeout: timeout, expires_at: expires_at}
@@ -136,19 +138,27 @@ defmodule EdgeAdmin.Commands.Schemas.CommandExecutionTest do
     end
   end
 
-  describe "terminal?/1" do
-    test "returns true for terminal enum statuses" do
-      for status <- CommandExecutionStatuses.terminal_statuses() do
-        assert CommandExecution.terminal?(%CommandExecution{status: status})
+  describe "finalized?/1" do
+    test "completed and dropped executions are finalized" do
+      for status <- [:completed, :dropped] do
+        assert CommandExecution.finalized?(%CommandExecution{status: status})
       end
     end
 
-    test "returns false for non-terminal enum statuses" do
-      non_terminal_statuses =
-        CommandExecutionStatuses.statuses() -- CommandExecutionStatuses.terminal_statuses()
+    test "cancelled and expired executions are finalized only after Admin accepts a result" do
+      for status <- [:cancelled, :expired] do
+        refute CommandExecution.finalized?(%CommandExecution{status: status, completed_at: nil})
 
-      for status <- non_terminal_statuses do
-        refute CommandExecution.terminal?(%CommandExecution{status: status})
+        assert CommandExecution.finalized?(%CommandExecution{
+                 status: status,
+                 completed_at: @admin_completed_at
+               })
+      end
+    end
+
+    test "pending and sent executions are not finalized" do
+      for status <- [:pending, :sent] do
+        refute CommandExecution.finalized?(%CommandExecution{status: status})
       end
     end
   end

@@ -1,6 +1,6 @@
 # edge_agent/lib/edge_agent/commands/workers/report_execution_worker.ex
 defmodule EdgeAgent.Commands.Workers.ReportExecutionWorker do
-  @moduledoc "Worker that reports completed command execution results to Admin."
+  @moduledoc "Worker that reports command execution results to Admin."
 
   use Oban.Worker,
     queue: :report_executions,

@@ -1140,7 +1140,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "Time spent in the pruning batched-delete loop. Spikes can indicate a large backlog of finalised rows accumulating between runs.",
+      "description": "Time spent in the pruning batched-delete loop. Spikes can indicate a large backlog of finalized rows accumulating between runs.",
       "fieldConfig": {
         "defaults": {
           "color": {

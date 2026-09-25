@@ -321,7 +321,7 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
       counter(
         [:edge_admin, :commands, :pruning, :runs, :total],
         event_name: [:edge_admin, :commands, :pruning],
-        description: "Total number of execution pruning runs (delete old finalised rows)",
+        description: "Total number of execution pruning runs (delete old finalized rows)",
         measurement: &event_count/1
       ),
       sum(

@@ -6,7 +6,7 @@ defmodule EdgeAdmin.Commands.Resources.CommandResources do
   import EdgeAdmin.Query, only: [case_insensitive_like: 2]
 
   alias Ecto.Query.CastError
-  alias EdgeAdmin.Commands.Checks.PendingCommandExecutionsCheck
+  alias EdgeAdmin.Commands.Checks.NonFinalizedCommandExecutionsCheck
   alias EdgeAdmin.Commands.Filters.CommandFilters
   alias EdgeAdmin.Commands.Schemas.Command
   alias EdgeAdmin.Repo
@@ -55,10 +55,10 @@ defmodule EdgeAdmin.Commands.Resources.CommandResources do
   @spec delete(Command.t()) :: {:ok, Command.t()} | {:error, Ecto.Changeset.t()}
   def delete(%Command{} = command), do: Repo.delete(command)
 
-  @doc "Deletes a command only when none of its executions are in flight."
-  @spec delete_if_no_in_flight_executions(Command.t()) ::
+  @doc "Deletes a command only when all of its executions are finalized."
+  @spec delete_if_all_executions_finalized(Command.t()) ::
           {:ok, Command.t()} | {:error, {:conflict, String.t()} | Ecto.Changeset.t()}
-  def delete_if_no_in_flight_executions(%Command{} = command) do
-    with :ok <- PendingCommandExecutionsCheck.check(command), do: delete(command)
+  def delete_if_all_executions_finalized(%Command{} = command) do
+    with :ok <- NonFinalizedCommandExecutionsCheck.check(command), do: delete(command)
   end
 end

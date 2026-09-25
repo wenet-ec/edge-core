@@ -8,10 +8,10 @@ defmodule EdgeAdmin.Commands.Checks.CommandExecutionAcceptsResultCheck do
     the authenticated owning Agent's result proves it received and ran the
     execution)
   - Status is "sent" (normal case)
-  - Status is "cancelled" with nil exit_code (race condition: pending execution
+  - Status is "cancelled" with nil Admin-owned `completed_at` (race condition: pending execution
     was cancelled by admin before agent ran it, but agent picked it up via sync
     and is now reporting back - allow the agent to overwrite with actual results)
-  - Status is "expired" with nil exit_code (race condition: admin expired the
+  - Status is "expired" with nil Admin-owned `completed_at` (race condition: admin expired the
     execution via scheduler, but agent already picked it up and is now reporting
     back - accept the result as it reflects what actually happened on the node)
 
@@ -29,19 +29,13 @@ defmodule EdgeAdmin.Commands.Checks.CommandExecutionAcceptsResultCheck do
   alias EdgeAdmin.Commands.Schemas.CommandExecution
 
   @spec check(CommandExecution.t()) :: :ok | {:error, {:conflict, String.t()}}
-  def check(%CommandExecution{status: :pending}), do: :ok
-
-  def check(%CommandExecution{status: :sent}), do: :ok
-
-  def check(%CommandExecution{status: :cancelled, exit_code: nil}), do: :ok
-
-  def check(%CommandExecution{status: :expired, exit_code: nil}), do: :ok
-
-  # A dropped execution belongs to a deleted node. It must never accept a
-  # result, including if the former agent retries after deletion.
-  def check(%CommandExecution{status: :dropped}), do: {:error, {:conflict, "execution is no longer active"}}
-
-  def check(%CommandExecution{status: status, exit_code: exit_code}) do
-    {:error, {:conflict, "execution is in '#{status}' status (exit_code: #{inspect(exit_code)}) and cannot be updated"}}
+  def check(%CommandExecution{} = execution) do
+    if CommandExecution.finalized?(execution) do
+      {:error,
+       {:conflict,
+        "execution is finalized with status '#{execution.status}' (completed_at: #{inspect(execution.completed_at)})"}}
+    else
+      :ok
+    end
   end
 end

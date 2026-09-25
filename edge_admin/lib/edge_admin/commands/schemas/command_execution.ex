@@ -10,7 +10,6 @@ defmodule EdgeAdmin.Commands.Schemas.CommandExecution do
   alias EdgeAdmin.Nodes.Schemas.Node
 
   @statuses CommandExecutionStatuses.statuses()
-  @terminal_statuses CommandExecutionStatuses.terminal_statuses()
   @cancellable_statuses CommandExecutionStatuses.cancellable_statuses()
 
   @type status :: CommandExecutionStatuses.t()
@@ -140,9 +139,10 @@ defmodule EdgeAdmin.Commands.Schemas.CommandExecution do
   def expires_at(%__MODULE__{command: %{expires_at: expires_at}}), do: expires_at
   def expires_at(%__MODULE__{}), do: nil
 
-  @doc "True when the execution is in a terminal status."
-  @spec terminal?(t()) :: boolean()
-  def terminal?(%__MODULE__{status: status}), do: status in @terminal_statuses
+  @doc "True when the execution can no longer receive an Agent result."
+  @spec finalized?(t()) :: boolean()
+  def finalized?(%__MODULE__{status: status, completed_at: completed_at}),
+    do: CommandExecutionStatuses.finalized?(status, completed_at)
 
   @doc "True when the execution can still be cancelled."
   @spec cancellable?(t()) :: boolean()

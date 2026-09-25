@@ -100,14 +100,15 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionController do
     description: """
     Delete a specific command execution.
 
-    Only completed, cancelled, expired, or dropped executions can be deleted. Attempting to delete pending or sent executions will return 409.
+    Only finalized executions can be deleted. A cancelled or expired execution is
+    finalized after Admin accepts an Agent result; otherwise deletion returns 409.
     """,
     parameters: [PathParams.uuid(:id, "Command Execution ID")],
     responses: %{
       204 => {"Command execution deleted successfully", "", nil},
       400 => {"Invalid path parameters", "application/json", CommonSchemas.BadRequestResponse},
       404 => {"Command execution not found", "application/json", CommonSchemas.NotFoundResponse},
-      409 => {"Cannot delete non-terminal execution", "application/json", CommonSchemas.ConflictResponse}
+      409 => {"Cannot delete non-finalized execution", "application/json", CommonSchemas.ConflictResponse}
     }
   )
 
@@ -125,7 +126,7 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionController do
 
     - `pending`: Immediately marked `cancelled` in the database (command never ran).
     - `sent`: Sends cancellation request to agent (best-effort, async). The agent is the source of truth — if it already ran the command, it reports back the real result and the execution is marked `completed`. If the agent honoured the cancellation (exit code 143), it is marked `cancelled`.
-    - `completed` / `cancelled` / `expired` / `dropped`: Returns 409 conflict (already terminal).
+    - `completed` / `cancelled` / `expired` / `dropped`: Returns 409 conflict (not cancellable).
 
     Returns `200` with the cancelled execution when a pending execution is cancelled
     immediately. Returns `202` when an agent accepted cancellation for a sent execution;
@@ -138,8 +139,7 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionController do
       202 => {"Cancellation accepted; final execution state is asynchronous", "", nil},
       400 => {"Invalid path parameters", "application/json", CommonSchemas.BadRequestResponse},
       404 => {"Command execution not found", "application/json", CommonSchemas.NotFoundResponse},
-      409 =>
-        {"Execution not in a cancellable state (already terminal)", "application/json", CommonSchemas.ConflictResponse},
+      409 => {"Execution is not cancellable in its current state", "application/json", CommonSchemas.ConflictResponse},
       503 =>
         {"Agent unreachable for cancellation request (sent status only)", "application/json",
          CommonSchemas.ServiceUnavailableResponse}

@@ -4,6 +4,8 @@ defmodule EdgeAdmin.Commands.Checks.CommandExecutionAcceptsResultCheckTest do
 
   alias EdgeAdmin.Commands.Checks.CommandExecutionAcceptsResultCheck
   alias EdgeAdmin.Commands.Schemas.CommandExecution
+
+  @admin_completed_at ~U[2026-09-25 00:00:00Z]
   # check/1 — pure struct pattern match, no DB
 
   describe "check/1 — updatable executions" do
@@ -17,12 +19,12 @@ defmodule EdgeAdmin.Commands.Checks.CommandExecutionAcceptsResultCheckTest do
       assert :ok = CommandExecutionAcceptsResultCheck.check(execution)
     end
 
-    test "cancelled execution with nil exit_code returns :ok (race: admin cancelled, agent already ran)" do
+    test "cancelled execution without Admin result timestamp returns :ok (race: admin cancelled, agent already ran)" do
       execution = %CommandExecution{status: :cancelled, exit_code: nil}
       assert :ok = CommandExecutionAcceptsResultCheck.check(execution)
     end
 
-    test "expired execution with nil exit_code returns :ok (race: admin expired, agent already ran)" do
+    test "expired execution without Admin result timestamp returns :ok (race: admin expired, agent already ran)" do
       execution = %CommandExecution{status: :expired, exit_code: nil}
       assert :ok = CommandExecutionAcceptsResultCheck.check(execution)
     end
@@ -41,14 +43,14 @@ defmodule EdgeAdmin.Commands.Checks.CommandExecutionAcceptsResultCheckTest do
       assert reason =~ "completed"
     end
 
-    test "cancelled execution with non-nil exit_code returns conflict error (already terminal)" do
-      execution = %CommandExecution{status: :cancelled, exit_code: 143}
+    test "cancelled execution with Admin result timestamp returns conflict error (already finalized)" do
+      execution = %CommandExecution{status: :cancelled, completed_at: @admin_completed_at}
       assert {:error, {:conflict, reason}} = CommandExecutionAcceptsResultCheck.check(execution)
       assert reason =~ "cancelled"
     end
 
-    test "expired execution with non-nil exit_code returns conflict error (already terminal)" do
-      execution = %CommandExecution{status: :expired, exit_code: 0}
+    test "expired execution with Admin result timestamp returns conflict error (already finalized)" do
+      execution = %CommandExecution{status: :expired, completed_at: @admin_completed_at}
       assert {:error, {:conflict, reason}} = CommandExecutionAcceptsResultCheck.check(execution)
       assert reason =~ "expired"
     end
@@ -58,7 +60,7 @@ defmodule EdgeAdmin.Commands.Checks.CommandExecutionAcceptsResultCheckTest do
       assert {:error, {:conflict, _reason}} = CommandExecutionAcceptsResultCheck.check(execution)
     end
 
-    test "error message includes the actual status and exit_code" do
+    test "error message includes the actual status and Admin result timestamp" do
       execution = %CommandExecution{status: :completed, exit_code: nil}
       {:error, {:conflict, reason}} = CommandExecutionAcceptsResultCheck.check(execution)
       assert reason =~ "completed"

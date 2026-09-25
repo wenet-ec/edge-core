@@ -91,9 +91,10 @@ defmodule EdgeAdminMcp.Server do
     ## Commands are asynchronous
 
     A `command` is a job. Creating one with target `all` or a list of nodes fans
-    out into one `command_execution` per targeted node. **`completed` is the only
-    terminal success/failure status — read `exit_code` to distinguish success
-    (0) from failure (non-zero).** Other terminal statuses: `cancelled`, `expired`.
+    out into one `command_execution` per targeted node. **`completed` is the
+    reported success/failure status — read `exit_code` to distinguish success
+    (0) from failure (non-zero).** A `cancelled` or `expired` execution is
+    finalized after the Agent reports its exit code.
 
     Use `list_command_executions` filtered by `command_id` to see how a single
     command is progressing across the fleet.

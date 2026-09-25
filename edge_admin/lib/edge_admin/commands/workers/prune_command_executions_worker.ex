@@ -1,7 +1,7 @@
 # edge_admin/lib/edge_admin/commands/workers/prune_command_executions_worker.ex
 defmodule EdgeAdmin.Commands.Workers.PruneCommandExecutionsWorker do
   @moduledoc """
-  Periodic worker that deletes finalised command executions older than the
+  Periodic worker that deletes finalized command executions older than the
   configured retention period.
 
   The worker no-ops when execution pruning is disabled.
@@ -35,7 +35,7 @@ defmodule EdgeAdmin.Commands.Workers.PruneCommandExecutionsWorker do
     {:ok, deleted} = Commands.prune_command_executions(retention_days)
     duration_ms = System.convert_time_unit(System.monotonic_time() - started_at, :native, :millisecond)
 
-    Logger.info("Pruned #{deleted} finalised command execution(s) older than #{retention_days} day(s)")
+    Logger.info("Pruned #{deleted} finalized command execution(s) older than #{retention_days} day(s)")
 
     :telemetry.execute(
       [:edge_admin, :commands, :pruning],

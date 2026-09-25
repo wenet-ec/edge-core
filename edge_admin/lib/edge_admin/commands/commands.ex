@@ -4,8 +4,9 @@ defmodule EdgeAdmin.Commands do
   The Commands context handles distributed command execution across edge nodes.
 
   A command is the requested shell text plus targeting. A command execution is
-  the per-node row that moves through `pending -> sent -> completed`, or one of
-  the terminal states `cancelled`, `expired`, or `dropped`.
+  the per-node row that moves through `pending -> sent` to a result status.
+  `cancelled` and `expired` executions are finalized after Admin accepts an
+  Agent result; `completed` and `dropped` are finalized immediately.
 
   ## Concurrency model
 
@@ -17,7 +18,7 @@ defmodule EdgeAdmin.Commands do
   report results back before the admin has finished marking the row `:sent`.
 
   Both situations were producing lost-update races on every status transition
-  (a terminal row could be clobbered back to `:sent` or `:expired` by a stale
+  (a finalized row could be clobbered back to `:sent` or `:expired` by a stale
   in-memory struct). Every transition now uses a conditional database update
   that restricts the allowed source statuses and returns `{:error, :stale_state}`
   when a row has already moved. Early conflict checks remain useful, but the
@@ -42,12 +43,12 @@ defmodule EdgeAdmin.Commands do
   @spec list_commands(map()) :: {:ok, {[Command.t()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
   defdelegate list_commands(params \\ %{}), to: CommandResources, as: :list
 
-  @doc "Deletes a command after checking that it has no pending or in-flight executions."
+  @doc "Deletes a command after checking that all its executions are finalized."
   @spec delete_command(Command.t()) ::
           {:ok, Command.t()} | {:error, {:conflict, String.t()} | Ecto.Changeset.t()}
   defdelegate delete_command(command),
     to: CommandResources,
-    as: :delete_if_no_in_flight_executions
+    as: :delete_if_all_executions_finalized
 
   @doc "Creates a command and atomically enqueues asynchronous execution creation."
   @spec create_command_and_enqueue_executions(map()) ::
@@ -61,12 +62,12 @@ defmodule EdgeAdmin.Commands do
   @spec list_command_executions(map()) :: {:ok, {[CommandExecution.t()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
   defdelegate list_command_executions(params \\ %{}), to: CommandExecutionResources, as: :list
 
-  @doc "Deletes a command execution after checking that it is terminal."
+  @doc "Deletes a command execution after checking that it is finalized."
   @spec delete_command_execution(CommandExecution.t()) ::
           {:ok, CommandExecution.t()} | {:error, {:conflict, String.t()} | Ecto.Changeset.t()}
   defdelegate delete_command_execution(command_execution),
     to: CommandExecutionResources,
-    as: :delete_if_terminal
+    as: :delete_if_finalized
 
   @spec create_command_executions(map()) :: {:ok, [CommandExecution.t()]} | {:error, String.t()}
   defdelegate create_command_executions(args), to: CommandExecutionDelivery

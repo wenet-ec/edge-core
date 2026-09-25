@@ -4,12 +4,22 @@ defmodule EdgeAdmin.Commands.Enums.CommandExecutionStatusesTest do
 
   alias EdgeAdmin.Commands.Enums.CommandExecutionStatuses
 
+  @admin_completed_at ~U[2026-09-25 00:00:00Z]
+
   test "statuses/0 returns all lifecycle statuses in canonical order" do
     assert CommandExecutionStatuses.statuses() == [:pending, :sent, :completed, :cancelled, :expired, :dropped]
   end
 
-  test "terminal_statuses/0 returns statuses that cannot transition further" do
-    assert CommandExecutionStatuses.terminal_statuses() == [:completed, :cancelled, :expired, :dropped]
+  test "finalized?/2 applies the complete execution finalization rule" do
+    assert CommandExecutionStatuses.finalized?(:completed, nil)
+    assert CommandExecutionStatuses.finalized?(:dropped, nil)
+    assert CommandExecutionStatuses.finalized?(:cancelled, @admin_completed_at)
+    assert CommandExecutionStatuses.finalized?(:expired, @admin_completed_at)
+
+    refute CommandExecutionStatuses.finalized?(:cancelled, nil)
+    refute CommandExecutionStatuses.finalized?(:expired, nil)
+    refute CommandExecutionStatuses.finalized?(:pending, nil)
+    refute CommandExecutionStatuses.finalized?(:sent, nil)
   end
 
   test "cancellable_statuses/0 returns statuses that accept cancellation" do

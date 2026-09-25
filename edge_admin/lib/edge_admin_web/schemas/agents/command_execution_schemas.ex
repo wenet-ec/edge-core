@@ -11,9 +11,9 @@ defmodule EdgeAdminWeb.Schemas.Agents.CommandExecutionSchemas do
   defmodule UpdateCommandExecutionResultRequest do
     @moduledoc false
 
-    # Agent only reports terminal results here. Cancellation is admin-driven
+    # Agent only reports command results here. Cancellation is admin-driven
     # (override on exit_code 143), so the wire enum is just these two.
-    @agent_terminal_enum ["completed", "expired"]
+    @agent_result_enum ["completed", "expired"]
 
     schema(%{
       title: "Internal.UpdateCommandExecutionResultRequest",
@@ -29,8 +29,8 @@ defmodule EdgeAdminWeb.Schemas.Agents.CommandExecutionSchemas do
         expires_at: %Schema{type: :string, format: :"date-time", nullable: true},
         status: %Schema{
           type: :string,
-          enum: @agent_terminal_enum,
-          description: "Terminal status reported by the agent"
+          enum: @agent_result_enum,
+          description: "Result status reported by the agent"
         },
         output: %Schema{type: :string, nullable: true, description: "Command output text"},
         exit_code: %Schema{type: :integer, nullable: true, description: "Process exit code"},

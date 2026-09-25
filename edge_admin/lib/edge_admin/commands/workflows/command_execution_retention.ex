@@ -39,7 +39,7 @@ defmodule EdgeAdmin.Commands.Workflows.CommandExecutionRetention do
     # Scope to clusters owned by this admin. Without this gate, every admin in
     # the fleet runs the expiration loop against every cluster, producing write
     # amplification and (pre-conditional-update) clobbering
-    # terminal rows. Mirrors the ownership gate in `deliver_local_command_executions/0`.
+    # finalized rows. Mirrors the ownership gate in `deliver_local_command_executions/0`.
     my_cluster_names =
       Metadata.get_my_clusters()
       |> Map.keys()
@@ -107,11 +107,13 @@ defmodule EdgeAdmin.Commands.Workflows.CommandExecutionRetention do
   end
 
   defp expire_execution(execution) do
+    cancellable_statuses = CommandExecutionStatuses.cancellable_statuses()
+
     # Conditional transition: only expire rows still in :pending or :sent. If
     # the agent has already reported back (row is now :completed/:cancelled/
-    # :expired with exit_code), do not overwrite — the agent is the source of
+    # :expired with completed_at), do not overwrite — the agent is the source of
     # truth for what actually ran.
-    case CommandExecutionLifecycle.transition_status(execution, [:pending, :sent], status: :expired) do
+    case CommandExecutionLifecycle.transition_status(execution, cancellable_statuses, status: :expired) do
       {:ok, updated} ->
         Logger.info("Execution #{execution.id} marked expired")
         CommandExecutionLifecycle.publish_execution_event(updated, :expired)
@@ -126,16 +128,16 @@ defmodule EdgeAdmin.Commands.Workflows.CommandExecutionRetention do
   @prune_batch_size 1_000
 
   @doc """
-  Deletes finalised command executions older than `retention_days`.
+  Deletes finalized command executions older than `retention_days`.
 
-  An execution is considered finalised — meaning it can no longer receive any
+  An execution is considered finalized — meaning it can no longer receive any
   updates — when:
 
     * `status in [:completed, :dropped]`, or
-    * `status in [:cancelled, :expired]` AND `exit_code IS NOT NULL` (agent
-      reported the result of the cancel/expire signal).
+    * `status in [:cancelled, :expired]` AND `completed_at IS NOT NULL` (Admin
+      accepted an Agent result).
 
-  A `:cancelled` or `:expired` row with `nil exit_code` is NOT finalised — it's
+  A `:cancelled` or `:expired` row with `nil completed_at` is not finalized — it's
   a race-window placeholder that `CommandExecutionAcceptsResultCheck` still accepts a
   late agent report for (the agent picked the command up before the admin's
   cancel/expire reached it). Pruning those would lose the agent's actual
@@ -160,16 +162,22 @@ defmodule EdgeAdmin.Commands.Workflows.CommandExecutionRetention do
     # codebase is pruning, and consumers maintaining state mirrors have no
     # other way to learn that a row went away.
     #
-    # Eligibility: completed/dropped (always finalised), OR cancelled/expired with
-    # exit_code set (agent reported back). Excludes the cancel/expire race
-    # window where exit_code is still nil.
+    # Eligibility: completed/dropped (always finalized), OR cancelled/expired
+    # with Admin's result timestamp set. Excludes the cancel/expire race window
+    # while no Agent result has been accepted.
+    finalized_without_completion_timestamp =
+      CommandExecutionStatuses.finalized_without_completion_timestamp_statuses()
+
+    completion_timestamp_dependent_finalization =
+      CommandExecutionStatuses.completion_timestamp_dependent_finalization_statuses()
+
     eligible =
       Repo.all(
         from(ce in CommandExecution,
           where:
             ce.inserted_at < ^cutoff and
-              (ce.status in [:completed, :dropped] or
-                 (ce.status in [:cancelled, :expired] and not is_nil(ce.exit_code))),
+              (ce.status in ^finalized_without_completion_timestamp or
+                 (ce.status in ^completion_timestamp_dependent_finalization and not is_nil(ce.completed_at))),
           limit: @prune_batch_size,
           preload: [:command, node: :cluster]
         )

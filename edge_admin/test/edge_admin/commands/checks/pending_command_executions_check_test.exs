@@ -50,7 +50,7 @@ defmodule EdgeAdmin.Commands.Checks.PendingCommandExecutionsCheckTest do
         socks5_proxy_port: 1080,
         api_token: Ecto.UUID.generate(),
         proxy_password: Ecto.UUID.generate(),
-        ingress_public_key: Base.encode64(:binary.copy(<<0>>, 32))
+        ingress_public_key: unique_ingress_public_key()
       })
     )
   end

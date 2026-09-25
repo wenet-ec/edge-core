@@ -60,4 +60,11 @@ defmodule EdgeAdmin.DataCase do
       end)
     end)
   end
+
+  @doc "Returns a unique canonical WireGuard public key for node fixtures."
+  @spec unique_ingress_public_key() :: String.t()
+  def unique_ingress_public_key do
+    key_id = :erlang.unique_integer([:positive, :monotonic])
+    Base.encode64(<<key_id::unsigned-big-integer-size(64), 0::size(192)>>)
+  end
 end

@@ -117,7 +117,7 @@ defmodule EdgeAdmin.Mixfile do
       # Database
       {:ecto_sql, "~> 3.14"},
       {:postgrex, "~> 0.22"},
-      {:ecto_sqlite3, "~> 0.24"},
+      {:ecto_sqlite3, "~> 0.25"},
       {:uniq, "~> 0.6"},
       {:flop, "~> 0.29"},
       {:cloak, "~> 1.1"},
@@ -164,7 +164,7 @@ defmodule EdgeAdmin.Mixfile do
       {:syn, "~> 3.4"},
 
       # Event Streaming
-      {:gnat, "~> 1.16"},
+      {:gnat, "~> 1.17"},
       {:brod, "~> 4.6"},
       {:amqp, "~> 4.2"},
       {:redix, "~> 1.9"},

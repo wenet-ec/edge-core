@@ -9,15 +9,12 @@ defmodule EdgeAgent.Commands do
   `:sent` and `:cancelled` are translated at the boundary.
   """
 
-  import Ecto.Query, warn: false
-
   alias EdgeAgent.AdminGateway.Client
   alias EdgeAgent.Commands.CommandExecutionOutput
   alias EdgeAgent.Commands.CommandExecutionResults
-  alias EdgeAgent.Commands.Enums.CommandExecutionStatuses
   alias EdgeAgent.Commands.ExecutionRegistry
   alias EdgeAgent.Commands.Forms.CreateCommandExecutionForm
-  alias EdgeAgent.Commands.Resources.CommandExecutions, as: CommandExecutionResource
+  alias EdgeAgent.Commands.Resources.CommandExecutionResources
   alias EdgeAgent.Commands.Schemas.CommandExecution
   alias EdgeAgent.Settings
 
@@ -29,7 +26,7 @@ defmodule EdgeAgent.Commands do
   Returns `{:ok, execution}` if found, `{:error, :not_found}` otherwise.
   """
   @spec get_command_execution(String.t()) :: {:ok, CommandExecution.t()} | {:error, :not_found}
-  defdelegate get_command_execution(id), to: CommandExecutionResource, as: :get
+  defdelegate get_command_execution(id), to: CommandExecutionResources, as: :get
 
   @doc """
   Creates a command execution and enqueues worker for execution.
@@ -51,19 +48,15 @@ defmodule EdgeAgent.Commands do
     end
   end
 
-  defp create_command_execution(attrs), do: CommandExecutionResource.create(attrs)
-
   defp get_or_create_command_execution(attrs) do
     case get_command_execution(attrs["id"]) do
       {:ok, command_execution} ->
         {:ok, command_execution}
 
       {:error, :not_found} ->
-        create_command_execution(attrs)
+        CommandExecutionResources.create(attrs)
     end
   end
-
-  defp delete_command_execution(command_execution), do: CommandExecutionResource.delete(command_execution)
 
   @doc """
   Enqueues all recoverable command executions as Oban jobs.
@@ -76,7 +69,7 @@ defmodule EdgeAgent.Commands do
   def enqueue_pending_executions do
     Logger.debug("Enqueueing recoverable command executions")
 
-    recoverable_executions = get_recoverable_executions()
+    recoverable_executions = CommandExecutionResources.list_recoverable()
 
     if Enum.empty?(recoverable_executions) do
       Logger.debug("No recoverable executions to enqueue")
@@ -114,7 +107,7 @@ defmodule EdgeAgent.Commands do
 
     Logger.info("Command #{execution.id} completed with exit code: #{exit_code}")
 
-    case complete_running_execution(execution.id, output, exit_code) do
+    case CommandExecutionResources.complete_running(execution.id, output, exit_code) do
       :ok ->
         :telemetry.execute(
           [:edge_agent, :commands, :execution, :completed],
@@ -138,7 +131,7 @@ defmodule EdgeAgent.Commands do
   finalized the row first.
   """
   @spec claim_command_execution(CommandExecution.t()) :: {:ok, CommandExecution.t()} | :stale
-  defdelegate claim_command_execution(execution), to: CommandExecutionResource, as: :claim
+  defdelegate claim_command_execution(execution), to: CommandExecutionResources, as: :claim
 
   defp run_command(execution) do
     timeout_ms = execution.timeout || :infinity
@@ -182,7 +175,7 @@ defmodule EdgeAgent.Commands do
   def report_unreported_executions do
     Logger.info("Starting unreported executions report")
 
-    reportable_executions = get_reportable_executions()
+    reportable_executions = CommandExecutionResources.list_reportable()
 
     if Enum.empty?(reportable_executions) do
       Logger.debug("No reportable executions found")
@@ -294,7 +287,7 @@ defmodule EdgeAgent.Commands do
   end
 
   defp delete_execution_after_report(execution) do
-    case delete_command_execution(execution) do
+    case CommandExecutionResources.delete(execution) do
       {:ok, _deleted_execution} ->
         Logger.debug("Deleted execution #{execution.id} from local database")
 
@@ -318,13 +311,6 @@ defmodule EdgeAgent.Commands do
     end
   end
 
-  defp get_executions_by_status(statuses) when is_list(statuses) do
-    CommandExecutionResource.by_status(statuses)
-  end
-
-  defp get_recoverable_executions, do: get_executions_by_status(CommandExecutionStatuses.recoverable_statuses())
-  defp get_reportable_executions, do: CommandExecutionResource.reportable()
-
   @doc """
   Cancels a command execution.
 
@@ -334,7 +320,7 @@ defmodule EdgeAgent.Commands do
   """
   @spec cancel_execution(CommandExecution.t()) :: {:ok, map()}
   def cancel_execution(execution) do
-    case cancel_pending_or_running_execution(execution.id) do
+    case CommandExecutionResources.cancel_pending_or_running(execution.id) do
       :cancelled ->
         task_kill_result =
           case ExecutionRegistry.get_task(execution.id) do
@@ -372,14 +358,6 @@ defmodule EdgeAgent.Commands do
         Logger.debug("Execution #{execution.id} no longer exists, ignoring cancel request")
         {:ok, %{action: :not_found}}
     end
-  end
-
-  defp complete_running_execution(execution_id, output, exit_code) do
-    CommandExecutionResource.complete_running(execution_id, output, exit_code)
-  end
-
-  defp cancel_pending_or_running_execution(execution_id) do
-    CommandExecutionResource.cancel_pending_or_running(execution_id)
   end
 
   defp cancel_oban_job(execution_id) do

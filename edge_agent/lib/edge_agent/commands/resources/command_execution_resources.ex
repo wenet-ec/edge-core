@@ -1,5 +1,5 @@
-# edge_agent/lib/edge_agent/commands/resources/command_executions.ex
-defmodule EdgeAgent.Commands.Resources.CommandExecutions do
+# edge_agent/lib/edge_agent/commands/resources/command_execution_resources.ex
+defmodule EdgeAgent.Commands.Resources.CommandExecutionResources do
   @moduledoc "Persistence operations for local command executions."
 
   import Ecto.Query, only: [from: 2]
@@ -18,6 +18,20 @@ defmodule EdgeAgent.Commands.Resources.CommandExecutions do
     Ecto.Query.CastError -> {:error, :not_found}
   end
 
+  @spec list_by_status([CommandExecutionStatuses.t()] | CommandExecutionStatuses.t()) ::
+          [CommandExecution.t()]
+  def list_by_status(statuses) when is_list(statuses) do
+    Repo.all(from(ce in CommandExecution, where: ce.status in ^statuses, order_by: [asc: ce.inserted_at]))
+  end
+
+  def list_by_status(status), do: list_by_status([status])
+
+  @spec list_recoverable() :: [CommandExecution.t()]
+  def list_recoverable, do: list_by_status(CommandExecutionStatuses.recoverable_statuses())
+
+  @spec list_reportable() :: [CommandExecution.t()]
+  def list_reportable, do: list_by_status([:completed, :expired])
+
   @spec create(map()) ::
           {:ok, CommandExecution.t()}
           | {:error, Ecto.Changeset.t()}
@@ -32,20 +46,6 @@ defmodule EdgeAgent.Commands.Resources.CommandExecutions do
   @spec delete(CommandExecution.t()) ::
           {:ok, CommandExecution.t()} | {:error, Ecto.Changeset.t()}
   def delete(%CommandExecution{} = execution), do: Repo.delete(execution)
-
-  @spec by_status([CommandExecutionStatuses.t()] | CommandExecutionStatuses.t()) ::
-          [CommandExecution.t()]
-  def by_status(statuses) when is_list(statuses) do
-    Repo.all(from(ce in CommandExecution, where: ce.status in ^statuses, order_by: [asc: ce.inserted_at]))
-  end
-
-  def by_status(status), do: by_status([status])
-
-  @spec recoverable() :: [CommandExecution.t()]
-  def recoverable, do: by_status(CommandExecutionStatuses.recoverable_statuses())
-
-  @spec reportable() :: [CommandExecution.t()]
-  def reportable, do: by_status([:completed, :expired])
 
   @spec claim(CommandExecution.t()) :: {:ok, CommandExecution.t()} | :stale
   def claim(%CommandExecution{id: id}) do

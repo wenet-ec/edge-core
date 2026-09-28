@@ -2,10 +2,10 @@
 defmodule EdgeAgent.Bootstrap do
   @moduledoc """
   Runs the one-time startup sequence that establishes local identity, verifies
-  enrollment, joins the VPN, registers with Admin, and synchronizes pending
-  command executions. Bootstrap failures are reported to the supervisor for
-  restart; optional discovery and synchronization work can continue in a
-  degraded state.
+  enrollment, joins the VPN, registers with Admin, refreshes Admin settings,
+  and synchronizes pending command executions. Bootstrap failures
+  are reported to the supervisor for restart; optional discovery and
+  synchronization work can continue in a degraded state.
 
   """
 
@@ -13,6 +13,7 @@ defmodule EdgeAgent.Bootstrap do
 
   alias EdgeAgent.AdminGateway.Client
   alias EdgeAgent.AdminGateway.Discovery
+  alias EdgeAgent.AdminGateway.SettingsConfig
   alias EdgeAgent.Commands
   alias EdgeAgent.Enrollment
   alias EdgeAgent.Identity
@@ -79,8 +80,9 @@ defmodule EdgeAgent.Bootstrap do
          :ok <- step_2_verify_enrollment(identity.recovery_key),
          :ok <- step_3_join_vpn(identity.node_id),
          :ok <- step_4_discover_and_register(identity),
-         :ok <- step_5_sync_unprocessed_command_executions(identity.node_id),
-         :ok <- step_6_register_aliases() do
+         :ok <- step_5_refresh_settings_config(),
+         :ok <- step_6_sync_unprocessed_command_executions(identity.node_id),
+         :ok <- step_7_register_aliases() do
       Logger.info("All bootstrap steps completed")
       :ok
     else
@@ -142,19 +144,24 @@ defmodule EdgeAgent.Bootstrap do
     )
   end
 
-  defp step_5_sync_unprocessed_command_executions(_node_id) do
-    Logger.info("Step 5: Syncing unprocessed command executions...")
+  defp step_5_refresh_settings_config do
+    Logger.info("Step 5: Refreshing Admin settings config...")
+    SettingsConfig.refresh()
+  end
+
+  defp step_6_sync_unprocessed_command_executions(_node_id) do
+    Logger.info("Step 6: Syncing unprocessed command executions...")
 
     Commands.sync_unprocessed_command_executions()
 
     :ok
   end
 
-  defp step_6_register_aliases do
+  defp step_7_register_aliases do
     aliases = Application.get_env(:edge_agent, :aliases, [])
 
     if aliases != [] do
-      Logger.info("Step 6: Registering #{length(aliases)} alias(es)...")
+      Logger.info("Step 7: Registering #{length(aliases)} alias(es)...")
 
       Enum.each(aliases, fn name ->
         case Client.register_alias(name) do

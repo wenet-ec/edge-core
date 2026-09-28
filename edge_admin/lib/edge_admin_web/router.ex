@@ -173,7 +173,7 @@ defmodule EdgeAdminWeb.Router do
     post("/aliases", AliasController, :create)
 
     # Refreshable, non-secret Settings Config.
-    get("/settings/config", SettingsController, :config)
+    get("/settings/config", SettingController, :config)
   end
 
   scope "/api/v1", EdgeAdminWeb.Controllers do

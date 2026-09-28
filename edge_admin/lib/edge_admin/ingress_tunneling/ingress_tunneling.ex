@@ -100,6 +100,10 @@ defmodule EdgeAdmin.IngressTunneling do
     end
   end
 
+  @doc "Gets the current Ingress Tunneling configuration for a Node."
+  @spec get_ingress_tunneling(String.t()) :: {:ok, map()} | {:error, :not_found}
+  defdelegate get_ingress_tunneling(node_id), to: DesiredState, as: :build
+
   @spec deliver_ingress_tunneling(String.t()) :: :ok | {:error, term()}
   def deliver_ingress_tunneling(node_id) do
     case {Repo.get(Node, node_id), DesiredState.build(node_id)} do

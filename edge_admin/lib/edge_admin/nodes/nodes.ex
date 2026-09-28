@@ -158,8 +158,8 @@ defmodule EdgeAdmin.Nodes do
   Flow:
   1. Serialize the target-cluster admission and update the database (source of truth)
   2. Clear the recovery key and delete all aliases (they're cluster-specific)
-  3. Best-effort sync: Add host to new network
-  4. Best-effort sync: Remove host from old network
+  3. Best-effort update: Add host to new network
+  4. Best-effort update: Remove host from old network
   5. Emit event for metadata recomputation
 
   Inconsistencies are handled by the cluster reconciliation worker.

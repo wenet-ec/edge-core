@@ -134,10 +134,12 @@ defmodule EdgeAdmin.Nodes.Resources.AliasResources do
       case Vpn.list_custom_dns_entries(network_name) do
         {:ok, vpn_custom_entries} ->
           vpn_entries_by_name = Map.new(vpn_custom_entries, &{&1["name"], &1})
-          repaired = repair_alias_dns_entries(aliases, vpn_entries_by_name, network_name)
 
-          if repaired > 0 do
-            Logger.info("Registration: repaired #{repaired} alias DNS record(s) for node #{node.id}")
+          {repaired_count, _error_count} =
+            repair_alias_dns_entries(aliases, vpn_entries_by_name, network_name)
+
+          if repaired_count > 0 do
+            Logger.info("Registration: repaired #{repaired_count} alias DNS record(s) for node #{node.id}")
           end
 
           :ok

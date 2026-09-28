@@ -29,7 +29,7 @@ The self-hostable Core is deliberately independent of any hosted platform. Use t
 
 ### Admin URLs
 
-`ADMIN_URLS` is an ordered list of independently usable Admin API endpoints. Add the new URL while retaining the old one, roll the Admin deployment, and leave both available until agents have had time to refresh their settings. This is additive: agents can use either URL for Admin communication.
+`ADMIN_URLS` is an ordered list of independently usable Admin API endpoints. Add the new URL while retaining the old one, roll the Admin deployment, and leave both available until agents have had time to pull their settings. This is additive: agents can use either URL for Admin communication.
 
 If the VPN path is temporarily unavailable, agents can still reach the control plane through those public Admin fallback URLs. Direct WireGuard connectivity continues to work whenever it is available.
 
@@ -41,7 +41,7 @@ When changing a DERP map hostname:
 
 1. Make the new and old URLs serve the exact same complete map.
 2. Configure the new URL first and retain the old URL second.
-3. Roll the Admin deployment and allow agents to refresh their settings. Wait for the normal refresh window (at least 10 minutes, plus margin for offline nodes) before retiring the old URL.
+3. Roll the Admin deployment and allow agents to pull their settings. Wait for the normal pull window (at least 10 minutes, plus margin for offline nodes) before retiring the old URL.
 
 Changing the contents of the map is a separate operation. Complete the hostname migration first, then update the map served by every active URL and again allow the fleet to converge. Do not change hostnames and map contents in the same rollout: nodes selecting different map versions can choose different DERP relays for the same peer pair.
 
@@ -119,7 +119,7 @@ Nodes are addressed **only by VPN hostname**, never by IP:
 node-{uuid}.{cluster_name}.<EDGE_VPN_DEFAULT_DOMAIN>
 ```
 
-The agent does have a VPN IP underneath — Netmaker has to assign one — but **we do not expose it through the admin API and you should not rely on it**. Tracking IPs and keeping them in sync across enrollments, re-enrollments, cluster moves, and DERP fallbacks is the kind of bookkeeping that's a nightmare to get right; the hostname convention abstracts it away. Use `node-{uuid}.{cluster_name}.<DOMAIN>` (or its alias form, see below) everywhere — in commands, in proxy chaining usernames, in your own scripts.
+The agent does have a VPN IP underneath — Netmaker has to assign one — but **we do not expose it through the admin API and you should not rely on it**. Tracking IPs and keeping them consistent across enrollments, re-enrollments, cluster moves, and DERP fallbacks is the kind of bookkeeping that's a nightmare to get right; the hostname convention abstracts it away. Use `node-{uuid}.{cluster_name}.<DOMAIN>` (or its alias form, see below) everywhere — in commands, in proxy chaining usernames, in your own scripts.
 
 From any node-A in `cluster-prod`, `ping node-B.cluster-prod.nm.internal` works out of the box. **Exactly one Admin owns each cluster at a time** (cluster ownership sharding) and runs its per-cluster `VirtualGateway`. This creates a coordinated operational hub-and-spoke path for commands, metrics, SSH, and proxy access, while Agents retain direct full-mesh WireGuard connectivity. The ownership is invisible to you, which is why you don't see "which admin is talking to my node" anywhere in the API.
 

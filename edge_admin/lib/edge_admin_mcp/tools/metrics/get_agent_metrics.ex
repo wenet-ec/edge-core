@@ -6,7 +6,7 @@ defmodule EdgeAdminMcp.Tools.Metrics.GetAgentMetrics do
   - `node_id` — required. The node whose Agent metrics should be fetched.
 
   The response includes BEAM, bootstrap, command, discovery, proxy, SSH, VPN,
-  fallback health, diagnostics, Settings Config refresh, and Oban metrics.
+  fallback health, diagnostics, Settings Config pulls, and Oban metrics.
   The operation reads the live Agent and may fail when the node or its metrics
   endpoint is unavailable.
   """

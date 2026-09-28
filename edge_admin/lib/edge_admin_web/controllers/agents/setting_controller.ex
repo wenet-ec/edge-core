@@ -16,7 +16,7 @@ defmodule EdgeAdminWeb.Controllers.Agents.SettingController do
   tags(["Internal.Agents"])
 
   operation(:config,
-    summary: "Get refreshable settings config",
+    summary: "Pull agent settings config",
     description: "Returns non-secret settings config, including this Agent Node's Ingress Tunneling configuration.",
     responses: %{
       200 => {"Settings config", "application/json", SettingSchema.ConfigResponse},

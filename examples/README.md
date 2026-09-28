@@ -93,7 +93,7 @@ No. Both examples work identically on a private network (LAN, internal VPC, corp
 
 For agents to enroll and operate, three things must be reachable from every agent machine:
 
-1. **Netmaker VPN API** — port `48081` (enrollment + WireGuard peer sync)
+1. **Netmaker VPN API** — port `48081` (enrollment + WireGuard peer updates)
 2. **MQTT broker** — port `48083` (Mosquitto or EMQX WebSocket; ongoing VPN config updates)
 3. **Admin API** — port `34000` (or `34000–34003` for standard; command delivery + health reporting)
 

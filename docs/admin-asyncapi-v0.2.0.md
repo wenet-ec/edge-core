@@ -316,7 +316,7 @@ Notes:
 | `expired`   | `expired`            | `null`       | `null`            | `null`         | `null`         |
 | `pruned`    | status at deletion   | as recorded  | as recorded       | as recorded    | as recorded    |
 
-**`pruned` semantics:** fired by the background pruning worker when a finalized execution is deleted from the DB after the retention window. The snapshot reflects the row's status at deletion time (`completed`, `cancelled`, `expired`, or `dropped`). `pruned` is the only async deletion path — cascade-from-command-delete is sync and does not fire events.
+**`pruned` semantics:** fired by the background pruning worker when a finalized execution is deleted from the DB after the retention window. The snapshot reflects the row's status at deletion time (`completed`, `cancelled`, `expired`, or `dropped`). `pruned` is the only async deletion path — cascade-from-command-delete happens immediately and does not fire events.
 
 ---
 

@@ -20,7 +20,7 @@ Business and operational metrics scraped from the edge_admin PromEx endpoint.
 | **VPN & Command Delivery** | Zombie Admin Cleanup Rate, Zombies Deleted, Delivery Batch Rate, Executions Delivered | Netmaker zombie admin cleanup; delivery scheduler batch run results and per-batch execution count |
 | **Gateway** | Gateway Connection Events, Active Gateway Connections, Gateway Scrape Rate | Gateway GenServer connect/disconnect events per cluster; active gateway count; metrics scrape success/error by type (host/agent/wireguard) |
 | **SSH** | SSH Verification Rate, SSH Failures (Window) | Per-auth-method (password/public_key) verification success and failure rates; failure count alerting for brute-force detection |
-| **Cluster Reconciliation** | Reconciliation Rate, Reconciliation Duration | Netmaker ↔ DB sync run rate and duration per cluster; error rate for diagnosing Netmaker API timeouts |
+| **Cluster Reconciliation** | Reconciliation Rate, Reconciliation Duration | Netmaker ↔ DB convergence run rate and duration per cluster; error rate for diagnosing Netmaker API timeouts |
 | **Self-Updates** | Requests Completed, Nodes Triggered vs Failed | Self-update request processing rate by targeting type; last-request outcome (triggered vs failed nodes) |
 
 Default datasource UID: `edge_admin_prometheus` — rename the variable if yours differs.
@@ -34,7 +34,7 @@ Agent-side metrics scraped from the edge_agent PromEx endpoint.
 | Section | What it shows |
 | ------- | ------------- |
 | **Bootstrap & Discovery** | Agent registration rate; admin discovery scan rate |
-| **Command Execution** | Command execution rate and duration; sync and report worker activity; pending/sent counts |
+| **Command Execution** | Command execution rate and duration; pull and report worker activity; pending/sent counts |
 | **Proxy Server** | HTTP + SOCKS5 connection rates; session duration (p95); blocked request counts |
 | **SSH Server** | Auth rate (password vs public key); connection rate; session duration |
 | **VPN** | VPN config pull rate by result (daily backstop for DNS recovery after netclient restart) |

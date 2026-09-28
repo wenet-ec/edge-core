@@ -24,7 +24,7 @@ defmodule EdgeAgent.BackgroundJobs.Quantum.Tasks do
   require Logger
 
   @doc """
-  Probe the VPN for `admin-*` Admin Gateway peers and refresh the cached Admin
+  Probe the VPN for `admin-*` Admin Gateway peers and update the cached Admin
   Gateway URL list.
 
   Always runs. Discovery returns an empty list if no Admin Gateways are
@@ -46,11 +46,11 @@ defmodule EdgeAgent.BackgroundJobs.Quantum.Tasks do
   end
 
   @doc """
-  Refreshes non-secret settings configuration advertised by the Admin Gateway.
+  Pulls non-secret settings configuration advertised by the Admin Gateway.
   """
-  @spec refresh_settings_config() :: :ok
-  def refresh_settings_config do
-    SettingsConfig.refresh()
+  @spec pull_settings_config() :: :ok
+  def pull_settings_config do
+    SettingsConfig.pull()
     :ok
   end
 
@@ -114,14 +114,15 @@ defmodule EdgeAgent.BackgroundJobs.Quantum.Tasks do
   Skipped when VPN is up — the Admin Gateway pushes executions to the agent
   directly.
   """
-  @spec sync_unprocessed_executions() :: :ok
-  def sync_unprocessed_executions do
+  @spec pull_unprocessed_executions() :: :ok
+  def pull_unprocessed_executions do
     if http_fallback_mode?() do
-      Logger.debug("Quantum: sync_unprocessed_executions started")
-      Commands.sync_unprocessed_command_executions()
-      Logger.debug("Quantum: sync_unprocessed_executions done")
+      Logger.debug("Quantum: pull_unprocessed_executions started")
+      Commands.pull_unprocessed_command_executions()
+      Commands.enqueue_pending_executions()
+      Logger.debug("Quantum: pull_unprocessed_executions done")
     else
-      Logger.debug("Quantum: sync_unprocessed_executions skipped (VPN up or fallback not configured)")
+      Logger.debug("Quantum: pull_unprocessed_executions skipped (VPN up or fallback not configured)")
     end
 
     :ok

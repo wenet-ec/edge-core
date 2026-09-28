@@ -172,7 +172,7 @@ defmodule EdgeAdminWeb.Router do
     post("/metrics/push", MetricsController, :push)
     post("/aliases", AliasController, :create)
 
-    # Refreshable, non-secret Settings Config.
+    # Agent-pulled, non-secret Settings Config.
     get("/settings/config", SettingController, :config)
   end
 

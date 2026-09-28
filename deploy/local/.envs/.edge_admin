@@ -389,9 +389,9 @@ WEBHOOK_ALLOW_PRIVATE_IPS=true
 # EXECUTION_EXPIRATION_SCHEDULE=* * * * *
 
 # Periodic netclient pull — decoupled from reconciliation, independent consistency backstop.
-# VPN_CONFIG_SYNC_SCHEDULE=*/5 * * * *
+# VPN_CONFIG_PULL_SCHEDULE=*/5 * * * *
 # Disable on severely resource-starved machines where interface resets cascade into failures.
-# VPN_CONFIG_SYNC_ENABLED=true
+# VPN_CONFIG_PULL_ENABLED=true
 
 # Zombie Admin Cleanup — weak leader only, reduces duplicate work across admin instances.
 # ZOMBIE_ADMIN_CLEANUP_SCHEDULE=*/30 * * * *

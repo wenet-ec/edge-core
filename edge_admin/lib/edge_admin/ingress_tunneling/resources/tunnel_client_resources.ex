@@ -77,7 +77,7 @@ defmodule EdgeAdmin.IngressTunneling.Resources.TunnelClientResources do
   @spec delete(TunnelClient.t()) :: {:ok, TunnelClient.t()} | {:error, Ecto.Changeset.t()}
   def delete(%TunnelClient{} = tunnel_client), do: Repo.delete(tunnel_client)
 
-  @doc "Deletes a Tunnel Client and returns the Ingress node IDs whose desired state must be refreshed."
+  @doc "Deletes a Tunnel Client and returns the Ingress node IDs requiring updated desired-state delivery."
   @spec delete_with_connections(TunnelClient.t()) ::
           {:ok, {TunnelClient.t(), [String.t()]}} | {:error, :not_found | Ecto.Changeset.t()}
   def delete_with_connections(%TunnelClient{} = tunnel_client) do

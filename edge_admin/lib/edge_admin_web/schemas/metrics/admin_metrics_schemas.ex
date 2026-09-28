@@ -346,7 +346,7 @@ defmodule EdgeAdminWeb.Schemas.Metrics.AdminMetricsSchemas do
             },
             reconciliation: %Schema{
               type: :object,
-              description: "Cluster reconciliation metrics (Edge VPN ↔ DB sync)",
+              description: "Cluster reconciliation metrics (Edge VPN and database convergence)",
               properties: %{
                 runs_total: %Schema{
                   type: :integer,

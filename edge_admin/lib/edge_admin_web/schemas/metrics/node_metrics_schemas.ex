@@ -284,10 +284,10 @@ defmodule EdgeAdminWeb.Schemas.Metrics.NodeMetricsSchemas do
               type: :object,
               description: "Command execution metrics",
               properties: %{
-                synced_total: %Schema{
+                pulled_total: %Schema{
                   type: :integer,
                   nullable: true,
-                  description: "Total command sync calls made to admin"
+                  description: "Total command pulls from Admin"
                 },
                 enqueued_total: %Schema{
                   type: :integer,
@@ -304,15 +304,15 @@ defmodule EdgeAdminWeb.Schemas.Metrics.NodeMetricsSchemas do
                   nullable: true,
                   description: "Total results reported back to admin"
                 },
-                sync_sent_count: %Schema{
+                pull_sent_count: %Schema{
                   type: :integer,
                   nullable: true,
-                  description: "Executions fetched in the most recent sync"
+                  description: "Sent executions fetched in the most recent pull"
                 },
-                sync_pending_count: %Schema{
+                pull_pending_count: %Schema{
                   type: :integer,
                   nullable: true,
-                  description: "Pending executions fetched in the most recent sync"
+                  description: "Pending executions fetched in the most recent pull"
                 },
                 report_batch_size: %Schema{
                   type: :integer,
@@ -534,27 +534,27 @@ defmodule EdgeAdminWeb.Schemas.Metrics.NodeMetricsSchemas do
             },
             settings_config: %Schema{
               type: :object,
-              description: "Refresh outcomes for Admin-advertised Settings Config",
+              description: "Pull outcomes for Admin-advertised Settings Config",
               properties: %{
-                refreshes_total: %Schema{
+                pulls_total: %Schema{
                   type: :integer,
                   nullable: true,
-                  description: "Total authenticated Settings Config refresh attempts"
+                  description: "Total authenticated Settings Config pulls"
                 },
-                refreshes_success_total: %Schema{
+                pulls_success_total: %Schema{
                   type: :integer,
                   nullable: true,
-                  description: "Successful Settings Config refreshes"
+                  description: "Successful Settings Config pulls"
                 },
-                refreshes_invalid_response_total: %Schema{
+                pulls_invalid_response_total: %Schema{
                   type: :integer,
                   nullable: true,
-                  description: "Refreshes that returned an invalid Settings Config response"
+                  description: "Pulls that returned an invalid Settings Config response"
                 },
-                refreshes_failure_total: %Schema{
+                pulls_failure_total: %Schema{
                   type: :integer,
                   nullable: true,
-                  description: "Refreshes that could not reach Admin"
+                  description: "Pulls that could not reach Admin"
                 }
               }
             },
@@ -598,12 +598,12 @@ defmodule EdgeAdminWeb.Schemas.Metrics.NodeMetricsSchemas do
             memory_binary_mb: 2.0
           },
           commands: %{
-            synced_total: 156,
+            pulled_total: 156,
             enqueued_total: 152,
             completed_total: 150,
             reported_total: 150,
-            sync_sent_count: 2,
-            sync_pending_count: 1,
+            pull_sent_count: 2,
+            pull_pending_count: 1,
             report_batch_size: 3,
             last_exit_code: 0
           },
@@ -660,10 +660,10 @@ defmodule EdgeAdminWeb.Schemas.Metrics.NodeMetricsSchemas do
             pushes_failure_total: 1
           },
           settings_config: %{
-            refreshes_total: 12,
-            refreshes_success_total: 10,
-            refreshes_invalid_response_total: 1,
-            refreshes_failure_total: 1
+            pulls_total: 12,
+            pulls_success_total: 10,
+            pulls_invalid_response_total: 1,
+            pulls_failure_total: 1
           },
           oban_queues: [
             %{
@@ -753,7 +753,7 @@ defmodule EdgeAdminWeb.Schemas.Metrics.NodeMetricsSchemas do
                 settings_config: %Schema{
                   type: :object,
                   nullable: true,
-                  description: "Admin-advertised Settings Config refresh metrics"
+                  description: "Admin-advertised Settings Config pull metrics"
                 },
                 oban_queues: %Schema{
                   type: :array,

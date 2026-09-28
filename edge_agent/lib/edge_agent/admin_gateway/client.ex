@@ -149,12 +149,12 @@ defmodule EdgeAgent.AdminGateway.Client do
   end
 
   @doc """
-  Fetches refreshable, non-secret Settings Config for this agent.
+  Pulls non-secret Settings Config for this agent.
 
   GET /api/v1/agents/settings/config
   """
-  @spec get_settings_config() :: {:ok, map()} | {:error, term()}
-  def get_settings_config do
+  @spec pull_settings_config() :: {:ok, map()} | {:error, term()}
+  def pull_settings_config do
     Transport.request_with_auth("/api/v1/agents/settings/config", fn url, headers ->
       opts = Keyword.merge([headers: headers], http_options())
 

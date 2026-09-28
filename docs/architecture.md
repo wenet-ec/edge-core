@@ -26,7 +26,7 @@ Edge Core is not a compute provider and does not provision virtual machines, dis
 
 ## Two principles
 
-Edge Core was born from three years of watching a company hit the same walls trying to ship to edge devices it didn't fully control: deployments were a black box, machines on the same LAN couldn't reliably find each other, and every new product re-implemented the same WebSocket/MQTT sync layer to stay in touch with the cloud. The system is organized around two principles that came out of that experience.
+Edge Core was born from three years of watching a company hit the same walls trying to ship to edge devices it didn't fully control: deployments were a black box, machines on the same LAN couldn't reliably find each other, and every new product re-implemented the same WebSocket/MQTT messaging layer to stay in touch with the cloud. The system is organized around two principles that came out of that experience.
 
 ### 1. Control — a fleet you don't physically touch should still be a fleet you can see and operate
 
@@ -40,7 +40,7 @@ Once devices are geographically distributed, you lose the things you take for gr
 
 ### 2. Connectivity — talking to a specific edge machine should work without anyone configuring IPs, ports, or tunnels in advance
 
-Once you've decided to operate machines you don't physically touch, the next problem is *reaching* them. You don't know the LAN, you don't control the firewall, the IPs are dynamic, the hostnames are generic. Every edge product ends up rebuilding the same WebSocket/MQTT sync layer to route around this. We wanted that solved once, in the platform.
+Once you've decided to operate machines you don't physically touch, the next problem is *reaching* them. You don't know the LAN, you don't control the firewall, the IPs are dynamic, the hostnames are generic. Every edge product ends up rebuilding the same WebSocket/MQTT messaging layer to route around this. We wanted that solved once, in the platform.
 
 - **Edge ↔ Edge (VPN mesh).** All nodes in the same cluster form a full WireGuard mesh via Netmaker. Every node can reach every other node P2P, no central gateway. This is the transport everything else runs on. Three-layer fallback handles adverse network conditions: raw WireGuard UDP → DERP relay (symmetric NAT) → HTTP polling (last resort). See [Admin ↔ Agent Communication](#admin--agent-communication).
 - **Cloud ↔ Edge (forward proxy + proxy chaining).** Admin runs HTTP (port 43128) and SOCKS5 (port 41080) forward proxies. Because SOCKS5 supports any TCP connection, this covers any protocol — not just HTTP. Two modes: route directly to a VPN node, or chain through a specific agent as the exit node to reach the internet or its LAN from that agent's network location. Raw TCP over the VPN, no MQTT or WebSocket on the application path. In production, HAProxy load-balances proxy traffic across all admin instances.
@@ -515,7 +515,7 @@ This is why "fleet ops automated by an AI agent" is a real capability of Edge Co
 - **One MCP-only tool: `check_admin_health`.** Runs every subsystem check in parallel and returns structured pass/fail. The motivation is operational: AI assistants are uniquely positioned to triage "why isn't this working" because they can correlate the health output with the user's description, but doing that requires one consolidated health view rather than seven separate REST calls.
 - **MCP bearer authentication.** `EdgeAdminMcp.Middlewares.McpAuth` validates the existing opaque `MCP_KEY`/`MASTER_KEY` bearer token. It does not introduce JWTs or claims. Missing credentials are anonymous: only tools registered in the `:public` scope may be called, and authenticated-only tools are omitted from anonymous `tools/list` responses. The middleware runs inside the MCP server so authentication is applied per tool rather than to the entire HTTP endpoint.
 - **MCP middleware pipeline.** `EdgeAdminMcp.Server` runs the registered request through `EdgeAdminMcp.Middlewares.McpAuth` and `EdgeAdminMcp.Middlewares.DegradedMode`. Degraded mode is metadata on each tool registration (`degraded: :allow` or `degraded: :block`), with `:allow` as the default; the middleware reads that metadata instead of maintaining a separate blocklist.
-- **No static spec — hand-maintained catalog.** MCP discovery is live (`tools/list`), and the protocol does not yet standardise a static-spec format the way OpenAPI/AsyncAPI do. There is no Swagger UI / `@asyncapi/react-component` equivalent to embed. For operator visibility without running an MCP client, we ship a hand-maintained catalog at [`admin-mcp-v0.2.0.md`](admin-mcp-v0.2.0.md). Keep it synchronized with `EdgeAdminMcp.ToolRegistry` when tools, scopes, or degraded-mode metadata change.
+- **No static spec — hand-maintained catalog.** MCP discovery is live (`tools/list`), and the protocol does not yet standardise a static-spec format the way OpenAPI/AsyncAPI do. There is no Swagger UI / `@asyncapi/react-component` equivalent to embed. For operator visibility without running an MCP client, we ship a hand-maintained catalog at [`admin-mcp-v0.2.0.md`](admin-mcp-v0.2.0.md). Keep it aligned with `EdgeAdminMcp.ToolRegistry` when tools, scopes, or degraded-mode metadata change.
 
 ---
 

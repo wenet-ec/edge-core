@@ -127,24 +127,24 @@ defmodule EdgeAdmin.Metrics.Schemas.AgentMetrics do
 
     @derive JSON.Encoder
     defstruct [
-      :synced_total,
+      :pulled_total,
       :enqueued_total,
       :completed_total,
       :reported_total,
-      :sync_sent_count,
-      :sync_pending_count,
+      :pull_sent_count,
+      :pull_pending_count,
       :report_batch_size,
       :last_exit_code
     ]
 
     def from_raw(raw) do
       %__MODULE__{
-        synced_total: raw["commands_synced"] || 0,
+        pulled_total: raw["commands_pulled"] || 0,
         enqueued_total: raw["commands_enqueued"] || 0,
         completed_total: raw["commands_completed"] || 0,
         reported_total: raw["commands_reported"] || 0,
-        sync_sent_count: raw["commands_sync_sent_count"],
-        sync_pending_count: raw["commands_sync_pending_count"],
+        pull_sent_count: raw["commands_pull_sent_count"],
+        pull_pending_count: raw["commands_pull_pending_count"],
         report_batch_size: raw["commands_report_batch_size"],
         last_exit_code: raw["commands_execution_exit_code"]
       }
@@ -292,16 +292,16 @@ defmodule EdgeAdmin.Metrics.Schemas.AgentMetrics do
   end
 
   defmodule SettingsConfig do
-    @moduledoc "Admin-advertised Settings Config refresh metrics"
+    @moduledoc "Admin-advertised Settings Config pull metrics"
     @derive JSON.Encoder
-    defstruct [:refreshes_total, :refreshes_success_total, :refreshes_invalid_response_total, :refreshes_failure_total]
+    defstruct [:pulls_total, :pulls_success_total, :pulls_invalid_response_total, :pulls_failure_total]
 
     def from_raw(raw) do
       %__MODULE__{
-        refreshes_total: raw["settings_config_refreshes"] || 0,
-        refreshes_success_total: raw["settings_config_refreshes_success"] || 0,
-        refreshes_invalid_response_total: raw["settings_config_refreshes_invalid_response"] || 0,
-        refreshes_failure_total: raw["settings_config_refreshes_failure"] || 0
+        pulls_total: raw["settings_config_pulls"] || 0,
+        pulls_success_total: raw["settings_config_pulls_success"] || 0,
+        pulls_invalid_response_total: raw["settings_config_pulls_invalid_response"] || 0,
+        pulls_failure_total: raw["settings_config_pulls_failure"] || 0
       }
     end
   end

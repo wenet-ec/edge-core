@@ -9,7 +9,7 @@ defmodule EdgeAdmin.Commands.Checks.CommandExecutionAcceptsResultCheck do
     execution)
   - Status is "sent" (normal case)
   - Status is "cancelled" with nil Admin-owned `completed_at` (race condition: pending execution
-    was cancelled by admin before agent ran it, but agent picked it up via sync
+    was cancelled by Admin before the Agent ran it, but the Agent pulled it
     and is now reporting back - allow the agent to overwrite with actual results)
   - Status is "expired" with nil Admin-owned `completed_at` (race condition: admin expired the
     execution via scheduler, but agent already picked it up and is now reporting

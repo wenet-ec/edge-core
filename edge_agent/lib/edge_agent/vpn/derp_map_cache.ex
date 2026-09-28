@@ -3,11 +3,11 @@ defmodule EdgeAgent.Vpn.DerpMapCache do
   @moduledoc """
   Caches the canonical Core DERP map for the Agent's reflection endpoint.
 
-  Sources are read from settings on every refresh. The first source that
-  returns a valid map wins; sources are not merged. A failed refresh keeps the
+  Sources are read from settings on every pull. The first source that
+  returns a valid map wins; sources are not merged. A failed pull keeps the
   last known map, while an unconfigured or not-yet-fetched cache returns nil.
   Failed startup fetches use an accelerated retry interval before settling on
-  the configured refresh interval.
+  the configured pull interval.
   """
 
   use GenServer
@@ -33,7 +33,7 @@ defmodule EdgeAgent.Vpn.DerpMapCache do
 
   @impl true
   def init(_opts) do
-    stable_ms = Application.get_env(:edge_agent, :derp_map_refresh_interval_ms, to_timeout(minute: 5))
+    stable_ms = Application.get_env(:edge_agent, :derp_map_pull_interval_ms, to_timeout(minute: 5))
     # If the configured interval is shorter than the warmup start, skip warmup entirely.
     initial_ms = min(@warmup_interval_ms, stable_ms)
 
@@ -42,7 +42,7 @@ defmodule EdgeAgent.Vpn.DerpMapCache do
     # don't block on a slow / unreachable DERP map server. Until the first
     # fetch lands, `get/0` returns nil and the reflection endpoint serves
     # an empty regions map — same behaviour the warmup path produced before.
-    schedule_refresh(0)
+    schedule_pull(0)
     {:ok, %{map: nil, interval_ms: initial_ms, stable_ms: stable_ms}}
   end
 
@@ -52,14 +52,14 @@ defmodule EdgeAgent.Vpn.DerpMapCache do
   end
 
   @impl true
-  def handle_info(:refresh, state) do
+  def handle_info(:pull, state) do
     {map, next_ms} = fetch_and_next_interval(state.map, state.interval_ms, state.stable_ms)
-    schedule_refresh(next_ms)
+    schedule_pull(next_ms)
     {:noreply, %{state | map: map, interval_ms: next_ms}}
   end
 
-  defp schedule_refresh(interval_ms) do
-    Process.send_after(self(), :refresh, interval_ms)
+  defp schedule_pull(interval_ms) do
+    Process.send_after(self(), :pull, interval_ms)
   end
 
   # Returns {map, next_interval_ms}. The pure decision lives in
@@ -70,7 +70,7 @@ defmodule EdgeAgent.Vpn.DerpMapCache do
     {map, next_ms} = next_state(fetch_result, current_map, current_ms, stable_ms)
 
     if is_nil(fetch_result) and next_ms != stable_ms do
-      Logger.debug("DerpMapCache: no map yet, next refresh in #{div(next_ms, 1000)} s")
+      Logger.debug("DerpMapCache: no map yet, next pull in #{div(next_ms, 1000)} s")
     end
 
     {map, next_ms}

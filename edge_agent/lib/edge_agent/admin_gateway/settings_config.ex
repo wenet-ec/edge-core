@@ -1,7 +1,7 @@
 # edge_agent/lib/edge_agent/admin_gateway/settings_config.ex
 defmodule EdgeAgent.AdminGateway.SettingsConfig do
   @moduledoc """
-  Refreshes non-secret, Admin Gateway-advertised Settings Config.
+  Pulls non-secret, Admin Gateway-advertised Settings Config.
 
   Values are fetched from the authenticated `/api/v1/agents/settings/config`
   endpoint through the normal VPN-first Admin Gateway client. Admin URLs and
@@ -15,30 +15,30 @@ defmodule EdgeAgent.AdminGateway.SettingsConfig do
 
   require Logger
 
-  @spec refresh() :: :ok
-  def refresh do
-    case Client.get_settings_config() do
+  @spec pull() :: :ok
+  def pull do
+    case Client.pull_settings_config() do
       {:ok, %{"admin_urls" => admin_urls, "core_derp_map_urls" => core_derp_map_urls} = config}
       when is_list(admin_urls) and is_list(core_derp_map_urls) ->
         Settings.merge_admin_fallback_urls(admin_urls)
         Settings.merge_core_derp_map_urls(core_derp_map_urls)
-        refresh_ingress_tunneling(config)
-        Logger.debug("SettingsConfig: refreshed")
-        emit_refresh_telemetry(:success)
+        pull_ingress_tunneling(config)
+        Logger.debug("SettingsConfig: pulled")
+        emit_pull_telemetry(:success)
 
       {:ok, response} ->
         Logger.warning("SettingsConfig: invalid response: #{inspect(response)}")
-        emit_refresh_telemetry(:invalid_response)
+        emit_pull_telemetry(:invalid_response)
 
       {:error, reason} ->
-        Logger.debug("SettingsConfig: refresh failed: #{inspect(reason)}")
-        emit_refresh_telemetry(:failure)
+        Logger.debug("SettingsConfig: pull failed: #{inspect(reason)}")
+        emit_pull_telemetry(:failure)
     end
 
     :ok
   end
 
-  defp refresh_ingress_tunneling(config) do
+  defp pull_ingress_tunneling(config) do
     case Map.fetch(config, "ingress_tunneling") do
       {:ok, ingress_tunneling} when is_map(ingress_tunneling) ->
         case IngressTunneling.upsert_ingress_tunneling(ingress_tunneling) do
@@ -57,9 +57,9 @@ defmodule EdgeAgent.AdminGateway.SettingsConfig do
     end
   end
 
-  defp emit_refresh_telemetry(result) do
+  defp emit_pull_telemetry(result) do
     :telemetry.execute(
-      [:edge_agent, :settings_config, :refresh],
+      [:edge_agent, :settings_config, :pull],
       %{count: 1},
       %{result: result}
     )

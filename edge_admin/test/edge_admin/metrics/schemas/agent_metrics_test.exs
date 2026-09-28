@@ -93,12 +93,12 @@ defmodule EdgeAdmin.Metrics.Schemas.AgentMetricsTest do
   describe "passthrough sub-modules default missing keys to 0" do
     test "Commands defaults counters to 0 and last values to nil" do
       assert Commands.from_raw(%{}) == %Commands{
-               synced_total: 0,
+               pulled_total: 0,
                enqueued_total: 0,
                completed_total: 0,
                reported_total: 0,
-               sync_sent_count: nil,
-               sync_pending_count: nil,
+               pull_sent_count: nil,
+               pull_pending_count: nil,
                report_batch_size: nil,
                last_exit_code: nil
              }
@@ -106,23 +106,23 @@ defmodule EdgeAdmin.Metrics.Schemas.AgentMetricsTest do
 
     test "Commands passes values through when present" do
       raw = %{
-        "commands_synced" => 1,
+        "commands_pulled" => 1,
         "commands_enqueued" => 2,
         "commands_completed" => 3,
         "commands_reported" => 4,
-        "commands_sync_sent_count" => 5,
-        "commands_sync_pending_count" => 6,
+        "commands_pull_sent_count" => 5,
+        "commands_pull_pending_count" => 6,
         "commands_report_batch_size" => 7,
         "commands_execution_exit_code" => 8
       }
 
       assert Commands.from_raw(raw) == %Commands{
-               synced_total: 1,
+               pulled_total: 1,
                enqueued_total: 2,
                completed_total: 3,
                reported_total: 4,
-               sync_sent_count: 5,
-               sync_pending_count: 6,
+               pull_sent_count: 5,
+               pull_pending_count: 6,
                report_batch_size: 7,
                last_exit_code: 8
              }
@@ -164,10 +164,10 @@ defmodule EdgeAdmin.Metrics.Schemas.AgentMetricsTest do
              }
 
       assert SettingsConfig.from_raw(%{}) == %SettingsConfig{
-               refreshes_total: 0,
-               refreshes_success_total: 0,
-               refreshes_invalid_response_total: 0,
-               refreshes_failure_total: 0
+               pulls_total: 0,
+               pulls_success_total: 0,
+               pulls_invalid_response_total: 0,
+               pulls_failure_total: 0
              }
     end
   end

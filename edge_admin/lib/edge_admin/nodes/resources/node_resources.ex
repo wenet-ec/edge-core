@@ -145,7 +145,7 @@ defmodule EdgeAdmin.Nodes.Resources.NodeResources do
       AliasResources.cleanup_node_aliases(current_node)
       updated_node = Repo.preload(updated_node, [:cluster, aliases: :cluster], force: true)
       Metadata.Events.publish(:node_updated)
-      sync_cluster_networks(current_node, new_cluster)
+      update_cluster_network_membership(current_node, new_cluster)
       {:ok, updated_node}
     end
   end
@@ -213,7 +213,7 @@ defmodule EdgeAdmin.Nodes.Resources.NodeResources do
     end)
   end
 
-  defp sync_cluster_networks(node, new_cluster) do
+  defp update_cluster_network_membership(node, new_cluster) do
     old_network_name = Cluster.network_name(node.cluster)
     new_network_name = Cluster.network_name(new_cluster)
 
@@ -224,7 +224,7 @@ defmodule EdgeAdmin.Nodes.Resources.NodeResources do
 
       {:error, reason} ->
         Logger.warning(
-          "Failed to add host #{node.vpn_host_id} to new network #{new_network_name}: #{inspect(reason)}. Reconciliation worker will handle sync."
+          "Failed to add host #{node.vpn_host_id} to new network #{new_network_name}: #{inspect(reason)}. Reconciliation will repair it."
         )
     end
   end

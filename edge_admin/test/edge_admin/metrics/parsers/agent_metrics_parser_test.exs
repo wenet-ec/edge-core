@@ -19,9 +19,9 @@ defmodule EdgeAdmin.Metrics.Parsers.AgentMetricsParserTest do
     edge_agent_discovery_scan_total{status="success"} 5
     edge_agent_discovery_scan_total{status="empty"} 2
     edge_agent_discovery_admins_found 3
-    edge_agent_commands_sync_total 10
-    edge_agent_commands_sync_sent_count 4
-    edge_agent_commands_sync_pending_count 1
+    edge_agent_commands_pull_total 10
+    edge_agent_commands_pull_sent_count 4
+    edge_agent_commands_pull_pending_count 1
     edge_agent_commands_execution_enqueued_total{status="success"} 8
     edge_agent_commands_execution_completed_total{result="success"} 7
     edge_agent_commands_report_total{status="success"} 7
@@ -49,9 +49,9 @@ defmodule EdgeAdmin.Metrics.Parsers.AgentMetricsParserTest do
     edge_agent_health_check_report_total{result="failure"} 3
     edge_agent_diagnostics_push_total{result="success"} 4
     edge_agent_diagnostics_push_total{result="failure"} 1
-    edge_agent_settings_config_refresh_total{result="success"} 5
-    edge_agent_settings_config_refresh_total{result="invalid_response"} 1
-    edge_agent_settings_config_refresh_total{result="failure"} 2
+    edge_agent_settings_config_pull_total{result="success"} 5
+    edge_agent_settings_config_pull_total{result="invalid_response"} 1
+    edge_agent_settings_config_pull_total{result="failure"} 2
     edge_agent_prom_ex_oban_queue_length_count{queue="commands",state="available"} 3
     edge_agent_prom_ex_oban_queue_length_count{queue="commands",state="executing"} 1
     edge_agent_prom_ex_oban_queue_length_count{queue="commands",state="completed"} 50
@@ -132,24 +132,24 @@ defmodule EdgeAdmin.Metrics.Parsers.AgentMetricsParserTest do
       assert result["diagnostics_pushes_failure"] == 1
     end
 
-    test "splits Settings Config refreshes by result" do
+    test "splits Settings Config pulls by result" do
       result = AgentMetricsParser.parse(sample_prometheus_text())
 
-      assert result["settings_config_refreshes"] == 8
-      assert result["settings_config_refreshes_success"] == 5
-      assert result["settings_config_refreshes_invalid_response"] == 1
-      assert result["settings_config_refreshes_failure"] == 2
+      assert result["settings_config_pulls"] == 8
+      assert result["settings_config_pulls_success"] == 5
+      assert result["settings_config_pulls_invalid_response"] == 1
+      assert result["settings_config_pulls_failure"] == 2
     end
 
     test "counter returns 0 when metric not present" do
       result = AgentMetricsParser.parse(empty_prometheus_text())
       assert result["discovery_scans"] == 0
-      assert result["commands_synced"] == 0
+      assert result["commands_pulled"] == 0
       assert result["ssh_authentications"] == 0
       assert result["vpn_pulls"] == 0
       assert result["health_check_reports"] == 0
       assert result["diagnostics_pushes"] == 0
-      assert result["settings_config_refreshes"] == 0
+      assert result["settings_config_pulls"] == 0
     end
 
     test "sums proxy tunnels_closed across all reasons and protocols" do
@@ -293,12 +293,12 @@ defmodule EdgeAdmin.Metrics.Parsers.AgentMetricsParserTest do
       raw = AgentMetricsParser.parse(sample_prometheus_text())
       raw = Map.put(raw, "cluster_name", "prod")
       metrics = AgentMetrics.from_raw_metrics(raw, "node-abc")
-      assert metrics.commands.synced_total == 10
+      assert metrics.commands.pulled_total == 10
       assert metrics.commands.enqueued_total == 8
       assert metrics.commands.completed_total == 7
       assert metrics.commands.reported_total == 7
-      assert metrics.commands.sync_sent_count == 4
-      assert metrics.commands.sync_pending_count == 1
+      assert metrics.commands.pull_sent_count == 4
+      assert metrics.commands.pull_pending_count == 1
       assert metrics.commands.report_batch_size == 3
       assert metrics.commands.last_exit_code == 0
     end
@@ -382,15 +382,15 @@ defmodule EdgeAdmin.Metrics.Parsers.AgentMetricsParserTest do
       assert metrics.diagnostics.pushes_failure_total == 1
     end
 
-    test "Settings Config struct has correct refresh outcomes" do
+    test "Settings Config struct has correct pull outcomes" do
       raw = AgentMetricsParser.parse(sample_prometheus_text())
       raw = Map.put(raw, "cluster_name", "prod")
       metrics = AgentMetrics.from_raw_metrics(raw, "node-abc")
 
-      assert metrics.settings_config.refreshes_total == 8
-      assert metrics.settings_config.refreshes_success_total == 5
-      assert metrics.settings_config.refreshes_invalid_response_total == 1
-      assert metrics.settings_config.refreshes_failure_total == 2
+      assert metrics.settings_config.pulls_total == 8
+      assert metrics.settings_config.pulls_success_total == 5
+      assert metrics.settings_config.pulls_invalid_response_total == 1
+      assert metrics.settings_config.pulls_failure_total == 2
     end
 
     test "oban_queues is a list of ObanQueue structs" do
@@ -405,7 +405,7 @@ defmodule EdgeAdmin.Metrics.Parsers.AgentMetricsParserTest do
       raw = AgentMetricsParser.parse(empty_prometheus_text())
       raw = Map.put(raw, "cluster_name", nil)
       metrics = AgentMetrics.from_raw_metrics(raw, "node-xyz")
-      assert metrics.commands.synced_total == 0
+      assert metrics.commands.pulled_total == 0
       assert metrics.discovery.scans_total == 0
       assert metrics.proxy.http_connections_total == 0
       assert metrics.proxy.http_blocked_by_reason == %{}
@@ -413,7 +413,7 @@ defmodule EdgeAdmin.Metrics.Parsers.AgentMetricsParserTest do
       assert metrics.vpn.pulls_total == 0
       assert metrics.health_check.reports_total == 0
       assert metrics.diagnostics.pushes_total == 0
-      assert metrics.settings_config.refreshes_total == 0
+      assert metrics.settings_config.pulls_total == 0
     end
 
     test "nil uptime_ms defaults to 0 seconds" do

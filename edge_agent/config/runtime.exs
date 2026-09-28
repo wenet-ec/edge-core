@@ -31,11 +31,11 @@ end
 # Background Job Schedules
 enqueue_executions_schedule = get_env("ENQUEUE_EXECUTIONS_SCHEDULE", :string, "* * * * *")
 report_executions_schedule = get_env("REPORT_EXECUTIONS_SCHEDULE", :string, "* * * * *")
-sync_executions_schedule = get_env("SYNC_EXECUTIONS_SCHEDULE", :string, "*/2 * * * *")
+pull_executions_schedule = get_env("PULL_EXECUTIONS_SCHEDULE", :string, "*/2 * * * *")
 report_health_check_schedule = get_env("REPORT_HEALTH_CHECK_SCHEDULE", :string, "*/2 * * * *")
 push_diagnostics_schedule = get_env("PUSH_DIAGNOSTICS_SCHEDULE", :string, "*/2 * * * *")
 discover_admins_schedule = get_env("DISCOVER_ADMINS_SCHEDULE", :string, "*/3 * * * *")
-refresh_settings_config_schedule = get_env("REFRESH_SETTINGS_CONFIG_SCHEDULE", :string, "*/5 * * * *")
+pull_settings_config_schedule = get_env("PULL_SETTINGS_CONFIG_SCHEDULE", :string, "*/5 * * * *")
 check_self_update_schedule = get_env("CHECK_SELF_UPDATE_SCHEDULE", :string, "0 */2 * * *")
 push_metrics_schedule = get_env("PUSH_METRICS_SCHEDULE", :string, "*/2 * * * *")
 pull_vpn_config_schedule = get_env("PULL_VPN_CONFIG_SCHEDULE", :string, "0 0 * * *")
@@ -48,9 +48,9 @@ config :edge_agent, EdgeAgent.BackgroundJobs.Quantum,
       schedule: discover_admins_schedule,
       task: {Tasks, :discover_admins, []}
     ],
-    refresh_settings_config: [
-      schedule: refresh_settings_config_schedule,
-      task: {Tasks, :refresh_settings_config, []}
+    pull_settings_config: [
+      schedule: pull_settings_config_schedule,
+      task: {Tasks, :pull_settings_config, []}
     ],
     report_health_check: [
       schedule: report_health_check_schedule,
@@ -60,9 +60,9 @@ config :edge_agent, EdgeAgent.BackgroundJobs.Quantum,
       schedule: push_diagnostics_schedule,
       task: {Tasks, :push_diagnostics, []}
     ],
-    sync_unprocessed_executions: [
-      schedule: sync_executions_schedule,
-      task: {Tasks, :sync_unprocessed_executions, []}
+    pull_unprocessed_executions: [
+      schedule: pull_executions_schedule,
+      task: {Tasks, :pull_unprocessed_executions, []}
     ],
     push_metrics: [
       schedule: push_metrics_schedule,
@@ -163,6 +163,6 @@ config :edge_agent,
   # VPN config pull toggle — disable on resource-starved machines where netclient pull
   # causes disruptive interface resets. MQTT retained messages provide eventual consistency.
   pull_vpn_config_enabled: get_env("PULL_VPN_CONFIG_ENABLED", :boolean, true),
-  # DERP map refresh interval at steady state. On startup the cache warms up with a short
+  # DERP map pull interval at steady state. On startup the cache warms up with a short
   # interval (5 s) that doubles each miss until this value is reached.
-  derp_map_refresh_interval_ms: get_env("DERP_MAP_REFRESH_INTERVAL_MS", :integer, to_timeout(minute: 5))
+  derp_map_pull_interval_ms: get_env("DERP_MAP_PULL_INTERVAL_MS", :integer, to_timeout(minute: 5))

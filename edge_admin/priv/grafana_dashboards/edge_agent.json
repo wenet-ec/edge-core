@@ -438,7 +438,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum(rate(edge_agent_settings_config_refresh_total{result=~\"failure|invalid_response\"}[$__rate_interval])) by (result)",
+          "expr": "sum(rate(edge_agent_settings_config_pull_total{result=~\"failure|invalid_response\"}[$__rate_interval])) by (result)",
           "refId": "C",
           "legendFormat": "settings config {{result}}"
         },
@@ -562,7 +562,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "edge_agent_commands_sync_sent_count",
+          "expr": "edge_agent_commands_pull_sent_count",
           "refId": "A"
         }
       ],
@@ -619,7 +619,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "edge_agent_commands_sync_pending_count",
+          "expr": "edge_agent_commands_pull_pending_count",
           "refId": "A"
         }
       ],
@@ -979,7 +979,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "rate(edge_agent_commands_sync_total[$__rate_interval])",
+          "expr": "rate(edge_agent_commands_pull_total[$__rate_interval])",
           "refId": "A",
           "legendFormat": "sync"
         },
@@ -1076,7 +1076,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "edge_agent_commands_sync_sent_count",
+          "expr": "edge_agent_commands_pull_sent_count",
           "refId": "A",
           "legendFormat": "sent (already acked)"
         },
@@ -1085,7 +1085,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "edge_agent_commands_sync_pending_count",
+          "expr": "edge_agent_commands_pull_pending_count",
           "refId": "B",
           "legendFormat": "pending (needs ack)"
         }

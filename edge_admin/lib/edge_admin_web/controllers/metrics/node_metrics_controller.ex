@@ -76,13 +76,13 @@ defmodule EdgeAdminWeb.Controllers.Metrics.NodeMetricsController do
     description: """
     Returns application-level metrics from the edge_agent PromEx:
     - Application: uptime, BEAM stats (processes, memory breakdown)
-    - Commands: sync/enqueue/complete/report statistics
+    - Commands: pull/enqueue/complete/report statistics
     - Discovery: admin discovery scan metrics
     - Proxy: HTTP and SOCKS5 connection and blocked-request statistics
     - SSH: authentication attempts and connection count
     - VPN: config pull count (daily backstop for DNS recovery)
     - Health Check: fallback health report outcomes (only non-zero when VPN is down)
-    - Settings Config: Admin URL and Core DERP map source refresh outcomes
+    - Settings Config: Admin URL and Core DERP map source pull outcomes
     - Oban: job queue states (available, executing, completed, etc.)
     """,
     parameters: [

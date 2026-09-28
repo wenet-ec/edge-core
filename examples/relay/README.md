@@ -62,7 +62,7 @@ Once both services are up and the map is reachable, point your admin at it via `
 CORE_DERP_MAP_URLS=https://edge-relay-map-1.yourdomain.com/derpmap/default
 ```
 
-The admin's `/start` script exports this to netclient's `DERP_MAP_URLS` at boot. Agents learn the same ordered source list through their authenticated settings refresh.
+The admin's `/start` script exports this to netclient's `DERP_MAP_URLS` at boot. Agents learn the same ordered source list through their authenticated settings pull.
 
 `CORE_DERP_MAP_URLS` is an ordered list for **one complete canonical map**. It is not a list of map fragments: the first reachable URL is used, and maps from multiple URLs are never merged.
 
@@ -78,7 +78,7 @@ Both URLs must serve the same complete canonical map. Deploy the new setting, th
 
 ### Change the map contents
 
-Do this separately from a hostname migration. First finish the hostname migration above. Then update `derp-map.json` on every active map server so all of them serve the same new complete map, and allow the fleet another refresh window to converge.
+Do this separately from a hostname migration. First finish the hostname migration above. Then update `derp-map.json` on every active map server so all of them serve the same new complete map, and allow the fleet another pull window to converge.
 
 Do not change the source URLs and map contents in one rollout. Nodes using different map versions can select different DERP relays for the same peer pair. This does not stop direct WireGuard connectivity or Admin fallback communication through `ADMIN_URLS`; only peer-to-peer traffic that requires DERP can be briefly disrupted while the maps converge.
 
@@ -155,7 +155,7 @@ The map JSON supports multiple regions and multiple nodes per region:
 
 Each node needs its own VM running the `edge_relay` service with its own `DERP_HOSTNAME`. Region IDs ≥ 900 are the convention for self-hosted relays — public Tailscale DERPs use lower numbers.
 
-After editing `derp-map.json`, restart `edge_relay_map` to pick up the file. Follow the map-content rollout above rather than relying on Admin restarts: Admins and Agents refresh their advertised configuration and map cache independently.
+After editing `derp-map.json`, restart `edge_relay_map` to pick up the file. Follow the map-content rollout above rather than relying on Admin restarts: Admins and Agents pull their advertised configuration and map independently.
 
 ## Limitations
 

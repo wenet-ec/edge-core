@@ -2,10 +2,9 @@
 defmodule EdgeAgent.Bootstrap do
   @moduledoc """
   Runs the one-time startup sequence that establishes local identity, verifies
-  enrollment, joins the VPN, registers with Admin, refreshes Admin settings,
-  and synchronizes pending command executions. Bootstrap failures
-  are reported to the supervisor for restart; optional discovery and
-  synchronization work can continue in a degraded state.
+  enrollment, joins the VPN, registers with Admin, pulls Admin settings and
+  pending command executions. Bootstrap failures are reported to the supervisor
+  for restart; optional discovery and pull work can continue in a degraded state.
 
   """
 
@@ -80,8 +79,8 @@ defmodule EdgeAgent.Bootstrap do
          :ok <- step_2_verify_enrollment(identity.recovery_key),
          :ok <- step_3_join_vpn(identity.node_id),
          :ok <- step_4_discover_and_register(identity),
-         :ok <- step_5_refresh_settings_config(),
-         :ok <- step_6_sync_unprocessed_command_executions(identity.node_id),
+         :ok <- step_5_pull_settings_config(),
+         :ok <- step_6_pull_unprocessed_command_executions(identity.node_id),
          :ok <- step_7_register_aliases() do
       Logger.info("All bootstrap steps completed")
       :ok
@@ -144,15 +143,15 @@ defmodule EdgeAgent.Bootstrap do
     )
   end
 
-  defp step_5_refresh_settings_config do
-    Logger.info("Step 5: Refreshing Admin settings config...")
-    SettingsConfig.refresh()
+  defp step_5_pull_settings_config do
+    Logger.info("Step 5: Pulling Admin settings config...")
+    SettingsConfig.pull()
   end
 
-  defp step_6_sync_unprocessed_command_executions(_node_id) do
-    Logger.info("Step 6: Syncing unprocessed command executions...")
+  defp step_6_pull_unprocessed_command_executions(_node_id) do
+    Logger.info("Step 6: Pulling unprocessed command executions...")
 
-    Commands.sync_unprocessed_command_executions()
+    Commands.pull_unprocessed_command_executions()
 
     :ok
   end

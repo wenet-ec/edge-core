@@ -40,7 +40,7 @@ defmodule EdgeAdminWeb.Controllers.Agents.NodeController do
 
   operation(:reregister,
     summary: "Re-register a node",
-    description: "Authenticated Agent re-registration that refreshes node credentials and metadata.",
+    description: "Authenticated Agent re-registration that updates node credentials and metadata.",
     request_body:
       {"Node re-registration parameters", "application/json", NodeSchemas.NodeReregisterRequest, required: true},
     responses: %{
@@ -63,7 +63,7 @@ defmodule EdgeAdminWeb.Controllers.Agents.NodeController do
   operation(:update_health_check,
     summary: "Report node health check",
     description:
-      "Agent reports local health through HTTP fallback mode. The report refreshes last_seen_at and records the node as unhealthy until the Admin can reach it through the VPN again. Node ID is inferred from the API token.",
+      "Agent reports local health through HTTP fallback mode. The report updates last_seen_at and records the node as unhealthy until the Admin can reach it through the VPN again. Node ID is inferred from the API token.",
     request_body: {"Health check parameters", "application/json", NodeSchemas.NodeHealthCheckRequest, required: true},
     responses: %{
       200 => {"Health check recorded", "application/json", NodeSchemas.NodeHealthCheckResponse},

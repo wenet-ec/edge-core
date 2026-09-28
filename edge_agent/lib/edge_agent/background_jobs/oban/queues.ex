@@ -6,7 +6,7 @@ defmodule EdgeAgent.BackgroundJobs.Oban.Queues do
 
   An Oban worker declares its queue inline via `use Oban.Worker, queue: :foo`,
   while `runtime.exs` separately declares `queues: [foo: 2, ...]` (queue name +
-  per-deployment concurrency). If the two fall out of sync — say a worker uses
+  per-deployment concurrency). If the two diverge — say a worker uses
   `:foo` but `:foo` is missing from the runtime list — Oban silently accepts
   the job into the table and never dispatches it. No log, no warning, no
   visible failure. The job table just grows.

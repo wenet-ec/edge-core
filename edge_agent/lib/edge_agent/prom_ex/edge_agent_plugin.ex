@@ -5,7 +5,7 @@ defmodule EdgeAgent.PromEx.EdgeAgentPlugin do
 
   The plugin converts the Agent's telemetry events into counters, gauges, and
   distributions for bootstrap, command, proxy, SSH, VPN, health, diagnostics,
-  discovery, and settings-refresh activity.
+  discovery, and settings-pull activity.
 
   ## Operator notes
 
@@ -25,7 +25,7 @@ defmodule EdgeAgent.PromEx.EdgeAgentPlugin do
     Event.build(
       :edge_agent_event_metrics,
       bootstrap_metrics() ++
-        command_sync_metrics() ++
+        command_pull_metrics() ++
         command_execution_metrics() ++
         command_report_metrics() ++
         proxy_metrics() ++
@@ -60,24 +60,24 @@ defmodule EdgeAgent.PromEx.EdgeAgentPlugin do
     ]
   end
 
-  defp command_sync_metrics do
+  defp command_pull_metrics do
     [
       counter(
-        [:edge_agent, :commands, :sync, :total],
-        event_name: [:edge_agent, :commands, :sync],
-        description: "Total number of command sync attempts with admin",
+        [:edge_agent, :commands, :pull, :total],
+        event_name: [:edge_agent, :commands, :pull],
+        description: "Total number of command execution pull attempts from Admin",
         measurement: &event_count/1
       ),
       last_value(
-        [:edge_agent, :commands, :sync, :sent_count],
-        event_name: [:edge_agent, :commands, :sync],
-        description: "Number of sent command executions fetched in last sync",
+        [:edge_agent, :commands, :pull, :sent_count],
+        event_name: [:edge_agent, :commands, :pull],
+        description: "Number of sent command executions fetched in the last pull",
         measurement: :sent_count
       ),
       last_value(
-        [:edge_agent, :commands, :sync, :pending_count],
-        event_name: [:edge_agent, :commands, :sync],
-        description: "Number of pending command executions fetched in last sync",
+        [:edge_agent, :commands, :pull, :pending_count],
+        event_name: [:edge_agent, :commands, :pull],
+        description: "Number of pending command executions fetched in the last pull",
         measurement: :pending_count
       )
     ]
@@ -324,9 +324,9 @@ defmodule EdgeAgent.PromEx.EdgeAgentPlugin do
   defp settings_config_metrics do
     [
       counter(
-        [:edge_agent, :settings_config, :refresh, :total],
-        event_name: [:edge_agent, :settings_config, :refresh],
-        description: "Total authenticated refresh attempts for Admin URLs and Core DERP map sources",
+        [:edge_agent, :settings_config, :pull, :total],
+        event_name: [:edge_agent, :settings_config, :pull],
+        description: "Total authenticated pulls for Admin URLs and Core DERP map sources",
         measurement: &event_count/1,
         tags: [:result],
         tag_values: &get_result_tag/1

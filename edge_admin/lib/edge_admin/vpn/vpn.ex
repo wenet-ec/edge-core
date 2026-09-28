@@ -622,10 +622,10 @@ defmodule EdgeAdmin.Vpn do
   @doc """
   Pulls the latest VPN configuration from Netmaker as a consistency backstop.
 
-  Respects the VPN configuration sync setting; when disabled, this is a no-op.
+  Respects the VPN configuration pull setting; when disabled, this is a no-op.
   """
-  def sync_vpn_config do
-    if Application.get_env(:edge_admin, :vpn_config_sync_enabled, true) do
+  def pull_vpn_config do
+    if Application.get_env(:edge_admin, :vpn_config_pull_enabled, true) do
       pull()
     else
       :ok

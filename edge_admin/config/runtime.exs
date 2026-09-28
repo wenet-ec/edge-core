@@ -303,7 +303,7 @@ metadata_recomputation_schedule = get_env("METADATA_RECOMPUTATION_SCHEDULE", :st
 node_health_check_schedule = get_env("NODE_HEALTH_CHECK_SCHEDULE", :string, "* * * * *")
 execution_delivery_schedule = get_env("EXECUTION_DELIVERY_SCHEDULE", :string, "* * * * *")
 execution_expiration_schedule = get_env("EXECUTION_EXPIRATION_SCHEDULE", :string, "* * * * *")
-vpn_config_sync_schedule = get_env("VPN_CONFIG_SYNC_SCHEDULE", :string, "*/5 * * * *")
+vpn_config_pull_schedule = get_env("VPN_CONFIG_PULL_SCHEDULE", :string, "*/5 * * * *")
 zombie_admin_cleanup_schedule = get_env("ZOMBIE_ADMIN_CLEANUP_SCHEDULE", :string, "*/30 * * * *")
 zombie_admin_checkin_threshold_minutes = get_env("ZOMBIE_ADMIN_CHECKIN_THRESHOLD_MINUTES", :integer, 120)
 
@@ -476,9 +476,9 @@ config :edge_admin, EdgeAdmin.BackgroundJobs.Quantum,
       schedule: execution_expiration_schedule,
       task: {EdgeAdmin.Commands, :expire_stale_command_executions, []}
     ],
-    vpn_config_sync: [
-      schedule: vpn_config_sync_schedule,
-      task: {EdgeAdmin.Vpn, :sync_vpn_config, []}
+    vpn_config_pull: [
+      schedule: vpn_config_pull_schedule,
+      task: {EdgeAdmin.Vpn, :pull_vpn_config, []}
     ],
     zombie_admin_cleanup: [
       schedule: zombie_admin_cleanup_schedule,
@@ -586,7 +586,7 @@ config :edge_admin,
   execution_pruning_enabled: execution_pruning_enabled,
   execution_pruning_schedule: execution_pruning_schedule,
   execution_retention_days: execution_retention_days,
-  vpn_config_sync_schedule: vpn_config_sync_schedule,
+  vpn_config_pull_schedule: vpn_config_pull_schedule,
   cluster_reconciliation_enabled: get_env("CLUSTER_RECONCILIATION_ENABLED", :boolean, true),
   cluster_reconciliation_schedule: cluster_reconciliation_schedule,
   zombie_admin_cleanup_schedule: zombie_admin_cleanup_schedule,
@@ -595,8 +595,8 @@ config :edge_admin,
   # netclient network join). Pre-flight + bounded waits replace the silent hang
   # that used to occur when CIDR was exhausted; tune up for slow Netmaker.
   join_timeout_seconds: get_env("MEMBERSHIP_JOIN_TIMEOUT_SECONDS", :integer, 60),
-  # Disable periodic VPN config sync on severely resource-starved machines (default: true)
-  vpn_config_sync_enabled: get_env("VPN_CONFIG_SYNC_ENABLED", :boolean, true),
+  # Disable periodic VPN config pulls on severely resource-starved machines (default: true)
+  vpn_config_pull_enabled: get_env("VPN_CONFIG_PULL_ENABLED", :boolean, true),
   # Delete unrecognized hosts from cluster networks during reconciliation (default: true).
   evict_rogue_hosts: get_env("EVICT_ROGUE_HOSTS", :boolean, true),
   # Health checks run every minute across all owned nodes — keep tight; geo-friendly.

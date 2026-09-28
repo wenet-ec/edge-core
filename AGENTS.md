@@ -36,10 +36,10 @@ When working on anything related to the Netmaker API, netclient enrollment, DERP
 - Admin's `/start` script bridges `CORE_DERP_MAP_URLS` into netclient's existing `DERP_MAP_URLS` contract before the daemon starts. Do not reuse `DERP_MAP_URLS` as an application configuration name.
 - In the `v1.7.0-derp` netclient fork, the first usable `DERP_MAP_URLS` source wins; Core maps are never merged. Every migration URL must serve the same complete map. If no Core source is usable, netclient falls back to Tailscale's public map.
 - `ADMIN_URLS` remains a list of independently useful Admin API endpoints; agents use it for transport failover. Do not apply canonical-map semantics to Admin URLs.
-- The authenticated agent refresh endpoint is `GET /api/v1/agents/settings/config`. It returns only non-secret Settings Config (`admin_urls`, `core_derp_map_urls`), follows the normal controller/JSON/OpenAPI schema convention, and remains available in degraded mode so agents can recover routes.
+- The authenticated agent refresh endpoint is `GET /api/v1/agents/settings/config`. It returns non-secret Admin URL and Core DERP map configuration plus a complete, per-Node `ingress_tunneling` snapshot derived from existing Admin records. It follows the normal controller/JSON/OpenAPI schema convention and remains available in degraded mode so agents can recover configuration.
 - Agent netclient receives a fixed localhost DERP reflection URL at process startup. Dynamic Core map sources are fetched by the Agent application and reflected there; never attempt to change a running netclient's environment.
 - The Agent refreshes settings on `REFRESH_SETTINGS_CONFIG_SCHEDULE` (default: every five minutes). Its DERP-map cache refreshes separately through `DERP_MAP_REFRESH_INTERVAL_MS` (default: five minutes).
-- Do not introduce an Admin database table, revision counter, or server-side persistence for this Settings Config. Deployment configuration is advertised by each Admin; agents retain learned endpoints locally to tolerate rolling hostname migration.
+- Do not introduce an Admin database table or revision counter for this Settings Config. Deployment URL configuration is advertised by each Admin; agents retain learned endpoints locally to tolerate rolling hostname migration. The Ingress Tunneling snapshot is calculated from current Admin records and replaces the Agent's stored snapshot when refreshed.
 
 ## Architecture
 
@@ -305,7 +305,7 @@ The full annotated Admin list lives in `deploy/production/.envs/.edge_admin` —
 - `PULL_VPN_CONFIG_ENABLED` (agent) — opt out of the daily `netclient pull` backstop.
 - `ADMIN_URLS` — ordered, independently usable Admin API URLs. Keep new and old URLs together during a hostname migration so agents can fail over between them.
 - `CORE_DERP_MAP_URLS` — ordered URLs for one complete canonical Core DERP map. The first reachable source wins; sources are never merged. During a hostname migration, every listed URL must serve the same complete map.
-- `REFRESH_SETTINGS_CONFIG_SCHEDULE` (agent) — cadence for retrieving non-secret `admin_urls` and `core_derp_map_urls` from the authenticated Admin endpoint; defaults to every five minutes.
+- `REFRESH_SETTINGS_CONFIG_SCHEDULE` (agent) — cadence for retrieving Admin URLs, Core DERP map URLs, and the current Ingress Tunneling snapshot from the authenticated Admin endpoint; defaults to every five minutes.
 - `PUSH_DIAGNOSTICS_SCHEDULE` (agent) — diagnostics push cadence; defaults to every two minutes.
 - `DERP_MAP_REFRESH_INTERVAL_MS` (agent) — DERP-map cache refresh interval; defaults to five minutes. It is independent of the settings refresh schedule.
 

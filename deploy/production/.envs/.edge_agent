@@ -9,8 +9,7 @@
 ENROLLMENT_KEY=
 PUBLIC_ENROLLMENT_KEY_URLS=https://edge-admin.yourdomain.com/api/v1/clusters/default/enrollment_keys/public
 
-# Path to a local file containing the enrollment key (alternative to the above).
-# PUBLIC_ENROLLMENT_KEY_PATHS=data.key,result.token
+# PUBLIC_ENROLLMENT_KEY_PATHS=data.key,result.token  # Local file containing the enrollment key (alternative to the above).
 
 # Node recovery
 # Optional. On a fresh Agent data volume only, RECOVERY_KEY restores a node
@@ -63,27 +62,20 @@ WATCHTOWER_HTTP_API_TOKEN=change-me-in-production
 # Per-operation proxy timeouts (in milliseconds)
 # PROXY_CONNECTION_TIMEOUT_MS=2000        # TCP connect to target host (default: 2s)
 # PROXY_READ_TIMEOUT_MS=10000             # Socket read (default: 10s)
-# Forwarding loop inactivity; closes half-open connections (default: 5min).
-# PROXY_RECV_TIMEOUT_MS=300000
-# Absolute ceiling on a tunnel's lifetime (default: 6h, slowloris defence).
-# PROXY_TUNNEL_TOTAL_TIMEOUT_MS=21600000
-# Grace window for tunnels during graceful drain on shutdown (default: 30s).
-# PROXY_DRAIN_GRACE_TIMEOUT_MS=30000
+# PROXY_RECV_TIMEOUT_MS=300000              # Forwarding loop inactivity; closes half-open connections (default: 5min).
+# PROXY_TUNNEL_TOTAL_TIMEOUT_MS=21600000     # Absolute ceiling on a tunnel's lifetime (default: 6h, slowloris defence).
+# PROXY_DRAIN_GRACE_TIMEOUT_MS=30000         # Grace window for tunnels during graceful drain on shutdown (default: 30s).
 # PROXY_NUM_ACCEPTORS=100                 # Ranch acceptor processes per listener (default: 100)
 
 # Background Job Schedules
 # ENQUEUE_EXECUTIONS_SCHEDULE=* * * * *      # Enqueue pending command executions (default: every 1min)
 # REPORT_EXECUTIONS_SCHEDULE=* * * * *       # Report completed executions to admin (default: every 1min)
-# Pull unprocessed executions via HTTP fallback (default: every 2min).
-# PULL_EXECUTIONS_SCHEDULE=*/2 * * * *
-# Pull Admin settings config (default: every 5min).
-# PULL_SETTINGS_CONFIG_SCHEDULE=*/5 * * * *
+# PULL_EXECUTIONS_SCHEDULE=*/2 * * * *  # Pull unprocessed executions via HTTP fallback (default: every 2min).
+# PULL_SETTINGS_CONFIG_SCHEDULE=*/5 * * * *  # Pull Admin settings config (default: every 5min).
 # REPORT_HEALTH_CHECK_SCHEDULE=*/2 * * * *   # Report node health via HTTP fallback (default: every 2min)
-# Push latest self-diagnostics via HTTP fallback (default: every 2min).
-# PUSH_DIAGNOSTICS_SCHEDULE=*/2 * * * *
+# PUSH_DIAGNOSTICS_SCHEDULE=*/2 * * * *  # Push latest self-diagnostics via HTTP fallback (default: every 2min).
 # DISCOVER_ADMINS_SCHEDULE=*/3 * * * *       # Probe VPN for admin peers (default: every 3min)
-# Poll admin for self-update requests via HTTP fallback (default: every 2h).
-# CHECK_SELF_UPDATE_SCHEDULE=0 */2 * * *
+# CHECK_SELF_UPDATE_SCHEDULE=0 */2 * * *  # Poll admin for self-update requests via HTTP fallback (default: every 2h).
 # PUSH_METRICS_SCHEDULE=*/2 * * * *          # Push metrics to admin via HTTP fallback (default: every 2min)
 # PULL_VPN_CONFIG_SCHEDULE=0 0 * * *         # Pull full VPN config as DNS recovery backstop (default: daily)
 
@@ -95,8 +87,7 @@ WATCHTOWER_HTTP_API_TOKEN=change-me-in-production
 #                                # resets — broken DNS can then persist indefinitely. (default: true)
 
 # Edge VPN CLI
-# Scheme used by the Edge VPN CLI to reach the Edge VPN server.
-EDGE_VPN_API_SCHEME=https
+EDGE_VPN_API_SCHEME=https  # Scheme used by the Edge VPN CLI to reach the Edge VPN server.
 
 # DERP Map Cache
 # DERP_MAP_PULL_INTERVAL_MS=300000       # Stable pull interval once the map has been fetched
@@ -123,5 +114,4 @@ EDGE_VPN_API_SCHEME=https
 #
 # DATA_DIR=/app/data
 # DB_POOL_SIZE=5
-# Maximum number of command executions the Agent runs concurrently.
-# COMMAND_EXECUTION_CONCURRENCY=4
+# COMMAND_EXECUTION_CONCURRENCY=4  # Maximum number of command executions the Agent runs concurrently.

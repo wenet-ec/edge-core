@@ -71,14 +71,26 @@ defmodule EdgeAdmin.IngressTunneling.Resources.TunnelConnectionResources do
   def delete(%TunnelConnection{} = tunnel_connection), do: Repo.delete(tunnel_connection)
 
   defp allocate_addresses(node_id) do
-    {ipv4_addresses, ipv6_addresses} =
-      from(connection in TunnelConnection,
-        where: connection.node_id == ^node_id,
-        select: {connection.tunnel_ipv4_address, connection.tunnel_ipv6_address}
+    addresses =
+      Repo.all(
+        from(connection in TunnelConnection,
+          where: connection.node_id == ^node_id,
+          select:
+            {connection.ingress_ipv4_address, connection.tunnel_ipv4_address, connection.ingress_ipv6_address,
+             connection.tunnel_ipv6_address}
+        )
       )
-      |> Repo.all()
-      |> Enum.unzip()
 
-    Addressing.allocate(ipv4_addresses, ipv6_addresses)
+    ingress_ipv4_addresses = Enum.map(addresses, &elem(&1, 0))
+    tunnel_ipv4_addresses = Enum.map(addresses, &elem(&1, 1))
+    ingress_ipv6_addresses = Enum.map(addresses, &elem(&1, 2))
+    tunnel_ipv6_addresses = Enum.map(addresses, &elem(&1, 3))
+
+    Addressing.allocate_for_ingress(
+      tunnel_ipv4_addresses,
+      tunnel_ipv6_addresses,
+      ingress_ipv4_addresses,
+      ingress_ipv6_addresses
+    )
   end
 end

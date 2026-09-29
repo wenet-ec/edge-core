@@ -35,6 +35,40 @@ defmodule EdgeAdmin.IngressTunneling.AddressingTest do
     assert reason =~ "no IPv4 addresses remain"
   end
 
+  test "skips previously allocated Ingress addresses when allocating Tunnel Client addresses" do
+    assert {:ok,
+            %{
+              ingress_ipv4_address: "10.240.0.1/32",
+              ingress_ipv6_address: "fd20:240::1/128",
+              tunnel_ipv4_address: "10.240.0.3/32",
+              tunnel_ipv6_address: "fd20:240::3/128"
+            }} =
+             Addressing.allocate(
+               [],
+               [],
+               ["10.240.0.2/32"],
+               ["fd20:240::2/128"],
+               ["10.240.0.0/29"],
+               ["fd20:240::/125"]
+             )
+  end
+
+  test "skips a pool when its Ingress address was previously allocated to a Tunnel Client" do
+    assert {:ok,
+            %{
+              ingress_ipv4_address: "10.241.0.1/32",
+              tunnel_ipv4_address: "10.241.0.2/32"
+            }} =
+             Addressing.allocate(
+               ["10.240.0.1/32"],
+               [],
+               [],
+               [],
+               ["10.240.0.0/30", "10.241.0.0/30"],
+               ["fd20:240::/126"]
+             )
+  end
+
   test "uses the next configured pool after an earlier pool is exhausted" do
     assert {:ok, "10.241.0.2/32"} =
              Addressing.next_ipv4_address(

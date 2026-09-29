@@ -40,8 +40,16 @@ defmodule EdgeAdminWeb.Schemas.Agents.SettingSchema do
       type: :object,
       properties: %{
         ingress_public_key: %Schema{type: :string},
-        ingress_ipv4_address: %Schema{type: :string, nullable: true},
-        ingress_ipv6_address: %Schema{type: :string, nullable: true},
+        ingress_ipv4_addresses: %Schema{
+          type: :array,
+          items: %Schema{type: :string},
+          description: "Ingress IPv4 addresses still referenced by Tunnel Connections"
+        },
+        ingress_ipv6_addresses: %Schema{
+          type: :array,
+          items: %Schema{type: :string},
+          description: "Ingress IPv6 addresses still referenced by Tunnel Connections"
+        },
         vpn_dns_suffix: %Schema{type: :string},
         vpn_ipv4_range: %Schema{type: :string},
         vpn_ipv6_range: %Schema{type: :string},
@@ -50,8 +58,8 @@ defmodule EdgeAdminWeb.Schemas.Agents.SettingSchema do
       },
       required: [
         :ingress_public_key,
-        :ingress_ipv4_address,
-        :ingress_ipv6_address,
+        :ingress_ipv4_addresses,
+        :ingress_ipv6_addresses,
         :vpn_dns_suffix,
         :vpn_ipv4_range,
         :vpn_ipv6_range,
@@ -92,8 +100,8 @@ defmodule EdgeAdminWeb.Schemas.Agents.SettingSchema do
         ],
         ingress_tunneling: %{
           ingress_public_key: "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=",
-          ingress_ipv4_address: "10.240.0.1/32",
-          ingress_ipv6_address: "fd20:240::1/128",
+          ingress_ipv4_addresses: ["10.240.0.1/32", "10.241.0.1/32"],
+          ingress_ipv6_addresses: ["fd20:240::1/128", "fd20:241::1/128"],
           vpn_dns_suffix: "cluster-1.nm.internal",
           vpn_ipv4_range: "100.64.0.0/24",
           vpn_ipv6_range: "fd7a:91c2:4e8c:1::/64",

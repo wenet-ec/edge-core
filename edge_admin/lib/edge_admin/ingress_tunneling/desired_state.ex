@@ -38,13 +38,12 @@ defmodule EdgeAdmin.IngressTunneling.DesiredState do
   end
 
   defp state(node, connections) do
-    first_connection = List.first(connections)
     cluster = node.cluster
 
     %{
       "ingress_public_key" => node.ingress_public_key,
-      "ingress_ipv4_address" => field(first_connection, :ingress_ipv4_address),
-      "ingress_ipv6_address" => field(first_connection, :ingress_ipv6_address),
+      "ingress_ipv4_addresses" => ingress_addresses(connections, :ingress_ipv4_address),
+      "ingress_ipv6_addresses" => ingress_addresses(connections, :ingress_ipv6_address),
       "vpn_dns_suffix" => Cluster.vpn_domain(cluster),
       "vpn_ipv4_range" => cluster.ipv4_range,
       "vpn_ipv6_range" => cluster.ipv6_range,
@@ -52,6 +51,9 @@ defmodule EdgeAdmin.IngressTunneling.DesiredState do
       "peers" => Enum.map(connections, &peer/1)
     }
   end
+
+  defp ingress_addresses(connections, field),
+    do: connections |> Enum.map(&Map.fetch!(&1, field)) |> Enum.uniq() |> Enum.sort()
 
   defp peer(connection) do
     %{
@@ -62,7 +64,4 @@ defmodule EdgeAdmin.IngressTunneling.DesiredState do
       "allowed_ips" => [connection.tunnel_ipv4_address, connection.tunnel_ipv6_address]
     }
   end
-
-  defp field(nil, _field), do: nil
-  defp field(struct, field), do: Map.fetch!(struct, field)
 end

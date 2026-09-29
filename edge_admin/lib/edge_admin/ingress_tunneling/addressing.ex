@@ -3,10 +3,10 @@ defmodule EdgeAdmin.IngressTunneling.Addressing do
   @moduledoc """
   Allocates isolated per-Ingress Tunnel Client transport addresses.
 
-  The configured pools are not connected interface subnets. Each Ingress owns
-  the first usable address in its selected pool, and every Tunnel Client gets
-  one distinct `/32` and `/128` after it. Different Ingress Nodes intentionally
-  reuse the same allocations.
+  The configured pools are not connected interface subnets. Each new connection
+  reserves its pool's first usable address for the Ingress; Tunnel Client
+  addresses avoid all addresses already assigned to that Ingress. Different
+  Ingress Nodes intentionally reuse the same allocations.
   """
 
   import Bitwise
@@ -36,16 +36,51 @@ defmodule EdgeAdmin.IngressTunneling.Addressing do
   @spec allocate([String.t()], [String.t()], [String.t()], [String.t()]) ::
           {:ok, allocation()} | allocation_error()
   def allocate(existing_ipv4_addresses, existing_ipv6_addresses, ipv4_ranges, ipv6_ranges) do
-    with {:ok, ipv4_allocation} <- next_ipv4_allocation(existing_ipv4_addresses, ipv4_ranges),
-         {:ok, ipv6_allocation} <- next_ipv6_allocation(existing_ipv6_addresses, ipv6_ranges) do
+    allocate(existing_ipv4_addresses, existing_ipv6_addresses, [], [], ipv4_ranges, ipv6_ranges)
+  end
+
+  @doc false
+  @spec allocate([String.t()], [String.t()], [String.t()], [String.t()], [String.t()], [String.t()]) ::
+          {:ok, allocation()} | allocation_error()
+  def allocate(
+        existing_ipv4_addresses,
+        existing_ipv6_addresses,
+        existing_ingress_ipv4_addresses,
+        existing_ingress_ipv6_addresses,
+        ipv4_ranges,
+        ipv6_ranges
+      ) do
+    with {:ok, ipv4_allocation} <-
+           next_ipv4_allocation(existing_ipv4_addresses, existing_ingress_ipv4_addresses, ipv4_ranges),
+         {:ok, ipv6_allocation} <-
+           next_ipv6_allocation(existing_ipv6_addresses, existing_ingress_ipv6_addresses, ipv6_ranges) do
       {:ok, Map.merge(ipv4_allocation, ipv6_allocation)}
     end
   end
 
   @doc false
+  @spec allocate_for_ingress([String.t()], [String.t()], [String.t()], [String.t()]) ::
+          {:ok, allocation()} | allocation_error()
+  def allocate_for_ingress(
+        existing_tunnel_ipv4_addresses,
+        existing_tunnel_ipv6_addresses,
+        existing_ingress_ipv4_addresses,
+        existing_ingress_ipv6_addresses
+      ) do
+    allocate(
+      existing_tunnel_ipv4_addresses,
+      existing_tunnel_ipv6_addresses,
+      existing_ingress_ipv4_addresses,
+      existing_ingress_ipv6_addresses,
+      ingress_tunnel_auto_generated_v4_ranges(),
+      ingress_tunnel_auto_generated_v6_ranges()
+    )
+  end
+
+  @doc false
   @spec next_ipv4_address([String.t()], [String.t()]) :: {:ok, String.t()} | allocation_error()
   def next_ipv4_address(existing_addresses, ranges \\ ingress_tunnel_auto_generated_v4_ranges()) do
-    with {:ok, %{tunnel_ipv4_address: tunnel_ipv4_address}} <- next_ipv4_allocation(existing_addresses, ranges) do
+    with {:ok, %{tunnel_ipv4_address: tunnel_ipv4_address}} <- next_ipv4_allocation(existing_addresses, [], ranges) do
       {:ok, tunnel_ipv4_address}
     end
   end
@@ -53,15 +88,17 @@ defmodule EdgeAdmin.IngressTunneling.Addressing do
   @doc false
   @spec next_ipv6_address([String.t()], [String.t()]) :: {:ok, String.t()} | allocation_error()
   def next_ipv6_address(existing_addresses, ranges \\ ingress_tunnel_auto_generated_v6_ranges()) do
-    with {:ok, %{tunnel_ipv6_address: tunnel_ipv6_address}} <- next_ipv6_allocation(existing_addresses, ranges) do
+    with {:ok, %{tunnel_ipv6_address: tunnel_ipv6_address}} <- next_ipv6_allocation(existing_addresses, [], ranges) do
       {:ok, tunnel_ipv6_address}
     end
   end
 
-  defp next_ipv4_allocation(existing_addresses, ranges) do
-    used_addresses = existing_addresses |> Enum.flat_map(&parse_ipv4_address/1) |> MapSet.new()
+  defp next_ipv4_allocation(existing_addresses, existing_ingress_addresses, ranges) do
+    tunnel_addresses = existing_addresses |> Enum.flat_map(&parse_ipv4_address/1) |> MapSet.new()
+    ingress_addresses = existing_ingress_addresses |> Enum.flat_map(&parse_ipv4_address/1) |> MapSet.new()
+    used_addresses = MapSet.union(tunnel_addresses, ingress_addresses)
 
-    case Enum.find_value(ranges, &next_ipv4_allocation_in_range(&1, used_addresses)) do
+    case Enum.find_value(ranges, &next_ipv4_allocation_in_range(&1, tunnel_addresses, used_addresses)) do
       nil ->
         {:error,
          {:conflict, "tunnel_address_pool_exhausted: no IPv4 addresses remain in the configured allocation pools"}}
@@ -71,10 +108,12 @@ defmodule EdgeAdmin.IngressTunneling.Addressing do
     end
   end
 
-  defp next_ipv6_allocation(existing_addresses, ranges) do
-    used_addresses = existing_addresses |> Enum.flat_map(&parse_ipv6_address/1) |> MapSet.new()
+  defp next_ipv6_allocation(existing_addresses, existing_ingress_addresses, ranges) do
+    tunnel_addresses = existing_addresses |> Enum.flat_map(&parse_ipv6_address/1) |> MapSet.new()
+    ingress_addresses = existing_ingress_addresses |> Enum.flat_map(&parse_ipv6_address/1) |> MapSet.new()
+    used_addresses = MapSet.union(tunnel_addresses, ingress_addresses)
 
-    case Enum.find_value(ranges, &next_ipv6_allocation_in_range(&1, used_addresses)) do
+    case Enum.find_value(ranges, &next_ipv6_allocation_in_range(&1, tunnel_addresses, used_addresses)) do
       nil ->
         {:error,
          {:conflict, "tunnel_address_pool_exhausted: no IPv6 addresses remain in the configured allocation pools"}}
@@ -92,7 +131,7 @@ defmodule EdgeAdmin.IngressTunneling.Addressing do
     Application.fetch_env!(:edge_admin, :ingress_tunnel_auto_generated_v6_ranges)
   end
 
-  defp next_ipv4_allocation_in_range(range, used_addresses) do
+  defp next_ipv4_allocation_in_range(range, tunnel_addresses, used_addresses) do
     case Vpn.parse_cidr(range) do
       {:ok, {address, prefix}} ->
         first_address = ipv4_to_int(address) &&& ipv4_mask(prefix)
@@ -101,7 +140,7 @@ defmodule EdgeAdmin.IngressTunneling.Addressing do
         ingress_address = first_address + 1
         first_client_address = ingress_address + 1
 
-        if first_client_address <= last_address do
+        if first_client_address <= last_address and not MapSet.member?(tunnel_addresses, ingress_address) do
           first_client_address..last_address
           |> Stream.reject(&MapSet.member?(used_addresses, &1))
           |> Enum.take(1)
@@ -122,7 +161,7 @@ defmodule EdgeAdmin.IngressTunneling.Addressing do
     end
   end
 
-  defp next_ipv6_allocation_in_range(range, used_addresses) do
+  defp next_ipv6_allocation_in_range(range, tunnel_addresses, used_addresses) do
     case Vpn.parse_ipv6_cidr(range) do
       {:ok, {address, prefix}} ->
         first_address = ipv6_to_int(address) &&& ipv6_mask(prefix)
@@ -131,7 +170,7 @@ defmodule EdgeAdmin.IngressTunneling.Addressing do
         ingress_address = first_address + 1
         first_client_address = ingress_address + 1
 
-        if first_client_address <= last_address do
+        if first_client_address <= last_address and not MapSet.member?(tunnel_addresses, ingress_address) do
           first_client_address..last_address
           |> Stream.reject(&MapSet.member?(used_addresses, &1))
           |> Enum.take(1)

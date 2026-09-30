@@ -48,10 +48,6 @@ defmodule EdgeAdmin.AdminClustering.Membership.PeerDiscovery do
         Logger.debug("Could not query Edge VPN API for peer discovery: #{inspect(reason)}")
         Logger.debug("Skipping peer discovery")
         :ok
-
-      _ ->
-        Logger.debug("Unexpected response format from Edge VPN API")
-        :ok
     end
   end
 

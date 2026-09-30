@@ -56,13 +56,8 @@ defmodule EdgeAdmin.AdminClustering.Membership.Cleanup do
     Logger.debug("Protected hosts: #{inspect(protected_host_ids)}")
 
     case Vpn.list_nodes(admin_cluster_name) do
-      {:ok, nodes} when is_list(nodes) ->
+      {:ok, nodes} ->
         delete_zombie_hosts(nodes, threshold_seconds, protected_host_ids, admin_cluster_name)
-
-      {:ok, _} ->
-        Logger.warning("Unexpected response format from Edge VPN node listing")
-        emit_cleanup_telemetry(0, :error)
-        {:ok, 0}
 
       {:error, reason} ->
         Logger.error("Failed to query Edge VPN nodes: #{inspect(reason)}")

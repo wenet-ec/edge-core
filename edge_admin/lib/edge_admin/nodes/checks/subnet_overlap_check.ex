@@ -6,8 +6,9 @@ defmodule EdgeAdmin.Nodes.Checks.SubnetOverlapCheck do
   Overlap means one network's address falls inside the other's range (either direction),
   which would cause Edge VPN to reject the network with "network cidr already in use".
 
-  Accepts the existing ranges as a parameter so the caller can reuse the same query
-  result for auto-generating a subnet when no range is supplied.
+  Existing ranges may come from both persisted clusters and Edge VPN networks.
+  The caller can reuse the same range set for auto-generating a subnet when no
+  range is supplied.
   """
 
   alias EdgeAdmin.Vpn
@@ -26,7 +27,7 @@ defmodule EdgeAdmin.Nodes.Checks.SubnetOverlapCheck do
 
   def check_ipv4(ipv4_range, existing_ranges) do
     if Vpn.ipv4_cidrs_overlap?(ipv4_range, existing_ranges) do
-      {:error, {:conflict, "#{ipv4_range} overlaps with an existing cluster range"}}
+      {:error, {:conflict, "#{ipv4_range} overlaps with an existing network range"}}
     else
       :ok
     end

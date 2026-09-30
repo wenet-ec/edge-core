@@ -44,6 +44,7 @@ defmodule EdgeAdmin.Nodes.Checks.SubnetOverlapCheckTest do
                SubnetOverlapCheck.check("100.64.1.0/24", ["100.64.1.0/24"], :ipv4)
 
       assert reason =~ "overlaps"
+      assert reason =~ "existing network range"
     end
 
     test "returns conflict when proposed /24 is contained within existing /16" do
@@ -88,6 +89,7 @@ defmodule EdgeAdmin.Nodes.Checks.SubnetOverlapCheckTest do
                )
 
       assert reason =~ "IPv6"
+      assert reason =~ "existing IPv6 network range"
     end
   end
 

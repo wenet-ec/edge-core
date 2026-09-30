@@ -58,19 +58,21 @@ defmodule EdgeAdmin.VpnTest do
   end
 
   describe "classify_create_network_400/1" do
-    test "CIDR collision → :already_exists" do
+    test "CIDR collision returns a conflict" do
       body = %{"Message" => "network cidr already in use by network-foo"}
-      assert Vpn.classify_create_network_400(body) == {:error, :already_exists}
+
+      assert Vpn.classify_create_network_400(body) ==
+               {:error, {:conflict, "network CIDR overlaps an existing Edge VPN network"}}
     end
 
-    test "name collision (Netmaker phrasing: 'invalid network name') → :already_exists" do
+    test "name collision response → :already_exists" do
       body = %{"Message" => "invalid network name: already exists"}
       assert Vpn.classify_create_network_400(body) == {:error, :already_exists}
     end
 
     test "substring match — phrase can appear anywhere in the message" do
       body = %{"Message" => "validation failed: network cidr already in use, retry"}
-      assert Vpn.classify_create_network_400(body) == {:error, :already_exists}
+      assert {:error, {:conflict, _reason}} = Vpn.classify_create_network_400(body)
     end
 
     test "matching is case-sensitive — wrong case falls through" do
@@ -85,7 +87,7 @@ defmodule EdgeAdmin.VpnTest do
 
     test "binary body is treated as the message directly" do
       assert Vpn.classify_create_network_400("network cidr already in use") ==
-               {:error, :already_exists}
+               {:error, {:conflict, "network CIDR overlaps an existing Edge VPN network"}}
     end
 
     test "empty / unrecognised body shape → :service_unavailable" do
@@ -95,8 +97,42 @@ defmodule EdgeAdmin.VpnTest do
     end
   end
 
+  describe "check_network_ranges/3" do
+    test "ignores the target network and detects overlap with another network" do
+      networks = [
+        %{"netid" => "admin-cluster-core", "addressrange" => "100.64.0.0/24", "addressrange6" => "fd7a:1::/64"},
+        %{"netid" => "cluster-west", "addressrange" => "100.65.0.0/24", "addressrange6" => "fd7a:2::/64"}
+      ]
+
+      assert Vpn.check_network_ranges("admin-cluster-core", %{addressrange: "100.64.0.0/24"}, networks) == :ok
+
+      assert {:error, {:conflict, message}} =
+               Vpn.check_network_ranges("admin-cluster-new", %{addressrange: "100.64.0.128/25"}, networks)
+
+      assert message =~ "cluster-core"
+      assert message =~ "100.64.0.128/25"
+    end
+
+    test "detects IPv6 overlap and allows disjoint ranges" do
+      networks = [
+        %{"netid" => "cluster-west", "addressrange" => "100.65.0.0/24", "addressrange6" => "fd7a:2::/64"}
+      ]
+
+      assert {:error, {:conflict, message}} =
+               Vpn.check_network_ranges("admin-cluster-new", %{addressrange6: "fd7a:2::1/128"}, networks)
+
+      assert message =~ "IPv6 range"
+
+      assert Vpn.check_network_ranges(
+               "admin-cluster-new",
+               %{addressrange: "100.66.0.0/24", addressrange6: "fd7a:3::/64"},
+               networks
+             ) == :ok
+    end
+  end
+
   describe "classify_delete_node_400/1" do
-    test "Netmaker missing-node validation error → :not_found" do
+    test "missing-node validation error → :not_found" do
       body = %{
         "Message" => "error fetching node during parameter validation: record not found"
       }
@@ -110,27 +146,27 @@ defmodule EdgeAdmin.VpnTest do
     end
   end
 
-  describe "normalize_netmaker_error/1" do
+  describe "normalize_edge_vpn_error/1" do
     test "ok tuple is preserved" do
-      assert Vpn.normalize_netmaker_error({:ok, %{"netid" => "x"}}) == {:ok, %{"netid" => "x"}}
-      assert Vpn.normalize_netmaker_error({:ok, []}) == {:ok, []}
+      assert Vpn.normalize_edge_vpn_error({:ok, %{"netid" => "x"}}) == {:ok, %{"netid" => "x"}}
+      assert Vpn.normalize_edge_vpn_error({:ok, []}) == {:ok, []}
     end
 
     test ":not_found is preserved (so callers can render 404)" do
-      assert Vpn.normalize_netmaker_error({:error, :not_found}) == {:error, :not_found}
+      assert Vpn.normalize_edge_vpn_error({:error, :not_found}) == {:error, :not_found}
     end
 
     test "every other error collapses to :service_unavailable" do
-      assert Vpn.normalize_netmaker_error({:error, :timeout}) == {:error, :service_unavailable}
-      assert Vpn.normalize_netmaker_error({:error, :econnrefused}) == {:error, :service_unavailable}
-      assert Vpn.normalize_netmaker_error({:error, %{status: 500}}) == {:error, :service_unavailable}
-      assert Vpn.normalize_netmaker_error({:error, "anything"}) == {:error, :service_unavailable}
+      assert Vpn.normalize_edge_vpn_error({:error, :timeout}) == {:error, :service_unavailable}
+      assert Vpn.normalize_edge_vpn_error({:error, :econnrefused}) == {:error, :service_unavailable}
+      assert Vpn.normalize_edge_vpn_error({:error, %{status: 500}}) == {:error, :service_unavailable}
+      assert Vpn.normalize_edge_vpn_error({:error, "anything"}) == {:error, :service_unavailable}
     end
 
     test "narrows Api.normalize — :conflict and {:bad_request, _} both flatten" do
-      assert Vpn.normalize_netmaker_error({:error, :conflict}) == {:error, :service_unavailable}
+      assert Vpn.normalize_edge_vpn_error({:error, :conflict}) == {:error, :service_unavailable}
 
-      assert Vpn.normalize_netmaker_error({:error, {:bad_request, %{"Message" => "x"}}}) ==
+      assert Vpn.normalize_edge_vpn_error({:error, {:bad_request, %{"Message" => "x"}}}) ==
                {:error, :service_unavailable}
     end
   end

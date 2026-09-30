@@ -69,11 +69,11 @@ defmodule EdgeAdmin.Release do
   @doc """
   Best-effort cleanup of the prior ephemeral Admin VPN identity.
 
-  Reads host and node identities from netclient's local state before the start
+  Reads host and node identities from local Edge VPN state before the start
   script wipes it. The previous host ID is the only host deletion target; this
   never resolves a host by Admin name. Recorded node memberships are also
-  deleted defensively because Netmaker host deletion can leave node rows behind
-  when its cached host-node relation has drifted.
+  deleted defensively because host deletion can leave node rows behind when
+  host-node relations are stale.
 
   Every failure is logged and ignored. Startup must proceed to the normal wipe
   and fresh enrollment when local state is absent, malformed, or the VPN API is
@@ -122,7 +122,7 @@ defmodule EdgeAdmin.Release do
   This task is idempotent and safe to run concurrently on every Admin replica.
   Edge VPN's check-then-create API is not atomic, so an ambiguous create failure
   is followed by a bounded, backoff-delayed re-check. This lets a replica observe
-  a superadmin created by a peer instead of failing its container startup.
+  an admin account created by a peer instead of failing its container startup.
 
   ## Exit codes
     - 0: Success (created or already exists)
@@ -144,13 +144,13 @@ defmodule EdgeAdmin.Release do
   end
 
   defp ensure_edge_vpn_admin(retries_left) do
-    case Vpn.check_superadmin() do
+    case Vpn.check_edge_vpn_admin_account() do
       {:ok, true} ->
         Logger.info("Edge VPN admin already exists, skipping creation")
         :ok
 
       {:ok, false} ->
-        Logger.info("No superadmin found, creating superadmin: #{edge_vpn_bootstrap_username()}")
+        Logger.info("No Edge VPN admin account found, creating account: #{edge_vpn_bootstrap_username()}")
         bootstrap_edge_vpn_admin_or_retry(retries_left)
 
       {:error, reason} ->
@@ -164,7 +164,7 @@ defmodule EdgeAdmin.Release do
       password: edge_vpn_bootstrap_password()
     }
 
-    case Vpn.create_superadmin(attrs) do
+    case Vpn.create_edge_vpn_admin_account(attrs) do
       {:ok, _user} ->
         Logger.info("Successfully created Edge VPN admin: #{edge_vpn_bootstrap_username()}")
         :ok
@@ -176,7 +176,7 @@ defmodule EdgeAdmin.Release do
       {:error, reason} ->
         # A concurrent peer can create the user after our initial check. The
         # Edge VPN API may report that outcome as either its documented
-        # `superadmin user already exists` response or a database constraint
+        # duplicate-account response or a database constraint
         # error, so re-check before treating it as a startup failure.
         retry_edge_vpn_admin_bootstrap(:create, reason, retries_left)
     end

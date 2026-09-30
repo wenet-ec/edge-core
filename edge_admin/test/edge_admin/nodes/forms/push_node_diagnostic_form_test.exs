@@ -88,6 +88,24 @@ defmodule EdgeAdmin.Nodes.Forms.PushNodeDiagnosticFormTest do
     assert "checks must contain valid diagnostic checks" in messages
   end
 
+  test "accepts netclient as the VPN client diagnostic check name" do
+    diagnostic = %{
+      "collected_at" => "2026-07-17T00:00:00Z",
+      "overall" => "pass",
+      "checks" => [%{"name" => "netclient", "status" => "pass", "duration_ms" => 1, "details" => %{}}]
+    }
+
+    assert {:ok, _attrs} = PushNodeDiagnosticForm.changeset(valid_attrs(%{"diagnostic" => diagnostic}))
+
+    legacy_check = %{"name" => "edge_vpn_cli", "status" => "pass", "duration_ms" => 1, "details" => %{}}
+    legacy_diagnostic = Map.put(diagnostic, "checks", [legacy_check])
+
+    assert {:error, changeset} =
+             PushNodeDiagnosticForm.changeset(valid_attrs(%{"diagnostic" => legacy_diagnostic}))
+
+    assert %{diagnostic: ["checks must contain valid diagnostic checks"]} = errors_on(changeset)
+  end
+
   test "rejects non-map parameters" do
     assert {:error, changeset} = PushNodeDiagnosticForm.changeset("not a map")
     assert %{base: ["invalid parameters - expected a map"]} = errors_on(changeset)

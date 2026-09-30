@@ -4,6 +4,7 @@ defmodule EdgeAdmin.Vpn.Naming do
 
   alias EdgeAdmin.Naming, as: CoreNaming
 
+  @spec default_domain() :: String.t()
   def default_domain, do: Application.get_env(:edge_admin, :edge_vpn_default_domain, "nm.internal")
 
   @doc """
@@ -51,6 +52,7 @@ defmodule EdgeAdmin.Vpn.Naming do
   - No leading/trailing hyphens
   - Total length with "admin-cluster-" prefix <= 32 chars
   """
+  @spec validate_admin_cluster_suffix!(String.t()) :: :ok
   def validate_admin_cluster_suffix!(suffix) when is_binary(suffix) do
     prefix = "admin-cluster-"
     max_total_length = 32
@@ -68,7 +70,7 @@ defmodule EdgeAdmin.Vpn.Naming do
       max_suffix_length = max_total_length - String.length(prefix)
 
       raise ArgumentError, """
-      Admin cluster name exceeds Netmaker's #{max_total_length} character limit
+      Admin cluster name exceeds the Edge VPN's #{max_total_length} character limit
       Total: #{String.length(full_name)} chars
       Max suffix length: #{max_suffix_length} chars
       """
@@ -101,18 +103,20 @@ defmodule EdgeAdmin.Vpn.Naming do
   @doc """
   Builds an admin erlang node name from dns hostname.
   """
+  @spec build_admin_erlang_node_name(String.t()) :: atom()
   def build_admin_erlang_node_name(hostname) do
     :"admin@#{hostname}"
   end
 
   @doc """
-  Validates a network name for Netmaker compatibility.
+  Validates an Edge VPN network name.
 
   Validates:
   - Max 32 characters
   - Lowercase alphanumeric with hyphens
   - No leading/trailing hyphens
   """
+  @spec validate_network_name(String.t()) :: :ok | {:error, String.t()}
   def validate_network_name(name) when is_binary(name) do
     cond do
       String.length(name) > 32 ->

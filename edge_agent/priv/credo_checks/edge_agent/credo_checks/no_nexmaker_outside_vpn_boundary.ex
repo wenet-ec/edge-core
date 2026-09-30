@@ -11,7 +11,7 @@ defmodule EdgeAgent.CredoChecks.NoNexmakerOutsideVpnBoundary do
       Agent application code should keep direct Nexmaker usage at the VPN boundary.
 
       Other domains should call `EdgeAgent.Vpn` instead of depending on
-      netclient CLI details.
+      Edge VPN client CLI details.
       """
     ]
 

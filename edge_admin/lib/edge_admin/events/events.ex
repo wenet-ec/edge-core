@@ -87,7 +87,7 @@ defmodule EdgeAdmin.Events do
     {:ok, envelope}
   end
 
-  @doc false
+  @doc "Builds a CloudEvents envelope using a generated ID, current time, and configured Core name."
   @spec build_envelope(event()) :: map()
   def build_envelope(event) do
     build_envelope(
@@ -98,7 +98,7 @@ defmodule EdgeAdmin.Events do
     )
   end
 
-  @doc false
+  @doc "Builds a CloudEvents envelope using the supplied event metadata."
   @spec build_envelope(event(), String.t(), DateTime.t(), String.t() | nil) :: map()
   def build_envelope(event, id, time, corename) do
     %{

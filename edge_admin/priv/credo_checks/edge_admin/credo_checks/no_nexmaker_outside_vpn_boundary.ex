@@ -11,7 +11,7 @@ defmodule EdgeAdmin.CredoChecks.NoNexmakerOutsideVpnBoundary do
       Admin application code should keep direct Nexmaker usage at the VPN boundary.
 
       Other domains should call `EdgeAdmin.Vpn` instead of depending on
-      Netmaker API or netclient CLI details.
+      Edge VPN API or client CLI details.
       """
     ]
 

@@ -555,7 +555,7 @@ config :edge_admin,
   # IPv4 CIDR ranges to use for auto-generated cluster subnets (CGNAT space)
   cluster_auto_generated_v4_ranges: cluster_auto_generated_v4_ranges,
   # Immutable Core-owned ULA /48 pool(s). Set explicitly in production and share
-  # the same value across every admin that uses this PostgreSQL/Netmaker core.
+  # the same value across every admin that uses this PostgreSQL/Core deployment.
   cluster_auto_generated_v6_ranges: cluster_auto_generated_v6_ranges,
   cluster_v6_subnet_prefix: cluster_v6_subnet_prefix,
   # Isolated, non-routed per-Ingress address pools for Edge Tunnel clients.
@@ -591,9 +591,9 @@ config :edge_admin,
   cluster_reconciliation_schedule: cluster_reconciliation_schedule,
   zombie_admin_cleanup_schedule: zombie_admin_cleanup_schedule,
   zombie_admin_checkin_threshold_minutes: zombie_admin_checkin_threshold_minutes,
-  # Per-step timeout for membership join waits (Netmaker host registration,
-  # netclient network join). Pre-flight + bounded waits replace the silent hang
-  # that used to occur when CIDR was exhausted; tune up for slow Netmaker.
+  # Per-step timeout for membership join waits (Edge VPN host registration,
+  # network join). Pre-flight + bounded waits replace the silent hang that used
+  # to occur when CIDR was exhausted; tune for slow VPN control-plane responses.
   join_timeout_seconds: get_env("MEMBERSHIP_JOIN_TIMEOUT_SECONDS", :integer, 60),
   # Disable periodic VPN config pulls on severely resource-starved machines (default: true)
   vpn_config_pull_enabled: get_env("VPN_CONFIG_PULL_ENABLED", :boolean, true),

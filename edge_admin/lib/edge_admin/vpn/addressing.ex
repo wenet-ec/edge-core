@@ -4,9 +4,16 @@ defmodule EdgeAdmin.Vpn.Addressing do
 
   import Bitwise
 
+  @spec cluster_auto_generated_v4_ranges() :: [String.t()]
   def cluster_auto_generated_v4_ranges, do: Application.get_env(:edge_admin, :cluster_auto_generated_v4_ranges)
+
+  @spec cluster_v4_subnet_prefix() :: 0..32
   def cluster_v4_subnet_prefix, do: Application.get_env(:edge_admin, :cluster_v4_subnet_prefix)
+
+  @spec cluster_auto_generated_v6_ranges() :: [String.t()]
   def cluster_auto_generated_v6_ranges, do: Application.get_env(:edge_admin, :cluster_auto_generated_v6_ranges)
+
+  @spec cluster_v6_subnet_prefix() :: 0..128
   def cluster_v6_subnet_prefix, do: Application.get_env(:edge_admin, :cluster_v6_subnet_prefix, 64)
 
   @spec usable_ipv4_capacity(0..32) :: non_neg_integer()
@@ -84,6 +91,7 @@ defmodule EdgeAdmin.Vpn.Addressing do
 
   Excludes any ranges in the provided list.
   """
+  @spec generate_next_subnet([String.t()]) :: {:ok, String.t()} | {:error, {:conflict, String.t()}}
   def generate_next_subnet(existing_ranges \\ []) do
     base_ranges = cluster_auto_generated_v4_ranges()
     target_prefix = cluster_v4_subnet_prefix()
@@ -113,6 +121,7 @@ defmodule EdgeAdmin.Vpn.Addressing do
   @doc """
   Finds an available subnet within a base CIDR range.
   """
+  @spec find_available_subnet(String.t(), 0..32, [String.t()]) :: String.t() | nil
   def find_available_subnet(base_cidr, target_prefix, existing_ranges) do
     case parse_cidr(base_cidr) do
       {:ok, {base_ip, base_prefix}} ->
@@ -127,7 +136,8 @@ defmodule EdgeAdmin.Vpn.Addressing do
     end
   end
 
-  @doc false
+  @doc "Finds the first available IPv6 subnet within a base CIDR range."
+  @spec find_available_ipv6_subnet(String.t(), 0..128, [String.t()]) :: String.t() | nil
   def find_available_ipv6_subnet(base_cidr, target_prefix, existing_ranges) do
     with {:ok, {base_ip, base_prefix}} <- parse_ipv6_cidr(base_cidr),
          true <- target_prefix >= base_prefix and target_prefix <= 128 do

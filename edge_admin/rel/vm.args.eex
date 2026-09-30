@@ -4,7 +4,7 @@
 
 ## Scheduler Configuration
 
-## Number of dirty schedulers doing IO work (file, netclient CLI calls, some crypto NIFs)
+## Number of dirty schedulers doing IO work (file, Edge VPN client CLI calls, some crypto NIFs)
 ## EdgeAdmin: Dirty IO schedulers handle blocking NIFs tagged dirty-io (System.cmd, file ops).
 ## They do NOT handle gen_tcp socket I/O — that goes through BEAM epoll/kqueue polling.
 ## Proxy workload (thousands of concurrent TCP connections) uses zero dirty IO schedulers.
@@ -28,7 +28,7 @@
 ## Network & Distribution
 
 ## Increase number of concurrent ports/sockets
-## EdgeAdmin: Many simultaneous connections (Netmaker, proxies, distributed Erlang)
+## EdgeAdmin: Many simultaneous connections (Edge VPN, proxies, distributed Erlang)
 +Q 65536
 
 ## Distribution buffer busy limit (KB)
@@ -52,7 +52,7 @@
 +hms 2048
 
 ## Binary heap management - threshold for storing binaries off-heap
-## Default 64, we increase since we handle large JSON responses from Netmaker API
+## Default 64, increased for large Edge VPN API responses
 +hmbs 8192
 
 ## Maximum number of processes

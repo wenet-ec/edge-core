@@ -56,6 +56,8 @@ defmodule EdgeAdmin.Ssh.Resources.SshUsernameResources do
     end
   end
 
+  @spec delete(SshUsername.t()) ::
+          {:ok, SshUsername.t()} | {:error, Ecto.Changeset.t()}
   def delete(%SshUsername{} = username), do: Repo.delete(username)
 
   defp create_public_keys(ssh_username_id, keys_attrs) do

@@ -4,7 +4,7 @@ defmodule EdgeAgent.Diagnostics.WireguardInterface do
 
   @interface "netmaker"
 
-  @doc "Inspects the Edge VPN interface (`netmaker`), addresses, and routes using the host `ip` command."
+  @doc "Inspects the Edge VPN WireGuard interface, its addresses, and routes using the host `ip` command."
   @spec check() :: {:ok, map()} | {:warn, String.t(), map()} | {:error, String.t(), map()}
   def check do
     with {:ok, [link]} <- ip_json(["-j", "link", "show", "dev", @interface]),

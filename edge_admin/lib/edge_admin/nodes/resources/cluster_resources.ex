@@ -293,6 +293,10 @@ defmodule EdgeAdmin.Nodes.Resources.ClusterResources do
         Logger.warning("Edge VPN network creation failed, rolling back DB cluster: #{cluster.name}")
         Repo.delete(cluster)
         error
+
+      {:error, {:conflict, _reason} = error} ->
+        Repo.delete(cluster)
+        {:error, error}
     end
   end
 

@@ -2256,7 +2256,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "description": "Per-cluster reconciliation runs (DB \u2194 Netmaker). Errors retry via Oban.",
+          "description": "Per-cluster reconciliation runs (DB \u2194 Edge VPN). Errors retry via Oban.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -2344,7 +2344,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "description": "Spikes mean Netmaker is slow or the cluster has many nodes.",
+          "description": "Spikes mean Edge VPN responses are slow or the cluster has many nodes.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -2504,7 +2504,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "description": "New Netmaker hosts created during last reconciliation.",
+          "description": "New Edge VPN hosts created during last reconciliation.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -2559,7 +2559,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "description": "Hosts removed from Netmaker during last reconciliation.",
+          "description": "Hosts removed from Edge VPN during last reconciliation.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -2669,7 +2669,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "description": "Periodic sweep that deletes long-absent admin entries from Netmaker.",
+          "description": "Periodic sweep that deletes long-absent Admin entries from Edge VPN.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -2859,7 +2859,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "description": "Step latency. Big numbers usually mean Netmaker API is slow.",
+          "description": "Step latency. Big numbers usually mean Edge VPN API responses are slow.",
           "fieldConfig": {
             "defaults": {
               "color": {

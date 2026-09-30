@@ -26,6 +26,7 @@ defmodule EdgeAdmin.Nodes do
   alias EdgeAdmin.Nodes.Resources.EnrollmentKeyResources
   alias EdgeAdmin.Nodes.Resources.NodeResources
   alias EdgeAdmin.Nodes.Resources.ProxyResources
+  alias EdgeAdmin.Nodes.Schemas.Alias
   alias EdgeAdmin.Nodes.Schemas.Cluster
   alias EdgeAdmin.Nodes.Schemas.EnrollmentKey
   alias EdgeAdmin.Nodes.Schemas.Node
@@ -312,9 +313,6 @@ defmodule EdgeAdmin.Nodes do
           {:ok, EnrollmentKey.t()} | {:error, Ecto.Changeset.t()}
   defdelegate update_enrollment_key(key, params), to: EnrollmentKeyResources
 
-  @doc """
-  Deletes an enrollment key.
-  """
   @spec delete_enrollment_key(EnrollmentKey.t()) ::
           {:ok, EnrollmentKey.t()} | {:error, Ecto.Changeset.t()}
   def delete_enrollment_key(%EnrollmentKey{} = key), do: EnrollmentKeyResources.delete(key)
@@ -346,22 +344,34 @@ defmodule EdgeAdmin.Nodes do
   def verify_enrollment_key(params), do: EnrollmentKeyResources.verify(params)
 
   @doc "Reconciles one active cluster with Edge VPN."
+  @spec reconcile_cluster(String.t()) :: {:ok, map()} | {:error, :not_found}
   defdelegate reconcile_cluster(cluster_name), to: ClusterReconciliation
 
   @doc "Completes deletion of a retired cluster."
+  @spec complete_cluster_deletion(String.t(), String.t()) :: :ok | {:error, :not_retired | term()}
   defdelegate complete_cluster_deletion(cluster_name, cluster_id), to: ClusterDeletion
 
   @doc "Enqueues cluster reconciliation and retired-cluster deletion work."
+  @spec enqueue_cluster_reconciliation() :: :ok | {:error, term()}
   defdelegate enqueue_cluster_reconciliation(), to: ClusterReconciliation
 
   @doc "Lists aliases with filtering and pagination."
+  @spec list_aliases(map()) :: {:ok, {[Alias.t()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
   defdelegate list_aliases(params \\ %{}), to: AliasResources, as: :list
 
+  @spec get_alias(String.t()) :: {:ok, Alias.t()} | {:error, :not_found}
   defdelegate get_alias(id), to: AliasResources, as: :get
 
   @doc "Creates an alias and its Edge VPN DNS entry."
+  @spec create_alias(Node.t(), map()) ::
+          {:ok, Alias.t()}
+          | {:error, Ecto.Changeset.t()}
+          | {:error, {:conflict, String.t()}}
+          | {:error, :service_unavailable}
   defdelegate create_alias(node, params), to: AliasResources, as: :create_with_dns
 
   @doc "Deletes an alias and its Edge VPN DNS entry."
+  @spec delete_alias(Alias.t()) ::
+          {:ok, Alias.t()} | {:error, Ecto.Changeset.t()} | {:error, :service_unavailable}
   defdelegate delete_alias(alias_record), to: AliasResources, as: :delete_with_dns
 end

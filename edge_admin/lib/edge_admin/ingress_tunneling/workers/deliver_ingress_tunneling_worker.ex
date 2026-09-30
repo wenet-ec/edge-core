@@ -1,7 +1,7 @@
 # edge_admin/lib/edge_admin/ingress_tunneling/workers/deliver_ingress_tunneling_worker.ex
 defmodule EdgeAdmin.IngressTunneling.Workers.DeliverIngressTunnelingWorker do
   @moduledoc """
-  Delivers the current Ingress Tunneling desired state to one Agent node.
+  Delivers the current Ingress Tunneling snapshot to one Agent node.
 
   Incomplete jobs are unique per node for five minutes and retry up to three
   attempts.

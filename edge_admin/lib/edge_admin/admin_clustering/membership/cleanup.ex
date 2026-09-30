@@ -3,8 +3,8 @@ defmodule EdgeAdmin.AdminClustering.Membership.Cleanup do
   @moduledoc """
   Cleans up stale and orphaned Admin-cluster memberships.
 
-  This module owns the Admin-cluster lifecycle policy. `EdgeAdmin.Vpn` remains
-  the adapter for NetMaker node and host operations.
+  This module owns the Admin-cluster lifecycle policy. `EdgeAdmin.Vpn` handles
+  Edge VPN node and host operations.
   """
 
   alias EdgeAdmin.AdminClustering.Metadata
@@ -60,12 +60,12 @@ defmodule EdgeAdmin.AdminClustering.Membership.Cleanup do
         delete_zombie_hosts(nodes, threshold_seconds, protected_host_ids, admin_cluster_name)
 
       {:ok, _} ->
-        Logger.warning("Unexpected response format from NetMaker Nodes API")
+        Logger.warning("Unexpected response format from Edge VPN node listing")
         emit_cleanup_telemetry(0, :error)
         {:ok, 0}
 
       {:error, reason} ->
-        Logger.error("Failed to query NetMaker Nodes API: #{inspect(reason)}")
+        Logger.error("Failed to query Edge VPN nodes: #{inspect(reason)}")
         emit_cleanup_telemetry(0, :error)
         {:error, reason}
     end
@@ -98,11 +98,10 @@ defmodule EdgeAdmin.AdminClustering.Membership.Cleanup do
   end
 
   @doc """
-  Removes a previous ephemeral Admin identity recorded in local netclient state.
+  Removes a previous ephemeral Admin identity recorded in local Edge VPN state.
 
   The host ID is an exact recorded target, never resolved by Admin name. Node
-  memberships are deleted after the host as a defensive sweep for Netmaker's
-  cached host-node relation drift.
+  memberships are deleted after the host to clear any stale host-node relations.
 
   This operation is best-effort: a missing host or node is already clean, and
   individual deletion failures are logged without preventing fresh enrollment.

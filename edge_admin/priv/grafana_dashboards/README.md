@@ -17,10 +17,10 @@ Business and operational metrics scraped from the edge_admin PromEx endpoint.
 | **Node Health** | Health Check Duration, Unhealthy/Unreachable Nodes, Health Check Rate by Result | How quickly individual node health checks resolve; how many nodes came back unhealthy in the last check cycle |
 | **Command Execution** | Execution Lifecycle (created/delivered/completed/expired), Execution Duration | Full command pipeline rate — from execution creation through agent delivery to result received; duration p50/p95/p99 by exit code category (success/failure/timeout/cancelled) |
 | **Quantum Scheduler** | Job Execution Rate, Job Duration (p95), Job Exception Rate | Quantum scheduler job health per job name; useful for spotting jammed or slow recurring jobs |
-| **VPN & Command Delivery** | Zombie Admin Cleanup Rate, Zombies Deleted, Delivery Batch Rate, Executions Delivered | Netmaker zombie admin cleanup; delivery scheduler batch run results and per-batch execution count |
+| **VPN & Command Delivery** | Zombie Admin Cleanup Rate, Zombies Deleted, Delivery Batch Rate, Executions Delivered | Edge VPN zombie Admin cleanup; delivery scheduler batch run results and per-batch execution count |
 | **Gateway** | Gateway Connection Events, Active Gateway Connections, Gateway Scrape Rate | Gateway GenServer connect/disconnect events per cluster; active gateway count; metrics scrape success/error by type (host/agent/wireguard) |
 | **SSH** | SSH Verification Rate, SSH Failures (Window) | Per-auth-method (password/public_key) verification success and failure rates; failure count alerting for brute-force detection |
-| **Cluster Reconciliation** | Reconciliation Rate, Reconciliation Duration | Netmaker ↔ DB convergence run rate and duration per cluster; error rate for diagnosing Netmaker API timeouts |
+| **Cluster Reconciliation** | Reconciliation Rate, Reconciliation Duration | Edge VPN ↔ DB convergence run rate and duration per cluster; error rate for diagnosing API timeouts |
 | **Self-Updates** | Requests Completed, Nodes Triggered vs Failed | Self-update request processing rate by targeting type; last-request outcome (triggered vs failed nodes) |
 
 Default datasource UID: `edge_admin_prometheus` — rename the variable if yours differs.
@@ -37,7 +37,7 @@ Agent-side metrics scraped from the edge_agent PromEx endpoint.
 | **Command Execution** | Command execution rate and duration; pull and report worker activity; pending/sent counts |
 | **Proxy Server** | HTTP + SOCKS5 connection rates; session duration (p95); blocked request counts |
 | **SSH Server** | Auth rate (password vs public key); connection rate; session duration |
-| **VPN** | VPN config pull rate by result (daily backstop for DNS recovery after netclient restart) |
+| **VPN** | VPN config pull rate by result (daily backstop for DNS recovery after Edge VPN client restart) |
 | **Health Check (HTTP Fallback)** | Health check report rate by result — only fires when VPN is down and agent is using HTTP fallback to reach admin |
 
 ---

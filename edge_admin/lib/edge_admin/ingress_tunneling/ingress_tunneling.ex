@@ -4,7 +4,7 @@ defmodule EdgeAdmin.IngressTunneling do
   Public domain boundary for Core-managed Ingress Tunneling.
 
   The context owns Tunnel Client identities, their selected Ingress Node
-  connections, provisioning artifacts, and Agent Ingress desired state.
+  connections, provisioning artifacts, and the per-node Ingress Tunneling snapshot.
   """
 
   alias EdgeAdmin.GatewayRegistry
@@ -21,15 +21,15 @@ defmodule EdgeAdmin.IngressTunneling do
 
   require Logger
 
-  @doc "Lists Tunnel Clients."
+  @doc "Lists Tunnel Clients with filtering, sorting, and pagination."
   @spec list_tunnel_clients(map()) :: {:ok, {[TunnelClient.t()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
   defdelegate list_tunnel_clients(params \\ %{}), to: TunnelClientResources, as: :list
 
-  @doc "Gets a Tunnel Client by ID."
+  @doc "Gets a Tunnel Client by ID with its connections preloaded."
   @spec get_tunnel_client(String.t()) :: {:ok, TunnelClient.t()} | {:error, :not_found}
   defdelegate get_tunnel_client(id), to: TunnelClientResources, as: :get
 
-  @doc "Creates a Tunnel Client and its requested connections atomically."
+  @doc "Creates a Tunnel Client and its connections in one transaction, then attempts to enqueue updated snapshots."
   @spec create_tunnel_client_with_connections(map()) :: {:ok, TunnelClient.t()} | {:error, term()}
   def create_tunnel_client_with_connections(attrs \\ %{}) do
     with {:ok, params} <- CreateTunnelClientForm.changeset(attrs) do
@@ -47,7 +47,7 @@ defmodule EdgeAdmin.IngressTunneling do
     end
   end
 
-  @doc "Deletes a Tunnel Client and enqueues desired-state updates for its Ingress nodes."
+  @doc "Deletes a Tunnel Client and attempts to enqueue updated snapshots for its Ingress nodes."
   @spec delete_tunnel_client(TunnelClient.t()) ::
           {:ok, TunnelClient.t()} | {:error, :not_found | Ecto.Changeset.t()}
   def delete_tunnel_client(%TunnelClient{} = tunnel_client) do
@@ -61,15 +61,14 @@ defmodule EdgeAdmin.IngressTunneling do
     end
   end
 
-  @doc "Lists Tunnel Connections."
+  @doc "Lists Tunnel Connections with filtering, sorting, and pagination."
   @spec list_tunnel_connections(map()) :: {:ok, {[TunnelConnection.t()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
   defdelegate list_tunnel_connections(params \\ %{}), to: TunnelConnectionResources, as: :list
 
-  @doc "Gets a Tunnel Connection by ID."
   @spec get_tunnel_connection(String.t()) :: {:ok, TunnelConnection.t()} | {:error, :not_found}
   defdelegate get_tunnel_connection(id), to: TunnelConnectionResources, as: :get
 
-  @doc "Validates and creates one Tunnel Connection for a Tunnel Client."
+  @doc "Validates and creates one Tunnel Connection, then attempts to enqueue an updated snapshot for its Ingress node."
   @spec create_tunnel_connection(String.t(), map()) ::
           {:ok, TunnelConnection.t()}
           | {:error, :not_found | {:conflict, String.t()} | Ecto.Changeset.t()}
@@ -86,7 +85,7 @@ defmodule EdgeAdmin.IngressTunneling do
     end
   end
 
-  @doc "Deletes a Tunnel Connection."
+  @doc "Deletes a Tunnel Connection and attempts to enqueue an updated snapshot for its Ingress node."
   @spec delete_tunnel_connection(TunnelConnection.t()) ::
           {:ok, TunnelConnection.t()} | {:error, Ecto.Changeset.t()}
   def delete_tunnel_connection(%TunnelConnection{} = tunnel_connection) do
@@ -104,6 +103,7 @@ defmodule EdgeAdmin.IngressTunneling do
   @spec get_ingress_tunneling(String.t()) :: {:ok, map()} | {:error, :not_found}
   defdelegate get_ingress_tunneling(node_id), to: DesiredState, as: :build
 
+  @doc "Builds and delivers the current per-node snapshot through the owning Admin gateway; missing nodes or snapshots are no-ops."
   @spec deliver_ingress_tunneling(String.t()) :: :ok | {:error, term()}
   def deliver_ingress_tunneling(node_id) do
     case {Repo.get(Node, node_id), DesiredState.build(node_id)} do

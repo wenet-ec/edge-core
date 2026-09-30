@@ -42,6 +42,8 @@ defmodule EdgeAdmin.Ssh.Resources.SshPublicKeyResources do
     end
   end
 
+  @spec delete(SshPublicKey.t()) ::
+          {:ok, SshPublicKey.t()} | {:error, Ecto.Changeset.t()}
   def delete(%SshPublicKey{} = key), do: Repo.delete(key)
 
   @spec list(map()) :: {:ok, {[SshPublicKey.t()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}

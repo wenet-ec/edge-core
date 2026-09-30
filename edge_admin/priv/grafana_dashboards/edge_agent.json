@@ -2393,7 +2393,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "description": "Daily backstop netclient pull (recovers DNS after netclient restart). success/failure tag from netclient.",
+          "description": "Daily Edge VPN configuration pull (recovers DNS after client restart). Success/failure is tagged by result.",
           "fieldConfig": {
             "defaults": {
               "color": {

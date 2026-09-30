@@ -391,7 +391,7 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
         last_peer_update_at: %Schema{
           type: :string,
           format: :"date-time",
-          description: "Last time Netmaker updated this admin's peer configuration (ISO 8601)",
+          description: "Last time Edge VPN updated this admin's peer configuration (ISO 8601)",
           nullable: true
         }
       },

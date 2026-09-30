@@ -160,7 +160,7 @@ config :edge_agent,
   # Authentication toggles
   agent_metrics_auth_enabled: get_env("AGENT_METRICS_AUTH_ENABLED", :boolean, true),
   agent_proxy_auth_enabled: get_env("AGENT_PROXY_AUTH_ENABLED", :boolean, true),
-  # VPN config pull toggle — disable on resource-starved machines where netclient pull
+  # VPN config pull toggle — disable on resource-starved machines where an Edge VPN client pull
   # causes disruptive interface resets. MQTT retained messages provide eventual consistency.
   pull_vpn_config_enabled: get_env("PULL_VPN_CONFIG_ENABLED", :boolean, true),
   # DERP map pull interval at steady state. On startup the cache warms up with a short

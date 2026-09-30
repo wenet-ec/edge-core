@@ -79,7 +79,7 @@ validate_compose_file() {
 # Show help for cloud commands
 show_cloud_help() {
     echo -e "${BLUE}Cloud Infrastructure Commands${NC}"
-    echo "Manages: Edge Admin, VPN (Netmaker), Database, Metrics, Message Broker"
+    echo "Manages: Edge Admin, Edge VPN, Database, Metrics, Message Broker"
     echo ""
     echo "Usage: ./bin/run cloud <command> [options]"
     echo ""

@@ -129,7 +129,7 @@ defmodule EdgeAdmin.Vpn.AddressingTest do
   # usable_ipv4_capacity/1
 
   describe "usable_ipv4_capacity/1" do
-    test "uses the same network-address exclusion as Netmaker" do
+    test "uses the same network-address exclusion as the Edge VPN allocator" do
       assert VpnAddressing.usable_ipv4_capacity(24) == 255
     end
 

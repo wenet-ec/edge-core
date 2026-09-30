@@ -144,7 +144,7 @@ defmodule EdgeAdmin.Release do
   end
 
   defp ensure_edge_vpn_admin(retries_left) do
-    case Vpn.check_edge_vpn_admin_account() do
+    case Vpn.check_admin_account() do
       {:ok, true} ->
         Logger.info("Edge VPN admin already exists, skipping creation")
         :ok
@@ -164,7 +164,7 @@ defmodule EdgeAdmin.Release do
       password: edge_vpn_bootstrap_password()
     }
 
-    case Vpn.create_edge_vpn_admin_account(attrs) do
+    case Vpn.create_admin_account(attrs) do
       {:ok, _user} ->
         Logger.info("Successfully created Edge VPN admin: #{edge_vpn_bootstrap_username()}")
         :ok

@@ -209,7 +209,7 @@ defmodule EdgeAdmin.GatewayRegistry.Coordinator do
   defp sweep_unassigned_vpn_memberships(assigned_clusters) do
     vpn_host_id = Metadata.get_admin().vpn_host_id
 
-    case Vpn.edge_vpn_cli_health_check() do
+    case Vpn.cli_health_check() do
       {:ok, _status, %{networks: networks}} when is_list(networks) ->
         networks
         |> Enum.filter(&edge_cluster_network?/1)

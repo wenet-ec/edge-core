@@ -72,7 +72,7 @@ defmodule EdgeAdminHealth do
   @doc "Checks reachability of the Edge VPN API with bounded retries."
   @spec edge_vpn_api_health() :: :ok | {:error, String.t()}
   def edge_vpn_api_health do
-    case EdgeAdmin.Vpn.edge_vpn_health_check(retries: 2, retry_delay: 200) do
+    case EdgeAdmin.Vpn.api_health_check(retries: 2, retry_delay: 200) do
       :ok ->
         :ok
 
@@ -91,7 +91,7 @@ defmodule EdgeAdminHealth do
   def edge_vpn_cli_health do
     admin_cluster = EdgeAdmin.Vpn.admin_cluster_name()
 
-    case EdgeAdmin.Vpn.edge_vpn_cli_health_check() do
+    case EdgeAdmin.Vpn.cli_health_check() do
       {:ok, :healthy, info} ->
         if admin_cluster in info[:networks] do
           :ok

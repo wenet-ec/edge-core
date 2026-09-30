@@ -286,7 +286,7 @@ defmodule EdgeAdmin.AdminClustering.Membership.Bootstrap do
   end
 
   defp wait_for_edge_vpn_cli(network_name, attempt, max_attempts) do
-    case Vpn.edge_vpn_cli_health_check() do
+    case Vpn.cli_health_check() do
       {:ok, status, info} when status in [:healthy, :degraded] ->
         if network_name in info[:networks] do
           Logger.info("Edge VPN CLI connected to #{network_name}")

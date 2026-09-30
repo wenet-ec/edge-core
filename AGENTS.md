@@ -53,6 +53,13 @@ When working on anything related to the Netmaker API, netclient enrollment, DERP
 6. Context pattern: Business logic organized in contexts (Commands, Nodes, Vpn, Ssh, etc.)
 7. API-first: Both admin and agent expose REST APIs; admin API uses OpenApiSpex for documentation
 
+### Specs, docs, and comments
+
+- Public functions that form a context, resource, or module API should have an `@spec` that matches the implementation, including meaningful error and result variants. Update specs when behavior changes; do not add broad `term()` variants just to make an inaccurate spec compile.
+- Add `@doc` when callers need contract details that the function name and typespec do not convey, such as side effects, transaction boundaries, preloads, ordering, fallback behavior, or non-obvious errors. Omit docs that merely restate an obvious function name. Use `@doc false` only when a public function must remain callable but should intentionally be hidden from generated documentation.
+- Module docs should explain the module's responsibility or an important invariant, not enumerate obvious contents. Comments should explain why a non-obvious choice exists; avoid narrating code that is already clear from its implementation.
+- Keep behavior callbacks when a module is used as a behaviour by runtime adapters or test substitutions. Before removing an `@callback`, inspect its configured implementations and compile-time consumers.
+
 ### Defense-in-depth validation
 
 Edge Core is **strict by default**. Every write to the database passes through 5 layers, each with its own role. Some checks intentionally duplicate across layers — the cost of letting bad input slip one layer deeper is bigger than the cost of running the same check twice.

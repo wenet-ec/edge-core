@@ -9,13 +9,11 @@ defmodule EdgeAgentWeb.Controllers.DerpMapController do
   @doc """
   DERP map reflection endpoint for the Edge VPN CLI.
 
-  Returns the cached DERP map fetched from the configured map server.
-  If no map server is configured or the last fetch failed, returns an empty
-  regions map — the Edge VPN CLI skips the overlay and falls back to Tailscale.
+  Returns the cached Core DERP map. If no Core map is available, the empty
+  response lets the Edge VPN CLI use its own public-map fallback chain.
 
-  This endpoint is set as DERP_MAP_URLS in the agent start script so the Edge VPN CLI
-  can fetch a fresh map on every DERP connect attempt without blocking on a
-  live outbound request.
+  This endpoint is set as DERP_MAP_URLS in the agent start script so the Edge
+  VPN CLI does not need to fetch Core map sources on every connection attempt.
   """
   def show(conn, _params) do
     map = DerpMapCache.get() || @empty

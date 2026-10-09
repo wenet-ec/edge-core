@@ -214,8 +214,11 @@ ADMIN_URLS=https://edge-admin.yourdomain.com
 
 # Ordered mirror / hostname-migration URLs for one canonical Core DERP map.
 # These are map sources, not relay servers. The first usable URL wins; every URL
-# must serve the same complete map. If unset, netclient uses its fallback map.
+# must serve the same complete map. If no source is usable, the Agent uses the public fallback map.
 # CORE_DERP_MAP_URLS=https://edge-relay-map-1.yourdomain.com/derpmap/default
+# Optional ordered STUN endpoints in host:port form. Replaces the built-in list;
+# an empty value disables direct-path discovery while keeping DERP available.
+# CORE_STUN_SERVERS=stun1.l.google.com:19302,stun2.l.google.com:19302,stun3.l.google.com:19302,stun4.l.google.com:19302
 
 # Admin Cluster & Erlang Distribution
 # Admins form an Erlang cluster over the VPN for HA coordination:

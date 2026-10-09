@@ -37,7 +37,7 @@ defmodule EdgeAgent.Mixfile do
   def application do
     [
       mod: {EdgeAgent.Application, []},
-      extra_applications: [:logger, :runtime_tools, :ssh, :crypto, :public_key]
+      extra_applications: [:logger, :runtime_tools, :ssh, :crypto, :public_key, :ssl]
     ]
   end
 
@@ -137,6 +137,9 @@ defmodule EdgeAgent.Mixfile do
 
       # LAN discovery and DNS
       {:mdns_lite, "~> 0.9"},
+
+      # NaCl-compatible authentication for DERP and peer candidate messages
+      {:libsodium, "~> 2.0"},
 
       # Nexmaker library
       {:nexmaker, path: "../nexmaker"}

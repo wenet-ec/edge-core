@@ -8,15 +8,19 @@ defmodule EdgeAgent.IngressTunneling do
   key remains in Agent settings and is never part of the configuration map.
   """
 
+  alias EdgeAgent.IngressTunneling.Configuration
   alias EdgeAgent.IngressTunneling.Identity
+  alias EdgeAgent.IngressTunneling.Reconciler
   alias EdgeAgent.Settings
 
   @doc "Validates and replaces the persisted Ingress Tunneling configuration."
   @spec upsert_ingress_tunneling(map()) :: {:ok, map()} | {:error, term()}
-  def upsert_ingress_tunneling(desired_state) when is_map(desired_state) do
-    with :ok <- Identity.verify_public_key(Map.get(desired_state, "ingress_public_key")),
-         {:ok, _setting} <- Settings.set_ingress_tunneling(desired_state) do
-      {:ok, desired_state}
+  def upsert_ingress_tunneling(ingress_tunneling) when is_map(ingress_tunneling) do
+    with {:ok, ingress_tunneling} <- Configuration.validate(ingress_tunneling),
+         :ok <- Identity.verify_public_key(Map.get(ingress_tunneling, "ingress_public_key")),
+         {:ok, _setting} <- Settings.set_ingress_tunneling(ingress_tunneling) do
+      if Process.whereis(Reconciler), do: Reconciler.reconcile()
+      {:ok, ingress_tunneling}
     end
   end
 end

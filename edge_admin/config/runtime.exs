@@ -217,6 +217,16 @@ admin_urls = urls
 
 core_derp_map_urls = EdgeAdmin.Config.get_http_url_list("CORE_DERP_MAP_URLS")
 
+core_stun_servers =
+  "CORE_STUN_SERVERS"
+  |> get_env(
+    :string,
+    "stun1.l.google.com:19302,stun2.l.google.com:19302,stun3.l.google.com:19302,stun4.l.google.com:19302"
+  )
+  |> String.split(",", trim: true)
+  |> Enum.map(&String.trim/1)
+  |> Enum.reject(&(&1 == ""))
+
 # CORS — origins and allowed request headers. Set CORS_ALLOWED_HEADERS=*
 # to mirror request headers back (Corsica's :all), or pass a comma-separated
 # explicit list. Defaults to a small safe set covering this API's auth surface.
@@ -576,6 +586,7 @@ config :edge_admin,
   admin_urls: admin_urls,
   # Ordered mirror / migration sources for one canonical Core DERP map.
   core_derp_map_urls: core_derp_map_urls,
+  core_stun_servers: core_stun_servers,
   # Edge VPN DNS domain suffix (used for hostname construction)
   edge_vpn_default_domain: get_env("EDGE_VPN_DEFAULT_DOMAIN", :string, "nm.internal"),
   admin_discovery_schedule: admin_discovery_schedule,

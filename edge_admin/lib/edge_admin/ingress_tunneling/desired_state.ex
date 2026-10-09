@@ -2,9 +2,9 @@
 defmodule EdgeAdmin.IngressTunneling.DesiredState do
   @moduledoc """
   Builds the complete Ingress Tunneling snapshot for an Agent node from
-  the current Tunnel Client and Tunnel Connection records. The result includes
-  the node's ingress identity, cluster VPN settings, and one peer entry for
-  each connection owned by the node.
+  current Tunnel Client and Tunnel Connection records. The snapshot contains
+  the node identity, cluster VPN settings, peer configuration, and Core
+  transport endpoints.
   """
 
   import Ecto.Query, warn: false
@@ -48,6 +48,7 @@ defmodule EdgeAdmin.IngressTunneling.DesiredState do
       "vpn_ipv4_range" => cluster.ipv4_range,
       "vpn_ipv6_range" => cluster.ipv6_range,
       "core_derp_map_urls" => Application.get_env(:edge_admin, :core_derp_map_urls, []),
+      "core_stun_servers" => Application.get_env(:edge_admin, :core_stun_servers, []),
       "peers" => Enum.map(connections, &peer/1)
     }
   end

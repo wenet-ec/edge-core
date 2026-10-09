@@ -32,12 +32,16 @@ When working on anything related to the Netmaker API, netclient enrollment, DERP
 
 ### DERP and dynamic Settings Config contract
 
+- `CORE_STUN_SERVERS` is an ordered, comma-separated Admin deployment setting in `host:port` form. It strictly replaces the built-in public STUN list and is included in each Agent's Ingress Tunneling snapshot. STUN only optimizes direct UDP paths; DERP remains the fallback.
+- Edge Ingress uses a separate `edge_ingress` userspace WireGuard interface and its own `wireguard-go` engine. The Agent's Elixir transport exchanges WireGuard packets over DERP and validated direct UDP paths; do not alter netclient's existing mesh interface for this feature.
+- Ingress forwarding is limited to the selected cluster's Edge VPN CIDRs and DNS suffix. The Agent requires IPv4 and IPv6 forwarding to be enabled in its network namespace; deployment examples are the source for required container capabilities and devices.
+
 - `CORE_DERP_MAP_URLS` is Edge Admin deployment configuration: an ordered comma-separated list of mirror or hostname-migration URLs for **one complete canonical Core DERP map**. It is not stored in the Admin database.
 - Admin's `/start` script bridges `CORE_DERP_MAP_URLS` into netclient's existing `DERP_MAP_URLS` contract before the daemon starts. Do not reuse `DERP_MAP_URLS` as an application configuration name.
-- In the `v1.7.0-derp` netclient fork, the first usable `DERP_MAP_URLS` source wins; Core maps are never merged. Every migration URL must serve the same complete map. If no Core source is usable, netclient falls back to Tailscale's public map.
+- In the `v1.7.0-derp` netclient fork, the first usable `DERP_MAP_URLS` source wins; Core maps are never merged. Every migration URL must serve the same complete map. The Agent's reflection cache serves only the first usable Core map; when it has none, netclient uses its own Tailscale, cached-public, and hardcoded fallbacks. Ingress uses the same cached Core map, then fetches Tailscale's public map independently and retains its last usable map in memory.
 - `ADMIN_URLS` remains a list of independently useful Admin API endpoints; agents use it for transport failover. Do not apply canonical-map semantics to Admin URLs.
 - The authenticated agent settings endpoint is `GET /api/v1/agents/settings/config`. Agents pull it to receive non-secret Admin URL and Core DERP map configuration plus a complete, per-Node `ingress_tunneling` snapshot derived from existing Admin records. It follows the normal controller/JSON/OpenAPI schema convention and remains available in degraded mode so agents can recover configuration.
-- Agent netclient receives a fixed localhost DERP reflection URL at process startup. Dynamic Core map sources are fetched by the Agent application and reflected there; never attempt to change a running netclient's environment.
+- Agent netclient receives a fixed localhost DERP reflection URL at process startup. Dynamic Core map sources are fetched by the Agent application and reflected there; never attempt to change a running netclient's environment. Do not add Tailscale or hardcoded public-map fallback data to this cache; netclient owns those fallbacks.
 - The Agent pulls settings on `PULL_SETTINGS_CONFIG_SCHEDULE` (default: every five minutes). Its DERP-map cache pulls separately through `DERP_MAP_PULL_INTERVAL_MS` (default: five minutes).
 - Do not introduce an Admin database table or revision counter for this Settings Config. Deployment URL configuration is advertised by each Admin; agents retain learned endpoints locally to tolerate rolling hostname migration. The Ingress Tunneling snapshot is calculated from current Admin records and replaces the Agent's stored snapshot when pulled.
 

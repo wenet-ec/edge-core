@@ -3,9 +3,9 @@ defmodule EdgeAgent.Vpn.DerpMapCache do
   @moduledoc """
   Caches the canonical Core DERP map for the Agent's reflection endpoint.
 
-  Sources are read from settings on every pull. The first source that
-  returns a valid map wins; sources are not merged. A failed pull keeps the
-  last known map, while an unconfigured or not-yet-fetched cache returns nil.
+  Sources are read from settings on every pull. The first source that returns
+  a valid map wins; sources are not merged. A failed pull keeps the last known
+  Core map; before any valid Core map is fetched, the cache returns nil.
   Failed startup fetches use an accelerated retry interval before settling on
   the configured pull interval.
   """
@@ -134,8 +134,7 @@ defmodule EdgeAgent.Vpn.DerpMapCache do
   @doc false
   # Public for unit testing. A 200 response counts as a successful fetch
   # only if it carries a non-empty `"Regions"` map. Empty/missing regions
-  # mean the map server has nothing to overlay; we treat that as a failed
-  # fetch so the warmup logic keeps trying.
+  # mean the map server has no usable relay map; treat that as a failed fetch.
   @spec map_has_regions?(term()) :: boolean()
   def map_has_regions?(%{"Regions" => regions}) when map_size(regions) > 0, do: true
   def map_has_regions?(_), do: false

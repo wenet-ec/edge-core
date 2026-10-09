@@ -54,6 +54,7 @@ defmodule EdgeAgent.Application do
       EdgeAgentProxy.Supervisor,
       EdgeAgent.Bootstrap,
       EdgeAgent.Vpn.DerpMapCache,
+      EdgeAgent.IngressTunneling.Reconciler,
       EdgeAgent.Lan.Mdns,
       EdgeAgent.PromEx.Server,
       EdgeAgentWeb.Endpoint

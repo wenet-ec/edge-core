@@ -28,6 +28,8 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
   # Agent runtime
   # SQLite — agent's local store
   sqlite3 \
+  # libsodium — DERP client authentication through the Erlang port driver
+  libsodium-dev \
   # procps — pgrep/pkill used by /start netclient cleanup
   procps \
   # libcap2-bin — getcap/setcap, agent inspects its own capabilities
@@ -44,6 +46,11 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
   kmod \
   # wireguard-tools: wg + wg-quick (WG interface bring-up)
   wireguard-tools \
+  # wireguard-go provides the isolated userspace WireGuard engine for Ingress.
+  # Elixir owns the DERP/direct UDP transport around this engine.
+  wireguard-go \
+  # dnsmasq provides a suffix-only listener backed by netclient's VPN DNS.
+  dnsmasq \
   # systemd-resolved: provides resolvectl + systemctl, used by netclient to
   # detect and configure systemd-resolved on systemd hosts
   systemd-resolved \
@@ -58,10 +65,14 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
   # prod, which also picks iptables).
   iptables \
   # Dev workflow (local only)
-  # build-essential + git — compile Elixir deps from source (erlexec's C++
-  # port, host_pty_spawn helper, sqlite NIF) and fetch git deps
+  # build-essential + git + autotools — compile native Elixir deps and
+  # libsodium's pinned source, plus fetch git deps
   build-essential \
   git \
+  autoconf \
+  automake \
+  libtool \
+  libtool-bin \
   libsqlite3-dev \
   # inotify-tools — Phoenix live-reload file watcher
   inotify-tools \
@@ -84,6 +95,10 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
 ENV LANG=en_US.UTF-8
 ENV LANGUAGE=en_US:en
 ENV LC_ALL=en_US.UTF-8
+# Use the config.guess/config.sub shipped with the pinned libsodium source.
+ENV DO_NOT_UPDATE_CONFIG_SCRIPTS=1
+# libsodium's Erlang port uses strnlen while compiling its C sources as C17.
+ENV CPPFLAGS="-D_GNU_SOURCE -Derts_fprintf=fprintf"
 
 COPY --from=node-exporter-builder --chmod=0755 /bin/node_exporter /usr/local/bin/node_exporter
 

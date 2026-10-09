@@ -54,6 +54,7 @@ defmodule EdgeAdminWeb.Schemas.Agents.SettingSchema do
         vpn_ipv4_range: %Schema{type: :string},
         vpn_ipv6_range: %Schema{type: :string},
         core_derp_map_urls: %Schema{type: :array, items: %Schema{type: :string}},
+        core_stun_servers: %Schema{type: :array, items: %Schema{type: :string}},
         peers: %Schema{type: :array, items: EmbeddedPeerData}
       },
       required: [
@@ -64,6 +65,7 @@ defmodule EdgeAdminWeb.Schemas.Agents.SettingSchema do
         :vpn_ipv4_range,
         :vpn_ipv6_range,
         :core_derp_map_urls,
+        :core_stun_servers,
         :peers
       ]
     })
@@ -106,6 +108,7 @@ defmodule EdgeAdminWeb.Schemas.Agents.SettingSchema do
           vpn_ipv4_range: "100.64.0.0/24",
           vpn_ipv6_range: "fd7a:91c2:4e8c:1::/64",
           core_derp_map_urls: ["https://relay.example.com/derpmap/default"],
+          core_stun_servers: ["stun1.l.google.com:19302"],
           peers: []
         }
       }

@@ -19,7 +19,7 @@
 #
 # Requirements:
 #   - privileged mode (provides the capabilities needed by netclient)
-#   - /dev/net/tun device (wireguard-go needs it to create a TUN interface)
+#   - /dev/net/tun device (WireGuard mesh and Edge Ingress create TUN interfaces)
 #   - The sysctls below (WireGuard routing rules)
 #
 # Usage:

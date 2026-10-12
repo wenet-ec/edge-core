@@ -115,7 +115,9 @@ defmodule EdgeAdmin.Nodes.Resources.NodeResources do
 
     recovery_key = build_recovery_key(node.id, node.cluster.name, Random.token())
 
-    with {:ok, _node} <- __MODULE__.update(node, %{recovery_key: recovery_key}) do
+    changeset = Node.changeset(node, %{recovery_key: recovery_key})
+
+    with {:ok, _node} <- Repo.update(changeset, log: false) do
       {:ok, recovery_key}
     end
   end

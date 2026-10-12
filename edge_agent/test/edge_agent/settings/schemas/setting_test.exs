@@ -11,6 +11,12 @@ defmodule EdgeAgent.Settings.Schemas.SettingTest do
   end
 
   describe "changeset/2 — required fields" do
+    test "redacts the value when inspected" do
+      changeset = Setting.changeset(%Setting{}, valid_attrs(%{value: "setting-secret"}))
+
+      refute inspect(changeset) =~ "setting-secret"
+    end
+
     test "valid attrs produce a valid changeset" do
       changeset = Setting.changeset(%Setting{}, valid_attrs())
       assert changeset.valid?

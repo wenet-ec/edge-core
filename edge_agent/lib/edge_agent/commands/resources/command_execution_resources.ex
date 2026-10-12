@@ -102,7 +102,7 @@ defmodule EdgeAgent.Commands.Resources.CommandExecutionResources do
       updated_at: now
     ]
 
-    case Repo.update_all(query, set: attrs) do
+    case Repo.update_all(query, [set: attrs], log: false) do
       {1, _} ->
         :cancelled
 

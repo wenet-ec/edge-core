@@ -12,7 +12,7 @@ defmodule EdgeAdmin.Ssh.Forms.VerifySshCredentialsForm do
 
   embedded_schema do
     field(:username, :string)
-    field(:password, :string)
+    field(:password, :string, redact: true)
     field(:public_key, :string)
   end
 

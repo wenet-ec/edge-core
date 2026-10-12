@@ -56,6 +56,19 @@ defmodule EdgeAdmin.Ssh.Forms.VerifySshCredentialsFormTest do
   # changeset/1 — mutual exclusivity: the core logic
 
   describe "changeset/1 — mutual exclusivity" do
+    test "redacts the password from an invalid changeset inspect" do
+      password = "ssh-password-secret"
+
+      assert {:error, changeset} =
+               VerifySshCredentialsForm.changeset(%{
+                 "username" => "deploy",
+                 "password" => password,
+                 "public_key" => "ssh-ed25519 AAAA..."
+               })
+
+      refute inspect(changeset) =~ password
+    end
+
     test "neither password nor public_key returns error" do
       assert {:error, changeset} =
                VerifySshCredentialsForm.changeset(%{"username" => "deploy"})

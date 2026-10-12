@@ -99,7 +99,6 @@ defmodule EdgeAdmin.Events.Webhooks.Delivery do
     Logger.warning(
       "[Webhook] delivery failed: #{summary}",
       webhook_id: webhook.id,
-      url: webhook.url,
       event_id: envelope["id"],
       event_type: envelope["type"]
     )

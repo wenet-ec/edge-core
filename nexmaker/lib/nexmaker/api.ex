@@ -196,7 +196,7 @@ defmodule Nexmaker.Api do
 
     url = build_url(base_url, path, query)
 
-    Logger.debug("Nexmaker API request: #{method} #{url}")
+    Logger.debug("Netmaker API request: #{method} #{url}")
 
     req_opts = [
       method: method,

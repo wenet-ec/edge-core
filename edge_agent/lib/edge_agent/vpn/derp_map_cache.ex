@@ -103,11 +103,11 @@ defmodule EdgeAgent.Vpn.DerpMapCache do
         Enum.find_value(urls, fn url ->
           case fetch(url) do
             {:ok, map} ->
-              Logger.info("DerpMapCache: fetched canonical Core DERP map from #{url}")
+              Logger.info("DerpMapCache: fetched canonical Core DERP map")
               map
 
             {:error, reason} ->
-              Logger.warning("DerpMapCache: fetch failed from #{url}: #{inspect(reason)}")
+              Logger.warning("DerpMapCache: fetch failed: #{inspect(reason)}")
               nil
           end
         end)

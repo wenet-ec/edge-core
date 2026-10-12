@@ -24,7 +24,7 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeForm do
     field(:version, :string)
     field(:self_update_enabled, :boolean)
     field(:ingress_public_key, :string)
-    field(:recovery_key, :string)
+    field(:recovery_key, :string, redact: true)
     field(:enrollment_key_id, :string)
   end
 

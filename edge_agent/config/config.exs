@@ -45,6 +45,13 @@ config :phoenix, :filter_parameters, [
   "recovery_key",
   "enrollment_token",
   "enrollment_key",
+  "vpn_enrollment_key",
+  "ingress_private_key",
+  "private_key",
+  "master_key",
+  "encryption_key",
+  "secret_key_base",
+  "password_hash",
   "secret",
   "token"
 ]

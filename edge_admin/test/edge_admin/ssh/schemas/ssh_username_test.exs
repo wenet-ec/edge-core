@@ -3,6 +3,11 @@ defmodule EdgeAdmin.Ssh.Schemas.SshUsernameTest do
   use ExUnit.Case, async: true
 
   alias EdgeAdmin.Ssh.Schemas.SshUsername
+
+  test "redacts the password hash when inspected" do
+    refute inspect(%SshUsername{password_hash: "password-hash-secret"}) =~ "password-hash-secret"
+  end
+
   # has_password?/1
 
   describe "has_password?/1" do

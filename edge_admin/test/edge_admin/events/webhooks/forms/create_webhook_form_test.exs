@@ -87,6 +87,25 @@ defmodule EdgeAdmin.Events.Webhooks.Forms.CreateWebhookFormTest do
   end
 
   describe "changeset/1 — secret validation" do
+    test "redacts URL, secret, and headers from an invalid changeset inspect" do
+      url = "https://203.0.113.10/hook?token=url-secret-value"
+      secret = String.duplicate("s", 12)
+      header_value = "header-secret-value"
+
+      assert {:error, changeset} =
+               CreateWebhookForm.changeset(%{
+                 "url" => url,
+                 "secret" => secret,
+                 "headers" => %{"Authorization" => header_value},
+                 "subscribed_events" => ["invalid.event"]
+               })
+
+      inspected = inspect(changeset)
+      refute inspected =~ url
+      refute inspected =~ secret
+      refute inspected =~ header_value
+    end
+
     test "short secret is rejected" do
       assert {:error, changeset} = CreateWebhookForm.changeset(valid_attrs(%{"secret" => "tooshort"}))
       assert %{secret: [msg]} = errors_on(changeset)

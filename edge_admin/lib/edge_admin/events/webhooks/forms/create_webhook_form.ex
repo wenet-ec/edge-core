@@ -11,9 +11,9 @@ defmodule EdgeAdmin.Events.Webhooks.Forms.CreateWebhookForm do
   alias EdgeAdmin.Events.Webhooks.Validators.WebhookValidators
 
   embedded_schema do
-    field(:url, :string)
-    field(:secret, :string)
-    field(:headers, :map)
+    field(:url, :string, redact: true)
+    field(:secret, :string, redact: true)
+    field(:headers, :map, redact: true)
     field(:subscribed_events, {:array, :string})
   end
 

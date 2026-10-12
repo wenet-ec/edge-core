@@ -39,7 +39,7 @@ defmodule EdgeAdmin.Nodes.Schemas.EnrollmentKey do
 
   schema "enrollment_keys" do
     field(:name, :string)
-    field(:key, :string)
+    field(:key, :string, redact: true)
     field(:uses_remaining, :integer, default: 1)
     field(:expires_at, :utc_datetime)
     field(:last_used_at, :utc_datetime)

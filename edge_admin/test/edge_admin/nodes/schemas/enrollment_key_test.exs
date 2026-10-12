@@ -35,6 +35,12 @@ defmodule EdgeAdmin.Nodes.Schemas.EnrollmentKeyTest do
   # changeset/2
 
   describe "changeset/2" do
+    test "redacts the enrollment key when inspected" do
+      changeset = EnrollmentKey.changeset(%EnrollmentKey{}, valid_attrs(%{key: "enrollment-secret"}))
+
+      refute inspect(changeset) =~ "enrollment-secret"
+    end
+
     test "accepts a future expiry" do
       future = ~U[2099-01-01 00:00:00Z]
 

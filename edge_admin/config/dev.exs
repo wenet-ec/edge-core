@@ -5,6 +5,9 @@ config :edge_admin, EdgeAdmin.PromEx,
   grafana: :disabled,
   metrics_server: :disabled
 
+config :edge_admin, EdgeAdmin.Repo.Postgres, show_sensitive_data_on_connection_error: false
+config :edge_admin, EdgeAdmin.Repo.SQLite, show_sensitive_data_on_connection_error: false
+
 config :edge_admin, EdgeAdminWeb.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 44_000],
   code_reloader: true,

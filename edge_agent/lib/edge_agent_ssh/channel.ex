@@ -105,8 +105,8 @@ defmodule EdgeAgentSsh.Channel do
   end
 
   @impl true
-  def handle_msg(msg, state) do
-    Logger.debug("Received message: #{inspect(msg)}")
+  def handle_msg(_msg, state) do
+    Logger.debug("Received unhandled SSH channel message")
     {:ok, state}
   end
 
@@ -177,7 +177,7 @@ defmodule EdgeAgentSsh.Channel do
 
   @impl true
   def handle_ssh_msg({:ssh_cm, connection_ref, {:exec, channel_id, want_reply, command}}, state) do
-    Logger.info("Exec requested: #{inspect(command)}")
+    Logger.info("Remote command requested")
     :ssh_connection.reply_request(connection_ref, want_reply, :success, channel_id)
 
     cmd_string = to_string(command)
@@ -250,8 +250,8 @@ defmodule EdgeAgentSsh.Channel do
   end
 
   @impl true
-  def handle_ssh_msg(msg, state) do
-    Logger.debug("Unhandled SSH message: #{inspect(msg)}")
+  def handle_ssh_msg(_msg, state) do
+    Logger.debug("Received unhandled SSH connection message")
     {:ok, state}
   end
 

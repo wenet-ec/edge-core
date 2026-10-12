@@ -30,7 +30,8 @@ defmodule EdgeAdmin.Ssh.Resources.SshUsernameResources do
           | {:error, Ecto.Changeset.t()}
           | {:error, {:conflict, String.t()}}
   def create(attrs),
-    do: %SshUsername{} |> SshUsername.changeset(attrs) |> Repo.insert() |> Repo.normalize_conflict([:username])
+    do:
+      %SshUsername{} |> SshUsername.changeset(attrs) |> Repo.insert(log: false) |> Repo.normalize_conflict([:username])
 
   @doc "Creates an SSH username and its nested public keys atomically."
   @spec create_with_keys(Node.t(), map()) ::

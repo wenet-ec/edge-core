@@ -45,7 +45,7 @@ defmodule EdgeAdmin.Events.Webhooks.Resources.WebhookResources do
   end
 
   @spec create(map()) :: {:ok, Webhook.t()} | {:error, Ecto.Changeset.t()}
-  def create(attrs), do: %Webhook{} |> Webhook.changeset(attrs) |> Repo.insert()
+  def create(attrs), do: %Webhook{} |> Webhook.changeset(attrs) |> Repo.insert(log: false)
 
   @spec delete(Webhook.t()) :: {:ok, Webhook.t()} | {:error, Ecto.Changeset.t()}
   def delete(%Webhook{} = webhook), do: Repo.delete(webhook)

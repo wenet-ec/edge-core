@@ -40,7 +40,7 @@ defmodule EdgeAdmin.IngressTunneling.Resources.TunnelClientResources do
   def create(attrs) do
     %TunnelClient{}
     |> TunnelClient.changeset(attrs)
-    |> Repo.insert()
+    |> Repo.insert(log: false)
   end
 
   @doc "Creates a Tunnel Client with an Admin-generated WireGuard keypair."

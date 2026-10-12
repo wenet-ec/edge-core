@@ -27,7 +27,7 @@ defmodule EdgeAdmin.Events.Webhooks.Schemas.Webhook do
   ]
 
   schema "webhooks" do
-    field(:url, :string)
+    field(:url, :string, redact: true)
     field(:secret, EncryptedBinary, redact: true)
     field(:headers, EncryptedMap, redact: true)
     field(:subscribed_events, {:array, :string})

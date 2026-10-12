@@ -365,11 +365,11 @@ defmodule Nexmaker.CliTest do
         {:ok, %{}} ->
           :ok
 
-        {:error, {:netclient_error, _, output}} ->
+        {:error, {:netclient_error, exit_code, output}} ->
           if String.contains?(output, "already") do
             :ok
           else
-            flunk("Failed to join network: #{output}")
+            flunk("Failed to join network with exit code #{exit_code}")
           end
 
         {:error, :netclient_not_found} ->
@@ -412,12 +412,11 @@ defmodule Nexmaker.CliTest do
         :ok ->
           :ok
 
-        {:error, {:netclient_error, _, output}} ->
-          if String.contains?(output, "not found") or
-               String.contains?(output, "no such network") do
+        {:error, {:netclient_error, exit_code, output}} ->
+          if String.contains?(output, "not found") or String.contains?(output, "no such network") do
             :ok
           else
-            flunk("Failed to leave network: #{output}")
+            flunk("Failed to leave network with exit code #{exit_code}")
           end
       end
 

@@ -167,13 +167,13 @@ defmodule EdgeAdmin.Nodes.Workflows.Registration do
   defp create_node(attrs) do
     %Node{}
     |> Node.changeset(attrs)
-    |> Repo.insert()
+    |> Repo.insert(log: false)
   end
 
   defp update_node(node, attrs) do
     node
     |> Node.changeset(attrs)
-    |> Repo.update()
+    |> Repo.update(log: false)
   end
 
   defp build_node_attrs(node_id, cluster, vpn_host_id, attrs) do

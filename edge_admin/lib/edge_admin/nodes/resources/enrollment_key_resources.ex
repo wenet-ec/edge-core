@@ -70,7 +70,7 @@ defmodule EdgeAdmin.Nodes.Resources.EnrollmentKeyResources do
   def create(attrs) do
     %EnrollmentKey{}
     |> EnrollmentKey.changeset(attrs)
-    |> Repo.insert()
+    |> Repo.insert(log: false)
   end
 
   @doc "Updates an enrollment key from validated attributes."

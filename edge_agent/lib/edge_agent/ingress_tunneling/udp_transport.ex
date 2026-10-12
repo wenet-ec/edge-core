@@ -142,6 +142,11 @@ defmodule EdgeAgent.IngressTunneling.UdpTransport do
   def handle_info(_message, state), do: {:noreply, state}
 
   @impl GenServer
+  def format_status(_reason, [_process_dictionary, state]) do
+    [data: [{~c"State", Map.put(state, :private_key, :redacted)}]]
+  end
+
+  @impl GenServer
   def handle_call(:adapter_ports, _from, state) do
     ports = Map.new(state.peers, fn {key, peer} -> {key, peer.adapter_port} end)
     {:reply, {:ok, ports}, state}

@@ -90,6 +90,15 @@ defmodule EdgeAdmin.Ssh.Forms.CreateSshUsernameFormTest do
     end
   end
 
+  test "redacts the password from an invalid changeset inspect" do
+    password = "valid-password"
+
+    assert {:error, changeset} =
+             CreateSshUsernameForm.changeset(%{"username" => "ab", "password" => password})
+
+    refute inspect(changeset) =~ password
+  end
+
   # changeset/1 — username validation
 
   describe "changeset/1 — username validation" do

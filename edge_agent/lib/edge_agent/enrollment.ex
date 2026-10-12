@@ -138,14 +138,14 @@ defmodule EdgeAgent.Enrollment do
   # moduledoc for rationale.
   defp fetch_enrollment_key_from_urls(urls) do
     Enum.reduce_while(urls, {:error, "No URLs to try"}, fn url, _acc ->
-      Logger.info("Fetching enrollment key from: #{url}")
+      Logger.info("Fetching enrollment key from configured public endpoint")
 
       case fetch_enrollment_key_from_url(url) do
         {:ok, key} ->
           {:halt, {:ok, key}}
 
         {:transport_error, reason} ->
-          Logger.warning("Transport error fetching enrollment key from #{url}: #{inspect(reason)} — trying next URL")
+          Logger.warning("Transport error fetching enrollment key: #{inspect(reason)} — trying next URL")
 
           {:cont, {:error, "All enrollment key URLs failed: last error #{inspect(reason)}"}}
 
@@ -168,8 +168,8 @@ defmodule EdgeAgent.Enrollment do
       {:ok, %{status: status, body: body}} when status in [200, 201] ->
         extract_from_response(body)
 
-      {:ok, %{status: status, body: body}} ->
-        Logger.error("Failed to fetch enrollment key from #{url}: HTTP #{status}, body: #{inspect(body)}")
+      {:ok, %{status: status, body: _body}} ->
+        Logger.error("Failed to fetch enrollment key: HTTP #{status}")
         {:error, "Public enrollment key request failed: HTTP #{status}"}
 
       {:error, reason} ->
@@ -197,7 +197,7 @@ defmodule EdgeAgent.Enrollment do
         {:ok, key}
 
       _ ->
-        Logger.error("Could not extract enrollment key from response: #{inspect(body)}")
+        Logger.error("Could not extract enrollment key from response shape")
         {:error, "Could not extract enrollment key from response"}
     end
   end
@@ -283,6 +283,10 @@ defmodule EdgeAgent.Enrollment do
       when not is_binary(vpn_enrollment_key) or vpn_enrollment_key == "" ->
         Logger.error("Admin verified enrollment but returned no VPN enrollment key")
         {:error, "Admin returned no VPN enrollment key"}
+
+      {:error, {:http_error, status, _body}} when is_integer(status) ->
+        Logger.error("Enrollment key verification failed: Admin returned HTTP #{status}")
+        {:error, "Enrollment key verification failed: Admin returned HTTP #{status}"}
 
       {:error, reason} ->
         Logger.error("Could not reach admin for enrollment verification: #{inspect(reason)}")

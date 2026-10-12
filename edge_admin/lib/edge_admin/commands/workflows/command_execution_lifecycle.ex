@@ -331,7 +331,7 @@ defmodule EdgeAdmin.Commands.Workflows.CommandExecutionLifecycle do
           (ce.status in ^result_pending_statuses and is_nil(ce.completed_at))
       )
 
-    do_transition(id, accepts_result, set)
+    do_transition(id, accepts_result, set, log: false)
   end
 
   # Shared core. Runs a conditional `update_all` on the row, and on exactly 1
@@ -341,7 +341,7 @@ defmodule EdgeAdmin.Commands.Workflows.CommandExecutionLifecycle do
   # We do a follow-up `Repo.get` rather than `update_all returning: [:*]`
   # because the SQLite adapter (DB_ADAPTER=sqlite) does not support RETURNING
   # on `update_all`. Two round trips, identical semantics on both adapters.
-  defp do_transition(id, where_dynamic, set) do
+  defp do_transition(id, where_dynamic, set, opts \\ []) do
     set = Keyword.put(set, :updated_at, DateTime.truncate(DateTime.utc_now(), :second))
 
     query =
@@ -350,7 +350,7 @@ defmodule EdgeAdmin.Commands.Workflows.CommandExecutionLifecycle do
         where: ^where_dynamic
       )
 
-    case Repo.update_all(query, set: set) do
+    case Repo.update_all(query, [set: set], opts) do
       {1, _} ->
         case Repo.get(CommandExecution, id) do
           nil -> {:error, :stale_state}

@@ -3,7 +3,7 @@ import Config
 
 config :edge_agent, EdgeAgent.Repo,
   stacktrace: true,
-  show_sensitive_data_on_connection_error: true
+  show_sensitive_data_on_connection_error: false
 
 config :edge_agent, EdgeAgentWeb.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 44_000],

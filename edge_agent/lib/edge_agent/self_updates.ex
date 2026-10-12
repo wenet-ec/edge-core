@@ -52,7 +52,7 @@ defmodule EdgeAgent.SelfUpdates do
 
     case build_update_endpoint(watchtower_url) do
       {:ok, update_endpoint} ->
-        Logger.info("Calling Watchtower service at #{update_endpoint}")
+        Logger.info("Calling Watchtower service")
 
         # POST to Watchtower's POST-only /v1/update with its async query parameter.
         # The accepted response arrives before Watchtower restarts the agent.

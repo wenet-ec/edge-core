@@ -13,7 +13,7 @@ defmodule EdgeAgent.Settings.Schemas.Setting do
 
   schema "settings" do
     field :key, :string
-    field :value, :string
+    field :value, :string, redact: true
 
     timestamps()
   end

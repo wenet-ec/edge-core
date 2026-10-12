@@ -125,6 +125,11 @@ defmodule EdgeAgent.IngressTunneling.Derp.Client do
   def handle_info(_message, state), do: {:noreply, state}
 
   @impl GenServer
+  def format_status(_reason, [_process_dictionary, state]) do
+    [data: [{~c"State", Map.put(state, :private_key, :redacted)}]]
+  end
+
+  @impl GenServer
   def terminate(_reason, %{socket: nil}), do: :ok
   def terminate(_reason, %{socket: socket}), do: :ssl.close(socket)
 

@@ -18,19 +18,25 @@ defmodule EdgeAdmin.SentryTest do
     conn =
       conn_with_params(%{
         "api_token" => "tok-123",
+        "master_key" => "master-123",
+        "ingress_private_key" => "private-123",
         "proxy_password" => "pw-123",
         "recovery_key" => "recovery-123",
         "authorization" => "Bearer top-secret",
-        "proxy-authorization" => "Basic dXNlcjpwYXNz"
+        "proxy-authorization" => "Basic dXNlcjpwYXNz",
+        "diagnostic" => "Authorization: Bearer embedded-secret"
       })
 
     scrubbed = Sentry.scrub_params(conn)
 
     assert scrubbed["api_token"] == "*********"
+    assert scrubbed["master_key"] == "*********"
+    assert scrubbed["ingress_private_key"] == "*********"
     assert scrubbed["proxy_password"] == "*********"
     assert scrubbed["recovery_key"] == "*********"
     assert scrubbed["authorization"] == "*********"
     assert scrubbed["proxy-authorization"] == "*********"
+    assert scrubbed["diagnostic"] == "Authorization: *********"
   end
 
   test "scrub_params redacts secret-shaped atom keys inside nested maps" do

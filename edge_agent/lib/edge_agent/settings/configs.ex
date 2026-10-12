@@ -32,7 +32,8 @@ defmodule EdgeAgent.Settings.Configs do
     |> Setting.changeset(%{key: key, value: value})
     |> Repo.insert(
       on_conflict: [set: [value: value, updated_at: DateTime.utc_now(:second)]],
-      conflict_target: :key
+      conflict_target: :key,
+      log: false
     )
   end
 

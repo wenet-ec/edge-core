@@ -12,7 +12,7 @@ defmodule EdgeAdmin.Ssh.Forms.CreateSshUsernameForm do
 
   embedded_schema do
     field(:username, :string)
-    field(:password, :string)
+    field(:password, :string, redact: true)
   end
 
   @doc """

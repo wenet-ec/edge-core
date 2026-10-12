@@ -71,6 +71,17 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeFormTest do
     end
   end
 
+  test "redacts the recovery key from an invalid changeset inspect" do
+    recovery_key = "registration-recovery-secret"
+
+    assert {:error, changeset} =
+             RegisterNodeForm.changeset(
+               valid_attrs(%{"network_name" => "invalid network", "recovery_key" => recovery_key})
+             )
+
+    refute inspect(changeset) =~ recovery_key
+  end
+
   # changeset/1 — required fields
 
   describe "changeset/1 — required fields" do

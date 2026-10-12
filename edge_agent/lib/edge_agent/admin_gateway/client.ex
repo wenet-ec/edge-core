@@ -91,15 +91,15 @@ defmodule EdgeAgent.AdminGateway.Client do
          }}
 
       {:ok, %{status: 503}} ->
-        Logger.warning("Admin Gateway at #{url} is in degraded mode, trying next URL...")
+        Logger.warning("Admin Gateway is in degraded mode, trying next URL")
         try_verify(rest, path, payload)
 
       {:ok, %{status: status, body: body}} ->
-        Logger.warning("Enrollment key verification failed at #{url}, HTTP #{status}: #{inspect(body)}")
+        Logger.warning("Enrollment key verification failed, HTTP #{status}")
         {:error, {:http_error, status, body}}
 
       {:error, reason} ->
-        Logger.warning("Enrollment key verification request failed at #{url}: #{inspect(reason)}, trying next URL...")
+        Logger.warning("Enrollment key verification request failed: #{inspect(reason)}, trying next URL")
         try_verify(rest, path, payload)
     end
   end

@@ -43,9 +43,11 @@ defmodule EdgeAdmin.Ssh.Credentials.Verification do
   end
 
   defp maybe_upgrade(%SshUsername{} = username, password, :legacy) when is_binary(password) do
-    case username |> SshUsername.changeset(%{password_hash: PasswordHashers.hash(password)}) |> Repo.update() do
+    case username
+         |> SshUsername.changeset(%{password_hash: PasswordHashers.hash(password)})
+         |> Repo.update(log: false) do
       {:ok, _} -> :ok
-      {:error, reason} -> Logger.warning("SSH password hash upgrade failed: #{inspect(reason)}")
+      {:error, _reason} -> Logger.warning("SSH password hash upgrade failed")
     end
   end
 

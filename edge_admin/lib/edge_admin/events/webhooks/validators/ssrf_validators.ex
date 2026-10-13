@@ -93,7 +93,7 @@ defmodule EdgeAdmin.Events.Webhooks.Validators.SsrfValidators do
   """
   @spec enabled?() :: boolean()
   def enabled? do
-    not Application.get_env(:edge_admin, :webhook_allow_private_ips, false)
+    not Application.fetch_env!(:edge_admin, :webhook_allow_private_ips)
   end
 
   @doc """

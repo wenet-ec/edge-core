@@ -39,7 +39,7 @@ defmodule EdgeAdmin.Events.Webhooks.Workers.DeliverEventWorker do
   @impl Oban.Worker
   def perform(%Oban.Job{args: args, inserted_at: inserted_at}) do
     %{"webhook_id" => webhook_id, "envelope" => envelope} = args
-    max_age = Application.get_env(:edge_admin, :event_delivery_max_age_seconds, 3600)
+    max_age = Application.fetch_env!(:edge_admin, :event_delivery_max_age_seconds)
     age_seconds = DateTime.diff(DateTime.utc_now(), inserted_at, :second)
 
     cond do

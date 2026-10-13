@@ -72,7 +72,7 @@ defmodule EdgeAdmin.Nodes.Workflows.HealthCheck do
   """
   @spec check_node_health() :: :ok
   def check_node_health do
-    concurrency = Application.get_env(:edge_admin, :node_health_check_concurrency, 100)
+    concurrency = Application.fetch_env!(:edge_admin, :node_health_check_concurrency)
     task_timeout = AgentClient.health_check_call_timeout()
 
     my_clusters = Metadata.get_my_clusters()

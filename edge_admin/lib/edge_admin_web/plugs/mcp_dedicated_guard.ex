@@ -12,7 +12,7 @@ defmodule EdgeAdminWeb.Plugs.McpDedicatedGuard do
   def init(opts), do: opts
 
   def call(conn, _opts) do
-    if Application.get_env(:edge_admin, :admin_mcp_dedicated, false) do
+    if Application.fetch_env!(:edge_admin, :admin_mcp_dedicated) do
       conn
       |> put_resp_content_type("text/plain")
       |> send_resp(404, "Not Found")

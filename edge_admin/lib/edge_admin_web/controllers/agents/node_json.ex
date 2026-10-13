@@ -12,8 +12,8 @@ defmodule EdgeAdminWeb.Controllers.Agents.NodeJSON do
       enrollment_key_id: node.enrollment_key_id,
       api_token: node.api_token,
       proxy_password: node.proxy_password,
-      admin_urls: Application.get_env(:edge_admin, :admin_urls, []),
-      core_derp_map_urls: Application.get_env(:edge_admin, :core_derp_map_urls, [])
+      admin_urls: Application.fetch_env!(:edge_admin, :admin_urls),
+      core_derp_map_urls: Application.fetch_env!(:edge_admin, :core_derp_map_urls)
     }
   end
 end

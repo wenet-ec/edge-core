@@ -255,8 +255,8 @@ defmodule EdgeAdminWeb.Router do
   # which masks a misconfigured prod admin. Set ADMIN_DEBUG_AUTH_ENABLED=true in
   # production deployments.
   defp admin_debug_dashboard_auth(conn, _opts) do
-    if Application.get_env(:edge_admin, :admin_debug_auth_enabled, true) do
-      dashboard_auth = Application.get_env(:edge_admin, :admin_debug_dashboard_auth, [])
+    if Application.fetch_env!(:edge_admin, :admin_debug_auth_enabled) do
+      dashboard_auth = Application.fetch_env!(:edge_admin, :admin_debug_dashboard_auth)
 
       if !(dashboard_auth[:username] && dashboard_auth[:password]) do
         raise "ADMIN_DEBUG_AUTH_ENABLED=true but Admin Debug Dashboard username or password is missing"

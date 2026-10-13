@@ -144,7 +144,7 @@ defmodule EdgeAdminWeb.OpenApiSpec do
   end
 
   defp maybe_add_security(spec) do
-    if Application.get_env(:edge_admin, :api_auth_enabled, true) do
+    if Application.fetch_env!(:edge_admin, :api_auth_enabled) do
       %{
         spec
         | components: %Components{

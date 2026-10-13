@@ -15,7 +15,7 @@ defmodule EdgeAdmin.Nodes.Policies.EnrollmentKeyPolicies do
   end
 
   def authorize?(:create_for_public) do
-    Application.get_env(:edge_admin, :public_enrollment_key_enabled, false) == true and
+    Application.fetch_env!(:edge_admin, :public_enrollment_key_enabled) == true and
       is_binary(Application.get_env(:edge_admin, :default_cluster_name))
   end
 

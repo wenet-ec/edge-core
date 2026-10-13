@@ -19,7 +19,7 @@ defmodule EdgeAdminWeb.Plugs.ApiKeyAuth do
   def init(opts), do: opts
 
   def call(conn, _opts) do
-    if Application.get_env(:edge_admin, :api_auth_enabled, true) do
+    if Application.fetch_env!(:edge_admin, :api_auth_enabled) do
       validate_api_key(conn)
     else
       conn

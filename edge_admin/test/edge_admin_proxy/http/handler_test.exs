@@ -218,11 +218,15 @@ defmodule EdgeAdminProxy.Http.HandlerTest do
 
   describe "vpn_target?/1" do
     setup do
+      previous = Elixir.Application.get_env(:edge_admin, :edge_vpn_default_domain)
       Elixir.Application.put_env(:edge_admin, :edge_vpn_default_domain, "nm.internal")
 
-      # add_via_header/2
       on_exit(fn ->
-        Elixir.Application.delete_env(:edge_admin, :edge_vpn_default_domain)
+        if is_nil(previous) do
+          Elixir.Application.delete_env(:edge_admin, :edge_vpn_default_domain)
+        else
+          Elixir.Application.put_env(:edge_admin, :edge_vpn_default_domain, previous)
+        end
       end)
 
       :ok
@@ -317,15 +321,8 @@ defmodule EdgeAdminProxy.Http.HandlerTest do
   end
 
   describe "via_pseudonym/0" do
-    test "defaults to 'edge-admin' when env unset" do
-      previous = Elixir.Application.get_env(:edge_admin, :via_pseudonym)
-      Elixir.Application.delete_env(:edge_admin, :via_pseudonym)
-
-      try do
-        assert Handler.via_pseudonym() == "edge-admin"
-      after
-        if previous, do: Elixir.Application.put_env(:edge_admin, :via_pseudonym, previous)
-      end
+    test "uses the configured Via pseudonym" do
+      assert Handler.via_pseudonym() == "edge-admin"
     end
 
     test "uses configured value when set" do

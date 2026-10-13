@@ -26,7 +26,7 @@ defmodule EdgeAdmin.Vpn do
 
   @doc "Returns the number of IPv4 slots reserved for Admin Gateway nodes."
   @spec admin_gateway_slot_reservation() :: non_neg_integer()
-  def admin_gateway_slot_reservation, do: Application.get_env(:edge_admin, :admin_gateway_slot_reservation, 10)
+  def admin_gateway_slot_reservation, do: Application.fetch_env!(:edge_admin, :admin_gateway_slot_reservation)
 
   @spec usable_ipv4_capacity(0..32) :: non_neg_integer()
   defdelegate usable_ipv4_capacity(prefix), to: Addressing

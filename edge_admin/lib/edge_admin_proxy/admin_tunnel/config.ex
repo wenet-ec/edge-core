@@ -9,11 +9,11 @@ defmodule EdgeAdminProxy.AdminTunnel.Config do
   alias EdgeAdmin.Vpn
 
   def port do
-    Application.get_env(:edge_admin, :admin_tcp_tunnel_port, 45_207)
+    Application.fetch_env!(:edge_admin, :admin_tcp_tunnel_port)
   end
 
   def secret do
-    Application.get_env(:edge_admin, :admin_tcp_tunnel_secret, "edge_admin_default_tcp_tunnel_secret")
+    Application.fetch_env!(:edge_admin, :admin_tcp_tunnel_secret)
   end
 
   def bind_addresses do

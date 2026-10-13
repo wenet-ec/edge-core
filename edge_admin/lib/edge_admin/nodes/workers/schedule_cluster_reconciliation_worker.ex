@@ -37,6 +37,6 @@ defmodule EdgeAdmin.Nodes.Workers.ScheduleClusterReconciliationWorker do
   end
 
   defp should_run? do
-    Application.get_env(:edge_admin, :cluster_reconciliation_enabled, true)
+    Application.fetch_env!(:edge_admin, :cluster_reconciliation_enabled)
   end
 end

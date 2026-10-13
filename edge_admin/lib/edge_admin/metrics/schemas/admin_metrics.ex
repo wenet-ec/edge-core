@@ -481,7 +481,7 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetrics do
 
     def from_raw(raw) do
       %__MODULE__{
-        enabled: Elixir.Application.get_env(:edge_admin, :event_broker_enabled, false),
+        enabled: Elixir.Application.fetch_env!(:edge_admin, :event_broker_enabled),
         enqueues_total: raw["event_broker_enqueues_total"],
         publishes_total: raw["event_broker_publishes_total"],
         publishes_ok_total: raw["event_broker_publishes_ok_total"],

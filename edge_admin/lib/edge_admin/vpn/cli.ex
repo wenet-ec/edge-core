@@ -16,7 +16,7 @@ defmodule EdgeAdmin.Vpn.Cli do
 
   @spec pull_vpn_config() :: :ok | {:error, term()}
   def pull_vpn_config do
-    if Application.get_env(:edge_admin, :vpn_config_pull_enabled, true) do
+    if Application.fetch_env!(:edge_admin, :vpn_config_pull_enabled) do
       Nexmaker.Cli.pull()
     else
       :ok

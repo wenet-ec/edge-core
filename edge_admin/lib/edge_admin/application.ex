@@ -38,7 +38,7 @@ defmodule EdgeAdmin.Application do
   end
 
   defp event_broker_children do
-    if Application.get_env(:edge_admin, :event_broker_enabled, false) do
+    if Application.fetch_env!(:edge_admin, :event_broker_enabled) do
       [EdgeAdmin.Events.Broker.Supervisor]
     else
       []

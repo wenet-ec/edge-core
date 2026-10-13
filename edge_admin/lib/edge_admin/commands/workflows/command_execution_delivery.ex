@@ -216,7 +216,7 @@ defmodule EdgeAdmin.Commands.Workflows.CommandExecutionDelivery do
   """
   @spec deliver_local_command_executions() :: :ok
   def deliver_local_command_executions do
-    concurrency = Application.get_env(:edge_admin, :command_delivery_concurrency, 50)
+    concurrency = Application.fetch_env!(:edge_admin, :command_delivery_concurrency)
 
     my_clusters = Metadata.get_my_clusters()
     my_cluster_network_names = Map.keys(my_clusters)

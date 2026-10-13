@@ -311,7 +311,7 @@ defmodule EdgeAdminProxy.Http.Handler do
   """
   @spec vpn_target?(String.t()) :: boolean()
   def vpn_target?(host) do
-    domain = Application.get_env(:edge_admin, :edge_vpn_default_domain, "nm.internal")
+    domain = EdgeAdmin.Vpn.default_domain()
     String.ends_with?(host, ".#{domain}")
   end
 
@@ -444,12 +444,11 @@ defmodule EdgeAdminProxy.Http.Handler do
   def parse_http_version(_), do: "1.1"
 
   @doc """
-  Returns this proxy's `Via` pseudonym, configurable via the `:via_pseudonym`
-  application env (default `"edge-admin"`).
+  Returns this proxy's `Via` pseudonym from application configuration.
   """
   @spec via_pseudonym() :: String.t()
   def via_pseudonym do
-    Application.get_env(:edge_admin, :via_pseudonym, "edge-admin")
+    Application.fetch_env!(:edge_admin, :via_pseudonym)
   end
 
   @doc """

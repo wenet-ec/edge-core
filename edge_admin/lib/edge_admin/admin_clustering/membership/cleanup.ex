@@ -161,7 +161,7 @@ defmodule EdgeAdmin.AdminClustering.Membership.Cleanup do
   end
 
   defp zombie_threshold_seconds do
-    Application.get_env(:edge_admin, :zombie_admin_checkin_threshold_minutes, 120) * 60
+    Application.fetch_env!(:edge_admin, :zombie_admin_checkin_threshold_minutes) * 60
   end
 
   defp delete_zombie_hosts(nodes, threshold_seconds, protected_host_ids, cluster_name) do

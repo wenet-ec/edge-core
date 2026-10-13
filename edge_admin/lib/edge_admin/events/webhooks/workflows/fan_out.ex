@@ -10,7 +10,7 @@ defmodule EdgeAdmin.Events.Webhooks.Workflows.FanOut do
   @doc "Enqueues one delivery job for every webhook subscribed to the envelope type."
   @spec fan_out(map()) :: :ok
   def fan_out(envelope) do
-    max_attempts = Application.get_env(:edge_admin, :webhook_max_attempts, 3)
+    max_attempts = Application.fetch_env!(:edge_admin, :webhook_max_attempts)
     count = enqueue_matching_pages(envelope, max_attempts, 1, 0)
 
     :telemetry.execute(

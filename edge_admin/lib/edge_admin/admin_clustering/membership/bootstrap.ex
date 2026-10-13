@@ -156,7 +156,7 @@ defmodule EdgeAdmin.AdminClustering.Membership.Bootstrap do
   @join_retry_delay_ms 2_000
 
   defp join_max_attempts do
-    timeout_seconds = Application.get_env(:edge_admin, :join_timeout_seconds, 60)
+    timeout_seconds = Application.fetch_env!(:edge_admin, :join_timeout_seconds)
     max(1, div(timeout_seconds * 1_000, @join_retry_delay_ms))
   end
 

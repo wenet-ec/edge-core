@@ -23,6 +23,6 @@ defmodule EdgeAdminWeb.Plugs.ApiDocsEnabled do
   end
 
   defp api_docs_enabled? do
-    Application.get_env(:edge_admin, :api_docs_enabled, true)
+    Application.fetch_env!(:edge_admin, :api_docs_enabled)
   end
 end

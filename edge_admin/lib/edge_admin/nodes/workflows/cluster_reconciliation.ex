@@ -253,7 +253,7 @@ defmodule EdgeAdmin.Nodes.Workflows.ClusterReconciliation do
   end
 
   defp maybe_evict_rogue_hosts(host_ids, host_hostname_map, expected_hostnames, network_name, cluster_name) do
-    if Application.get_env(:edge_admin, :evict_rogue_hosts, true) do
+    if Application.fetch_env!(:edge_admin, :evict_rogue_hosts) do
       evict_rogue_hosts(host_ids, host_hostname_map, expected_hostnames, network_name, cluster_name)
     else
       if not MapSet.equal?(host_ids, MapSet.new()) do

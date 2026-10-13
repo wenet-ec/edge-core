@@ -29,7 +29,7 @@ defmodule EdgeAdmin.PromEx.Server do
   end
 
   def start_link(_opts) do
-    if Application.get_env(:edge_admin, :admin_metrics_dedicated, false) do
+    if Application.fetch_env!(:edge_admin, :admin_metrics_dedicated) do
       Bandit.start_link(
         plug: __MODULE__,
         scheme: :http,

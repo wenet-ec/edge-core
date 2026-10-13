@@ -8,7 +8,7 @@ defmodule EdgeAdminWeb.Controllers.Guide.IndexController do
     render(
       conn,
       :index,
-      admin_debug_dashboard_enabled: Application.get_env(:edge_admin, :admin_debug_dashboard_enabled, false)
+      admin_debug_dashboard_enabled: Application.fetch_env!(:edge_admin, :admin_debug_dashboard_enabled)
     )
   end
 end

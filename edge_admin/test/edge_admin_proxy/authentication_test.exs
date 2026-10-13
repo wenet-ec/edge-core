@@ -19,7 +19,6 @@ defmodule EdgeAdminProxy.AuthenticationTest do
   setup do
     Elixir.Application.delete_env(:edge_admin, :proxy_auth_enabled)
     Elixir.Application.delete_env(:edge_admin, :proxy_key)
-    Elixir.Application.delete_env(:edge_admin, :edge_vpn_default_domain)
     :ok
   end
 
@@ -86,11 +85,17 @@ defmodule EdgeAdminProxy.AuthenticationTest do
   describe "authenticate_and_parse/2 - DNS format" do
     setup do
       Elixir.Application.put_env(:edge_admin, :proxy_auth_enabled, false)
+      previous_domain = Elixir.Application.get_env(:edge_admin, :edge_vpn_default_domain)
       Elixir.Application.put_env(:edge_admin, :edge_vpn_default_domain, "nm.internal")
 
       on_exit(fn ->
         Elixir.Application.delete_env(:edge_admin, :proxy_auth_enabled)
-        Elixir.Application.delete_env(:edge_admin, :edge_vpn_default_domain)
+
+        if is_nil(previous_domain) do
+          Elixir.Application.delete_env(:edge_admin, :edge_vpn_default_domain)
+        else
+          Elixir.Application.put_env(:edge_admin, :edge_vpn_default_domain, previous_domain)
+        end
       end)
     end
 
@@ -164,11 +169,17 @@ defmodule EdgeAdminProxy.AuthenticationTest do
   describe "authenticate_and_parse/2 - node lookup" do
     setup do
       Elixir.Application.put_env(:edge_admin, :proxy_auth_enabled, false)
+      previous_domain = Elixir.Application.get_env(:edge_admin, :edge_vpn_default_domain)
       Elixir.Application.put_env(:edge_admin, :edge_vpn_default_domain, "nm.internal")
 
       on_exit(fn ->
         Elixir.Application.delete_env(:edge_admin, :proxy_auth_enabled)
-        Elixir.Application.delete_env(:edge_admin, :edge_vpn_default_domain)
+
+        if is_nil(previous_domain) do
+          Elixir.Application.delete_env(:edge_admin, :edge_vpn_default_domain)
+        else
+          Elixir.Application.put_env(:edge_admin, :edge_vpn_default_domain, previous_domain)
+        end
       end)
     end
 

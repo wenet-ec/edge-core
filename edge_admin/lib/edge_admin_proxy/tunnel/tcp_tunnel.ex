@@ -13,6 +13,7 @@ defmodule EdgeAdminProxy.Tunnel.TcpTunnel do
   """
 
   alias EdgeAdmin.GatewayRegistry
+  alias EdgeAdmin.Vpn
   alias EdgeAdminProxy.Config
   alias EdgeAdminProxy.ErrorHandler
   alias EdgeAdminProxy.Socks5.Codec, as: Socks5Codec
@@ -71,7 +72,7 @@ defmodule EdgeAdminProxy.Tunnel.TcpTunnel do
   end
 
   defp parse_cluster_from_hostname(target_host) do
-    domain = Application.get_env(:edge_admin, :edge_vpn_default_domain, "nm.internal")
+    domain = Vpn.default_domain()
     # Proxy chaining
     pattern = ~r/(cluster-[^.]+)\.#{Regex.escape(domain)}$/
 
@@ -90,9 +91,9 @@ defmodule EdgeAdminProxy.Tunnel.TcpTunnel do
 
   defp connect_via_agent_proxy(exit_node, target_host, target_port, initial_data, protocol) do
     node_dns = EdgeAdmin.Nodes.Schemas.Node.vpn_hostname(exit_node)
-    agent_proxy_port = agent_proxy_port(protocol)
 
-    with {:ok, cluster_name} <- parse_cluster_from_hostname(node_dns),
+    with {:ok, agent_proxy_port} <- agent_proxy_port(exit_node, protocol),
+         {:ok, cluster_name} <- parse_cluster_from_hostname(node_dns),
          {:ok, socket} <- GatewayRegistry.open_stream(cluster_name, node_dns, agent_proxy_port),
          :ok <- handshake(socket, protocol, target_host, target_port, exit_node.proxy_password, initial_data) do
       {:ok, socket}
@@ -101,8 +102,9 @@ defmodule EdgeAdminProxy.Tunnel.TcpTunnel do
     end
   end
 
-  defp agent_proxy_port(:http), do: Application.get_env(:edge_agent, :agent_http_proxy_port, 43_128)
-  defp agent_proxy_port(:socks5), do: Application.get_env(:edge_agent, :agent_socks5_proxy_port, 41_080)
+  defp agent_proxy_port(%{http_proxy_port: port}, :http) when is_integer(port), do: {:ok, port}
+  defp agent_proxy_port(%{socks5_proxy_port: port}, :socks5) when is_integer(port), do: {:ok, port}
+  defp agent_proxy_port(_node, _protocol), do: {:error, :agent_proxy_port_not_configured}
 
   defp handshake(socket, :http, target_host, target_port, proxy_password, initial_data) do
     auth_header = "Proxy-Authorization: Basic #{Base.encode64("_:#{proxy_password}")}\r\n"

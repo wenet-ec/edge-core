@@ -88,7 +88,7 @@ defmodule EdgeAdminWeb.Endpoint do
   plug(EdgeAdminWeb.Router)
 
   defp request_logger_conditional(conn, _opts) do
-    if Application.get_env(:edge_admin, :admin_debug_dashboard_enabled, false) do
+    if Application.fetch_env!(:edge_admin, :admin_debug_dashboard_enabled) do
       RequestLogger.call(
         conn,
         RequestLogger.init(param_key: "request_logger")
@@ -100,7 +100,7 @@ defmodule EdgeAdminWeb.Endpoint do
 
   # Apply metrics auth only for the metrics endpoint
   defp metrics_auth_conditional(%{request_path: "/api/v1/admins/me/metrics/raw"} = conn, _opts) do
-    if Application.get_env(:edge_admin, :admin_metrics_dedicated, false) do
+    if Application.fetch_env!(:edge_admin, :admin_metrics_dedicated) do
       conn
     else
       EdgeAdminWeb.Plugs.MetricsAuth.call(conn, [])
@@ -110,7 +110,7 @@ defmodule EdgeAdminWeb.Endpoint do
   defp metrics_auth_conditional(conn, _opts), do: conn
 
   defp prom_ex_metrics(conn, _opts) do
-    if Application.get_env(:edge_admin, :admin_metrics_dedicated, false) do
+    if Application.fetch_env!(:edge_admin, :admin_metrics_dedicated) do
       conn
     else
       PromEx.Plug.call(conn, @prom_ex_metrics_opts)

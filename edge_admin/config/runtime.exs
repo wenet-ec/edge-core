@@ -277,7 +277,8 @@ config :edge_admin,
   all_auth_enabled: all_auth_enabled,
   admin_debug_dashboard_enabled: admin_debug_dashboard_enabled,
   admin_debug_auth_enabled: admin_debug_auth_enabled,
-  api_docs_enabled: get_env("API_DOCS_ENABLED", :boolean, true)
+  api_docs_enabled: get_env("API_DOCS_ENABLED", :boolean, true),
+  via_pseudonym: "edge-admin"
 
 if token_auth_enabled do
   master_key = get_env!("MASTER_KEY")
@@ -643,6 +644,15 @@ config :edge_admin,
   # receivers that legitimately live on RFC1918 ranges.
   webhook_allow_private_ips: get_env("WEBHOOK_ALLOW_PRIVATE_IPS", :boolean, false)
 
+# Event Broker
+# Disabled by default; publish calls are no-ops. Enable with EVENT_BROKER_ENABLED=true,
+# pick one EVENT_BROKER_ADAPTER, and set the adapter's vars (see deploy/.../.envs/.edge_admin
+# for the per-adapter env var lists). Endpoint vars use _URLS (plural) for adapters that
+# take a cluster list (NATS, Kafka) and _URL (singular) for single-endpoint adapters
+# (RabbitMQ, Redis, MQTT). Managed-service adapters (AWS SNS, Google Pub/Sub) have no
+# endpoint var — auth + region/project envs locate the service.
+config :edge_admin, event_broker_enabled: false
+
 config :edge_admin,
   proxy_num_acceptors: get_env("PROXY_NUM_ACCEPTORS", :integer, 100)
 
@@ -663,13 +673,6 @@ config :sentry,
   client: EdgeAdmin.Sentry.ReqClient,
   before_send: {EdgeAdmin.Sentry, :before_send}
 
-# Event Broker
-# Disabled by default; publish calls are no-ops. Enable with EVENT_BROKER_ENABLED=true,
-# pick one EVENT_BROKER_ADAPTER, and set the adapter's vars (see deploy/.../.envs/.edge_admin
-# for the per-adapter env var lists). Endpoint vars use _URLS (plural) for adapters that
-# take a cluster list (NATS, Kafka) and _URL (singular) for single-endpoint adapters
-# (RabbitMQ, Redis, MQTT). Managed-service adapters (AWS SNS, Google Pub/Sub) have no
-# endpoint var — auth + region/project envs locate the service.
 if get_env("EVENT_BROKER_ENABLED", :boolean, false) do
   alias EdgeAdmin.Events.Broker.AdapterRegistry
   alias EdgeAdmin.Events.Broker.Endpoint

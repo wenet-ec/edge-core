@@ -47,6 +47,6 @@ defmodule EdgeAdmin.Commands.Workers.PruneCommandExecutionsWorker do
   end
 
   defp should_run? do
-    Application.get_env(:edge_admin, :execution_pruning_enabled, false)
+    Application.fetch_env!(:edge_admin, :execution_pruning_enabled)
   end
 end

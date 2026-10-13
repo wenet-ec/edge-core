@@ -27,11 +27,11 @@ defmodule EdgeAdmin.GatewayRegistry.AgentClient do
   @spec diagnostics_call_timeout() :: pos_integer()
   def diagnostics_call_timeout, do: health_check_timeout() + 2_000
 
-  defp command_delivery_timeout, do: Application.get_env(:edge_admin, :command_delivery_timeout, 10_000)
+  defp command_delivery_timeout, do: Application.fetch_env!(:edge_admin, :command_delivery_timeout)
 
-  defp metrics_scrape_timeout, do: Application.get_env(:edge_admin, :metrics_scrape_timeout, 10_000)
+  defp metrics_scrape_timeout, do: Application.fetch_env!(:edge_admin, :metrics_scrape_timeout)
 
-  defp health_check_timeout, do: Application.get_env(:edge_admin, :health_check_timeout, 5_000)
+  defp health_check_timeout, do: Application.fetch_env!(:edge_admin, :health_check_timeout)
 
   defp command_opts do
     t = command_delivery_timeout()

@@ -47,8 +47,8 @@ defmodule EdgeAdmin.IngressTunneling.DesiredState do
       "vpn_dns_suffix" => Cluster.vpn_domain(cluster),
       "vpn_ipv4_range" => cluster.ipv4_range,
       "vpn_ipv6_range" => cluster.ipv6_range,
-      "core_derp_map_urls" => Application.get_env(:edge_admin, :core_derp_map_urls, []),
-      "core_stun_servers" => Application.get_env(:edge_admin, :core_stun_servers, []),
+      "core_derp_map_urls" => Application.fetch_env!(:edge_admin, :core_derp_map_urls),
+      "core_stun_servers" => Application.fetch_env!(:edge_admin, :core_stun_servers),
       "peers" => Enum.map(connections, &peer/1)
     }
   end

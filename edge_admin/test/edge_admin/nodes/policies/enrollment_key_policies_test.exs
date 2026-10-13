@@ -62,9 +62,9 @@ defmodule EdgeAdmin.Nodes.Policies.EnrollmentKeyPoliciesTest do
       assert EnrollmentKeyPolicies.authorize(:create_for_public) == {:error, :forbidden}
     end
 
-    test "denied when public flag is unset (defaults to false)" do
+    test "denied when public flag is false" do
       Elixir.Application.put_env(:edge_admin, :default_cluster_name, "default")
-      Elixir.Application.delete_env(:edge_admin, :public_enrollment_key_enabled)
+      Elixir.Application.put_env(:edge_admin, :public_enrollment_key_enabled, false)
 
       assert EnrollmentKeyPolicies.authorize(:create_for_public) == {:error, :forbidden}
     end

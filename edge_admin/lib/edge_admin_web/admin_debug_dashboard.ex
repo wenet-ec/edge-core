@@ -11,7 +11,7 @@ defmodule EdgeAdminWeb.AdminDebugDashboard do
   import Phoenix.LiveView
 
   def on_mount(:default, _params, _session, socket) do
-    if Application.get_env(:edge_admin, :admin_debug_dashboard_enabled, false) do
+    if Application.fetch_env!(:edge_admin, :admin_debug_dashboard_enabled) do
       {:cont, socket}
     else
       socket =

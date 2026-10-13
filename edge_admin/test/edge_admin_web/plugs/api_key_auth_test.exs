@@ -143,8 +143,8 @@ defmodule EdgeAdminWeb.Plugs.ApiKeyAuthTest do
       assert conn.status == 401
     end
 
-    test "when specific flag is not set, auth defaults to enabled" do
-      Elixir.Application.delete_env(:edge_admin, :api_auth_enabled)
+    test "when specific flag is enabled, auth is enforced" do
+      Elixir.Application.put_env(:edge_admin, :api_auth_enabled, true)
       Elixir.Application.put_env(:edge_admin, :api_key, "secret")
       conn = nil |> build_conn() |> ApiKeyAuth.call(@opts)
       assert conn.halted

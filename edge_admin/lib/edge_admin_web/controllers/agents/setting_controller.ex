@@ -30,7 +30,7 @@ defmodule EdgeAdminWeb.Controllers.Agents.SettingController do
       render(conn, :config,
         conn: conn,
         admin_urls: Application.fetch_env!(:edge_admin, :admin_urls),
-        core_derp_map_urls: Application.get_env(:edge_admin, :core_derp_map_urls, []),
+        core_derp_map_urls: Application.fetch_env!(:edge_admin, :core_derp_map_urls),
         ingress_tunneling: ingress_tunneling
       )
     end

@@ -35,7 +35,7 @@ defmodule EdgeAdmin.Events.Broker.Workers.PublishEventWorker do
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: envelope, inserted_at: inserted_at}) do
-    max_age = Application.get_env(:edge_admin, :event_delivery_max_age_seconds, 3600)
+    max_age = Application.fetch_env!(:edge_admin, :event_delivery_max_age_seconds)
     age_seconds = DateTime.diff(DateTime.utc_now(), inserted_at, :second)
 
     cond do

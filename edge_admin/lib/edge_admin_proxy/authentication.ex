@@ -36,7 +36,7 @@ defmodule EdgeAdminProxy.Authentication do
   end
 
   defp authenticate_password(password) do
-    proxy_auth_enabled = Application.get_env(:edge_admin, :proxy_auth_enabled, true)
+    proxy_auth_enabled = Application.fetch_env!(:edge_admin, :proxy_auth_enabled)
 
     if proxy_auth_enabled do
       stored_key = Application.get_env(:edge_admin, :proxy_key)

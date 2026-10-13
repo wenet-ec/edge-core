@@ -14,7 +14,7 @@ defmodule EdgeAdmin.Vpn.Addressing do
   def cluster_auto_generated_v6_ranges, do: Application.get_env(:edge_admin, :cluster_auto_generated_v6_ranges)
 
   @spec cluster_v6_subnet_prefix() :: 0..128
-  def cluster_v6_subnet_prefix, do: Application.get_env(:edge_admin, :cluster_v6_subnet_prefix, 64)
+  def cluster_v6_subnet_prefix, do: Application.fetch_env!(:edge_admin, :cluster_v6_subnet_prefix)
 
   @spec usable_ipv4_capacity(0..32) :: non_neg_integer()
   def usable_ipv4_capacity(prefix) when prefix in 0..32 do

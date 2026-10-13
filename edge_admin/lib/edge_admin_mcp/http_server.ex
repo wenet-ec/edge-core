@@ -26,7 +26,7 @@ defmodule EdgeAdminMcp.HttpServer do
   end
 
   def start_link(_opts) do
-    if Application.get_env(:edge_admin, :admin_mcp_dedicated, false) do
+    if Application.fetch_env!(:edge_admin, :admin_mcp_dedicated) do
       Bandit.start_link(
         plug: __MODULE__,
         scheme: :http,

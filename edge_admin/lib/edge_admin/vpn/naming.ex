@@ -5,7 +5,7 @@ defmodule EdgeAdmin.Vpn.Naming do
   alias EdgeAdmin.Naming, as: CoreNaming
 
   @spec default_domain() :: String.t()
-  def default_domain, do: Application.get_env(:edge_admin, :edge_vpn_default_domain, "nm.internal")
+  def default_domain, do: Application.fetch_env!(:edge_admin, :edge_vpn_default_domain)
 
   @doc """
   Builds a VPN name with a prefix.

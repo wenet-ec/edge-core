@@ -86,6 +86,8 @@ config :edge_admin,
   admin_max_wireguard_peers: 100,
   admin_cluster_cookie: :test_cookie,
   admin_discovery_port: 44_000,
+  via_pseudonym: "edge-admin",
+  public_enrollment_key_enabled: false,
   edge_vpn_default_domain: "nm.internal"
 
 config :logger, level: :warning

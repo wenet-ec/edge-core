@@ -7,6 +7,8 @@ defmodule EdgeAdminProxy.Routing do
   the username and looks up a node when proxy chaining is requested.
   """
 
+  alias EdgeAdmin.Vpn
+
   require Logger
 
   @nodes_module Application.compile_env(:edge_admin, :nodes_module, EdgeAdmin.Nodes)
@@ -23,7 +25,7 @@ defmodule EdgeAdminProxy.Routing do
   def parse(node_dns), do: find_node_by_dns(node_dns)
 
   defp find_node_by_dns(node_dns) do
-    domain = Application.get_env(:edge_admin, :edge_vpn_default_domain, "nm.internal")
+    domain = Vpn.default_domain()
     pattern = ~r/^node-(.+)\.(cluster-[^.]+)\.#{Regex.escape(domain)}$/
 
     case Regex.run(pattern, node_dns) do

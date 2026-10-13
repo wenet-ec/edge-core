@@ -32,7 +32,7 @@ defmodule EdgeAdminMcp.Middlewares.McpAuth do
   @doc false
   @spec status(map()) :: status()
   def status(headers) when is_map(headers) do
-    if Application.get_env(:edge_admin, :mcp_auth_enabled, true) do
+    if Application.fetch_env!(:edge_admin, :mcp_auth_enabled) do
       validate_headers(headers)
     else
       :authenticated

@@ -128,9 +128,9 @@ defmodule EdgeAdminWeb.Plugs.MetricsAuthTest do
     end
   end
 
-  describe "METRICS_AUTH_ENABLED defaults to true" do
-    test "when :metrics_auth_enabled not set, auth is enforced" do
-      Elixir.Application.delete_env(:edge_admin, :metrics_auth_enabled)
+  describe "METRICS_AUTH_ENABLED" do
+    test "when enabled, auth is enforced" do
+      Elixir.Application.put_env(:edge_admin, :metrics_auth_enabled, true)
       Elixir.Application.put_env(:edge_admin, :master_key, "master-key")
       Elixir.Application.put_env(:edge_admin, :metrics_key, "metrics-key")
       conn = nil |> build_conn() |> MetricsAuth.call(@opts)

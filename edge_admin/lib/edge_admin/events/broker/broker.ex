@@ -97,7 +97,7 @@ defmodule EdgeAdmin.Events.Broker do
   end
 
   defp enabled? do
-    Application.get_env(:edge_admin, :event_broker_enabled, false)
+    Application.fetch_env!(:edge_admin, :event_broker_enabled)
   end
 
   defp adapter, do: AdapterRegistry.module_for(adapter_name())

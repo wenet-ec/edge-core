@@ -25,30 +25,30 @@ defmodule EdgeAdminProxy.Config do
   Returns the TCP connection timeout in milliseconds.
 
   Used when establishing connections to target hosts.
-  Default: 2000ms (2 seconds)
+  Configured by `PROXY_CONNECTION_TIMEOUT_MS`.
   """
   def connection_timeout do
-    get_timeout(:connection, 2_000)
+    get_timeout(:connection)
   end
 
   @doc """
   Returns the proxy handshake timeout in milliseconds.
 
   Used for SOCKS5 and HTTP proxy handshakes (multi-step operations).
-  Default: 10000ms (10 seconds)
+  Configured by `PROXY_HANDSHAKE_TIMEOUT_MS`.
   """
   def handshake_timeout do
-    get_timeout(:handshake, 10_000)
+    get_timeout(:handshake)
   end
 
   @doc """
   Returns the socket read timeout in milliseconds.
 
   Used for reading from client/target sockets.
-  Default: 10000ms (10 seconds)
+  Configured by `PROXY_READ_TIMEOUT_MS`.
   """
   def read_timeout do
-    get_timeout(:read, 10_000)
+    get_timeout(:read)
   end
 
   @doc """
@@ -56,20 +56,18 @@ defmodule EdgeAdminProxy.Config do
 
   Applied to each :gen_tcp.recv call in the forwarding loop. Closes half-open
   connections after this period of inactivity.
-  Default: 300000ms (5 minutes)
+  Configured by `PROXY_RECV_TIMEOUT_MS`.
   """
   def recv_timeout do
-    get_timeout(:recv, 300_000)
+    get_timeout(:recv)
   end
 
   @doc """
   Returns the number of Ranch acceptor processes for each proxy listener.
 
-  Configurable via `PROXY_NUM_ACCEPTORS` env var (default: 100).
+  Configured by `PROXY_NUM_ACCEPTORS`.
   """
-  def num_acceptors do
-    Application.get_env(:edge_admin, :proxy_num_acceptors, 100)
-  end
+  def num_acceptors, do: Application.fetch_env!(:edge_admin, :proxy_num_acceptors)
 
   @doc """
   Returns the absolute cap on a single tunnel's lifetime in milliseconds.
@@ -78,11 +76,11 @@ defmodule EdgeAdminProxy.Config do
   a tunnel open indefinitely against `recv_timeout`; this ceiling bounds the
   total duration as a slowloris defence.
 
-  Configurable via `PROXY_TUNNEL_TOTAL_TIMEOUT_MS` (default: 6h /
-  21_600_000ms). Set to a very large value to effectively disable.
+  Configured by `PROXY_TUNNEL_TOTAL_TIMEOUT_MS`. Set to a very large value
+  to effectively disable.
   """
   def tunnel_total_timeout do
-    get_timeout(:tunnel_total, 21_600_000)
+    get_timeout(:tunnel_total)
   end
 
   @doc """
@@ -90,15 +88,15 @@ defmodule EdgeAdminProxy.Config do
   graceful drain (deploy / shutdown). Handlers receive `{:drain, grace_ms}`
   when shutdown starts; after the grace, surviving tunnels are force-closed.
 
-  Configurable via `PROXY_DRAIN_GRACE_TIMEOUT_MS` (default: 30s / 30_000ms).
+  Configured by `PROXY_DRAIN_GRACE_TIMEOUT_MS`.
   """
   def drain_grace_timeout do
-    get_timeout(:drain_grace, 30_000)
+    get_timeout(:drain_grace)
   end
 
-  defp get_timeout(key, default) do
+  defp get_timeout(key) do
     :edge_admin
-    |> Application.get_env(:proxy_timeouts, [])
-    |> Keyword.get(key, default)
+    |> Application.fetch_env!(:proxy_timeouts)
+    |> Keyword.fetch!(key)
   end
 end

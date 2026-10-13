@@ -94,7 +94,7 @@ defmodule EdgeAdmin.Events do
       event,
       Uniq.UUID.uuid4(),
       DateTime.utc_now(),
-      Application.get_env(:edge_admin, :core_name, "default")
+      Application.fetch_env!(:edge_admin, :core_name)
     )
   end
 

@@ -150,11 +150,8 @@ config :edge_agent,
   proxy_custom_blocked_hosts: get_env("PROXY_CUSTOM_BLOCKED_HOSTS", :list, []),
   proxy_custom_allowed_hosts: get_env("PROXY_CUSTOM_ALLOWED_HOSTS", :list, []),
   # === HTTP Request Timeouts (agent → admin) ===
-  # All regular admin API calls: registration, command acks, health reporting, metrics push.
+  # All Agent-to-Admin HTTP calls, including discovery probes.
   admin_call_timeout: get_env("ADMIN_CALL_TIMEOUT_MS", :integer, 10_000),
-  # Admin discovery probing — short, probing many peers in parallel.
-  # Bounds wall-clock cost of one parallel pass; tuned for geo-distributed VPN paths.
-  admin_discovery_timeout: get_env("ADMIN_DISCOVERY_TIMEOUT_MS", :integer, 5_000),
   # VPN connection verification timeout (in seconds)
   vpn_ready_timeout_seconds: get_env("VPN_READY_TIMEOUT_SECONDS", :integer, 30),
   # Authentication toggles

@@ -18,7 +18,7 @@ defmodule EdgeAgent.AdminGateway.Client do
   require Logger
 
   defp http_options do
-    timeout = Application.get_env(:edge_agent, :admin_call_timeout, 10_000)
+    timeout = Application.fetch_env!(:edge_agent, :admin_call_timeout)
 
     [
       receive_timeout: timeout,
@@ -35,15 +35,7 @@ defmodule EdgeAgent.AdminGateway.Client do
   """
   @spec probe(String.t()) :: {:ok, String.t()} | {:error, term()}
   def probe(url) do
-    timeout = Application.get_env(:edge_agent, :admin_discovery_timeout, 5_000)
-
-    opts = [
-      receive_timeout: timeout,
-      connect_options: [timeout: timeout],
-      retry: false
-    ]
-
-    case Req.get("#{url}/api/v1/admins/me/discovery", opts) do
+    case Req.get("#{url}/api/v1/admins/me/discovery", http_options()) do
       {:ok, %{status: 200, body: %{"data" => %{"name" => admin_name}}}} ->
         {:ok, admin_name}
 

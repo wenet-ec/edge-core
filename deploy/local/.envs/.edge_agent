@@ -56,7 +56,6 @@ ALIASES=test
 
 # HTTP Timeouts (agent → admin communication)
 ADMIN_CALL_TIMEOUT_MS=30000          # Local host-network calls can take ~19s through WSL/Docker port forwarding
-# ADMIN_DISCOVERY_TIMEOUT_MS=5000     # Admin peer probing during discovery (parallel; geo-friendly)
 
 # Proxy Server Timeouts
 # Per-operation proxy timeouts (in milliseconds)

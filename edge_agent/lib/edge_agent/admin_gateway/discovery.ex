@@ -70,6 +70,7 @@ defmodule EdgeAgent.AdminGateway.Discovery do
       fn {net_name, peer} -> {net_name, probe_peer(peer, net_name, discovery_port)} end,
       max_concurrency: max_concurrency,
       ordered: false,
+      timeout: Application.fetch_env!(:edge_agent, :admin_call_timeout),
       on_timeout: :kill_task
     )
     |> Enum.flat_map(fn

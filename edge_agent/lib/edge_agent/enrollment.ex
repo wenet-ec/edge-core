@@ -156,7 +156,7 @@ defmodule EdgeAgent.Enrollment do
   end
 
   defp fetch_enrollment_key_from_url(url) do
-    timeout = Application.get_env(:edge_agent, :admin_call_timeout, 10_000)
+    timeout = Application.fetch_env!(:edge_agent, :admin_call_timeout)
 
     opts = [
       receive_timeout: timeout,

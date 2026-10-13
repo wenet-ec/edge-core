@@ -4,9 +4,9 @@ defmodule EdgeAdminMcp.Server do
   MCP server for Edge Admin.
 
   The server exposes registered management tools through Anubis. Authentication
-  and degraded-mode policy gate dispatch; unauthenticated tool listings are
-  limited to the public scope. Non-MCP proxy and metrics endpoints remain part
-  of the HTTP API surface.
+  and degraded-mode policy gate dispatch. Each connection gets only the tools
+  and usage guidance allowed by its authentication state. Non-MCP proxy and
+  metrics endpoints remain part of the HTTP API surface.
   """
 
   use Anubis.Server,
@@ -14,6 +14,8 @@ defmodule EdgeAdminMcp.Server do
     version: :edge_admin |> Application.spec(:vsn) |> to_string(),
     capabilities: [:tools]
 
+  alias Anubis.Server.Component.Tool
+  alias Anubis.Server.Frame
   alias Anubis.Server.Handlers
   alias EdgeAdminMcp.Middlewares.DegradedMode
   alias EdgeAdminMcp.Middlewares.McpAuth
@@ -24,33 +26,34 @@ defmodule EdgeAdminMcp.Server do
   def handle_request(request, frame) do
     with :ok <- McpAuth.call(request, frame),
          :ok <- DegradedMode.call(request, frame) do
-      request
-      |> Handlers.handle(__MODULE__, frame)
-      |> filter_scoped_tool_list(request, frame)
+      Handlers.handle(request, __MODULE__, frame)
     else
       {:error, response, frame} -> {:reply, response, frame}
     end
   end
 
-  defp mcp_authenticated?(frame), do: McpAuth.authenticated?(frame)
-
-  defp filter_scoped_tool_list({:reply, payload, frame}, %{"method" => "tools/list"}, _request_frame)
-       when is_map(payload) do
-    if mcp_authenticated?(frame) do
-      {:reply, payload, frame}
+  @impl Anubis.Server
+  @spec server_tools([Tool.t()], Frame.t()) ::
+          [Tool.t()]
+  def server_tools(tools, frame) do
+    if McpAuth.authenticated?(frame) do
+      tools
     else
-      tools = Map.get(payload, "tools", [])
-
-      {:reply,
-       Map.put(
-         payload,
-         "tools",
-         Enum.filter(tools, &(EdgeAdminMcp.ToolRegistry.scope_for_tool(&1.name) == :public))
-       ), frame}
+      Enum.filter(tools, &(EdgeAdminMcp.ToolRegistry.scope_for_tool(&1.name) == :public))
     end
   end
 
-  defp filter_scoped_tool_list(result, _request, _frame), do: result
+  @impl Anubis.Server
+  @spec server_instructions(Frame.t()) :: String.t()
+  def server_instructions(frame) do
+    if McpAuth.authenticated?(frame) do
+      server_instructions()
+    else
+      """
+      This Edge Admin MCP connection is unauthenticated and can access only the `create_public_enrollment_key` tool. When public enrollment is enabled and a default cluster is configured, it creates an enrollment credential for an agent to join that cluster. Treat the returned key as a secret. Fleet-management tools require an authenticated connection.
+      """
+    end
+  end
 
   @impl true
   @spec server_instructions() :: String.t()

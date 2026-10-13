@@ -126,7 +126,7 @@ defmodule EdgeAgent.Mixfile do
       {:styler, "~> 1.12", only: [:dev, :test], runtime: false},
 
       # Security check
-      {:sobelow, "~> 0.15", only: [:dev, :test], runtime: true},
+      {:sobelow, "~> 0.16", only: [:dev, :test], runtime: true},
       {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false},
 
       # Testing

@@ -280,7 +280,7 @@ defmodule EdgeAgentProxy.Transport.DestinationValidator do
   """
   @spec custom_blocked?(String.t(), :inet.port_number()) :: boolean()
   def custom_blocked?(host, port) when is_binary(host) and is_integer(port) do
-    custom_blocked_hosts = Application.get_env(:edge_agent, :proxy_custom_blocked_hosts, [])
+    custom_blocked_hosts = Application.fetch_env!(:edge_agent, :proxy_custom_blocked_hosts)
     normalised = normalise_host(host)
 
     host_blocked =
@@ -292,7 +292,7 @@ defmodule EdgeAgentProxy.Transport.DestinationValidator do
           normalise_host(blocked_host) == normalised
       end)
 
-    custom_blocked_ports = Application.get_env(:edge_agent, :proxy_blocked_ports, [])
+    custom_blocked_ports = Application.fetch_env!(:edge_agent, :proxy_blocked_ports)
     port_blocked = port in custom_blocked_ports
 
     host_blocked or port_blocked
@@ -304,7 +304,7 @@ defmodule EdgeAgentProxy.Transport.DestinationValidator do
   """
   @spec custom_allowed?(String.t(), :inet.port_number()) :: boolean()
   def custom_allowed?(host, port) when is_binary(host) and is_integer(port) do
-    custom_allowed_hosts = Application.get_env(:edge_agent, :proxy_custom_allowed_hosts, [])
+    custom_allowed_hosts = Application.fetch_env!(:edge_agent, :proxy_custom_allowed_hosts)
     normalised = normalise_host(host)
 
     Enum.any?(custom_allowed_hosts, fn

@@ -33,7 +33,7 @@ defmodule EdgeAgent.Vpn.DerpMapCache do
 
   @impl true
   def init(_opts) do
-    stable_ms = Application.get_env(:edge_agent, :derp_map_pull_interval_ms, to_timeout(minute: 5))
+    stable_ms = Application.fetch_env!(:edge_agent, :derp_map_pull_interval_ms)
     # If the configured interval is shorter than the warmup start, skip warmup entirely.
     initial_ms = min(@warmup_interval_ms, stable_ms)
 

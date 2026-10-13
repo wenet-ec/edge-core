@@ -30,7 +30,7 @@ defmodule EdgeAgent.PromEx.Server do
   end
 
   def start_link(_opts) do
-    if Application.get_env(:edge_agent, :agent_metrics_dedicated, false) do
+    if Application.fetch_env!(:edge_agent, :agent_metrics_dedicated) do
       Bandit.start_link(
         plug: __MODULE__,
         scheme: :http,
@@ -60,7 +60,7 @@ defmodule EdgeAgent.PromEx.Server do
   end
 
   defp authenticate(conn) do
-    if Application.get_env(:edge_agent, :agent_metrics_auth_enabled, true) do
+    if Application.fetch_env!(:edge_agent, :agent_metrics_auth_enabled) do
       ApiTokenAuth.call(conn, [])
     else
       conn

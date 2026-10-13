@@ -118,7 +118,7 @@ defmodule EdgeAgent.Enrollment do
 
   defp load_enrollment_key do
     enrollment_key = Application.get_env(:edge_agent, :enrollment_key)
-    urls = Application.get_env(:edge_agent, :public_enrollment_key_urls, [])
+    urls = Application.fetch_env!(:edge_agent, :public_enrollment_key_urls)
 
     cond do
       is_binary(enrollment_key) and enrollment_key != "" ->
@@ -180,7 +180,7 @@ defmodule EdgeAgent.Enrollment do
   @doc false
   @spec extract_from_response(term()) :: {:ok, String.t()} | {:error, String.t()}
   def extract_from_response(body),
-    do: extract_from_response(body, Application.get_env(:edge_agent, :public_enrollment_key_paths, []))
+    do: extract_from_response(body, Application.fetch_env!(:edge_agent, :public_enrollment_key_paths))
 
   @doc false
   # Custom paths take precedence, then the built-in response shapes are tried.

@@ -114,7 +114,11 @@ config :edge_agent, :proxy_timeouts,
   drain_grace: get_env("PROXY_DRAIN_GRACE_TIMEOUT_MS", :integer, 30_000)
 
 config :edge_agent,
-  proxy_num_acceptors: get_env("PROXY_NUM_ACCEPTORS", :integer, 100)
+  proxy_num_acceptors: get_env("PROXY_NUM_ACCEPTORS", :integer, 100),
+  proxy_listen_address: {0, 0, 0, 0, 0, 0, 0, 0},
+  admin_discovery_concurrency: 10,
+  via_pseudonym: "edge-agent",
+  run_bootstrap: true
 
 if get_env("SELF_UPDATE_ENABLED", :boolean, false) do
   config :edge_agent,

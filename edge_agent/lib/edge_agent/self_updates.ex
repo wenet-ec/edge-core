@@ -26,7 +26,7 @@ defmodule EdgeAgent.SelfUpdates do
 
   @spec enabled? :: boolean()
   defp enabled? do
-    Application.get_env(:edge_agent, :self_update_enabled, false)
+    Application.fetch_env!(:edge_agent, :self_update_enabled)
   end
 
   @doc """
@@ -47,8 +47,8 @@ defmodule EdgeAgent.SelfUpdates do
   """
   @spec trigger_update :: {:ok, map() | binary()} | {:error, binary()}
   def trigger_update do
-    watchtower_url = Application.get_env(:edge_agent, :watchtower_url, "")
-    api_token = Application.get_env(:edge_agent, :watchtower_http_api_token, "")
+    watchtower_url = Application.fetch_env!(:edge_agent, :watchtower_url)
+    api_token = Application.fetch_env!(:edge_agent, :watchtower_http_api_token)
 
     case build_update_endpoint(watchtower_url) do
       {:ok, update_endpoint} ->

@@ -50,7 +50,7 @@ defmodule EdgeAgent.Bootstrap do
 
   @impl true
   def init(_opts) do
-    if Application.get_env(:edge_agent, :run_bootstrap, true) do
+    if Application.fetch_env!(:edge_agent, :run_bootstrap) do
       Logger.info("Bootstrap starting...")
 
       case do_bootstrap() do
@@ -157,7 +157,7 @@ defmodule EdgeAgent.Bootstrap do
   end
 
   defp step_7_register_aliases do
-    aliases = Application.get_env(:edge_agent, :aliases, [])
+    aliases = Application.fetch_env!(:edge_agent, :aliases)
 
     if aliases != [] do
       Logger.info("Step 7: Registering #{length(aliases)} alias(es)...")

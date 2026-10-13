@@ -379,12 +379,11 @@ defmodule EdgeAgentProxy.Http.Handler do
   def parse_http_version(_), do: "1.1"
 
   @doc """
-  Returns this proxy's `Via` pseudonym, configurable via the `:via_pseudonym`
-  application env (default `"edge-agent"`).
+  Returns this proxy's `Via` pseudonym from application configuration.
   """
   @spec via_pseudonym() :: String.t()
   def via_pseudonym do
-    Application.get_env(:edge_agent, :via_pseudonym, "edge-agent")
+    Application.fetch_env!(:edge_agent, :via_pseudonym)
   end
 
   @doc """

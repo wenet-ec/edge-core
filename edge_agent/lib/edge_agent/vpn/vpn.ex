@@ -130,7 +130,7 @@ defmodule EdgeAgent.Vpn do
   end
 
   defp verify_connection_after_join do
-    timeout_seconds = Application.get_env(:edge_agent, :vpn_ready_timeout_seconds, 30)
+    timeout_seconds = Application.fetch_env!(:edge_agent, :vpn_ready_timeout_seconds)
     Logger.info("Verifying VPN connection (timeout: #{timeout_seconds}s)...")
     verify_with_retry(System.monotonic_time(:second) + timeout_seconds, 2)
   end

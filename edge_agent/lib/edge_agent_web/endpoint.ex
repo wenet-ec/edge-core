@@ -59,10 +59,10 @@ defmodule EdgeAgentWeb.Endpoint do
   defp ping(conn, _opts), do: conn
 
   defp metrics_auth_conditional(%{request_path: "/api/v1/agents/me/metrics/raw"} = conn, _opts) do
-    if Application.get_env(:edge_agent, :agent_metrics_dedicated, false) do
+    if Application.fetch_env!(:edge_agent, :agent_metrics_dedicated) do
       conn
     else
-      auth_enabled = Application.get_env(:edge_agent, :agent_metrics_auth_enabled, true)
+      auth_enabled = Application.fetch_env!(:edge_agent, :agent_metrics_auth_enabled)
 
       if auth_enabled do
         EdgeAgentWeb.Plugs.ApiTokenAuth.call(conn, [])
@@ -75,7 +75,7 @@ defmodule EdgeAgentWeb.Endpoint do
   defp metrics_auth_conditional(conn, _opts), do: conn
 
   defp prom_ex_metrics(conn, _opts) do
-    if Application.get_env(:edge_agent, :agent_metrics_dedicated, false) do
+    if Application.fetch_env!(:edge_agent, :agent_metrics_dedicated) do
       conn
     else
       PromEx.Plug.call(

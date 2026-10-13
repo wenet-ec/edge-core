@@ -20,7 +20,7 @@ defmodule EdgeAgentProxy.Authentication do
   If authentication is disabled, always returns :ok.
   """
   def authenticate(username, password) do
-    auth_enabled = Application.get_env(:edge_agent, :agent_proxy_auth_enabled, true)
+    auth_enabled = Application.fetch_env!(:edge_agent, :agent_proxy_auth_enabled)
 
     if auth_enabled do
       authenticate_credentials(username, password)

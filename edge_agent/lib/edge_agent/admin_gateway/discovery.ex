@@ -42,8 +42,8 @@ defmodule EdgeAgent.AdminGateway.Discovery do
   defp probe_all_networks(ping_data, fallback_network) do
     Logger.info("Inspecting peers on #{map_size(ping_data)} network(s) for admins...")
 
-    discovery_port = Application.get_env(:edge_agent, :admin_discovery_port, 44_000)
-    max_concurrency = Application.get_env(:edge_agent, :admin_discovery_concurrency, 10)
+    discovery_port = Application.fetch_env!(:edge_agent, :admin_discovery_port)
+    max_concurrency = Application.fetch_env!(:edge_agent, :admin_discovery_concurrency)
 
     results =
       ping_data

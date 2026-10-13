@@ -228,15 +228,8 @@ defmodule EdgeAgentProxy.Http.HandlerTest do
   # via_pseudonym/0 — agent default differs from admin
 
   describe "via_pseudonym/0" do
-    test "defaults to 'edge-agent' when env unset" do
-      previous = Elixir.Application.get_env(:edge_agent, :via_pseudonym)
-      Elixir.Application.delete_env(:edge_agent, :via_pseudonym)
-
-      try do
-        assert Handler.via_pseudonym() == "edge-agent"
-      after
-        if previous, do: Elixir.Application.put_env(:edge_agent, :via_pseudonym, previous)
-      end
+    test "uses the configured Via pseudonym" do
+      assert Handler.via_pseudonym() == "edge-agent"
     end
 
     test "uses configured value when set" do

@@ -123,7 +123,7 @@ defmodule EdgeAgent.Registration do
       http_proxy_port: Application.fetch_env!(:edge_agent, :agent_http_proxy_port),
       socks5_proxy_port: Application.fetch_env!(:edge_agent, :agent_socks5_proxy_port),
       version: :edge_agent |> Application.spec(:vsn) |> to_string(),
-      self_update_enabled: Application.get_env(:edge_agent, :self_update_enabled, false),
+      self_update_enabled: Application.fetch_env!(:edge_agent, :self_update_enabled),
       ingress_public_key: ingress_public_key
     }
   end

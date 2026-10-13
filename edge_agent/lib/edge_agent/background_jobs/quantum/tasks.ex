@@ -155,7 +155,7 @@ defmodule EdgeAgent.BackgroundJobs.Quantum.Tasks do
   """
   @spec pull_vpn_config() :: :ok
   def pull_vpn_config do
-    if Application.get_env(:edge_agent, :pull_vpn_config_enabled, true) do
+    if Application.fetch_env!(:edge_agent, :pull_vpn_config_enabled) do
       Logger.debug("Quantum: pull_vpn_config started")
 
       result =
@@ -182,6 +182,6 @@ defmodule EdgeAgent.BackgroundJobs.Quantum.Tasks do
   end
 
   defp self_update_enabled? do
-    Application.get_env(:edge_agent, :self_update_enabled, false)
+    Application.fetch_env!(:edge_agent, :self_update_enabled)
   end
 end

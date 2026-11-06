@@ -28,8 +28,6 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
   # Agent runtime
   # SQLite — agent's local store
   sqlite3 \
-  # libsodium — DERP client authentication through the Erlang port driver
-  libsodium-dev \
   # procps — pgrep/pkill used by /start netclient cleanup
   procps \
   # libcap2-bin — getcap/setcap, agent inspects its own capabilities
@@ -65,10 +63,10 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
   # prod, which also picks iptables).
   iptables \
   # Dev workflow (local only)
-  # build-essential + git + autotools — compile native Elixir deps and
-  # libsodium's pinned source, plus fetch git deps
+  # build-essential + git — compile native Elixir deps and fetch git deps
   build-essential \
   git \
+  # libsodium generates its bundled configure script when building from source
   autoconf \
   automake \
   libtool \
@@ -95,11 +93,6 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
 ENV LANG=en_US.UTF-8
 ENV LANGUAGE=en_US:en
 ENV LC_ALL=en_US.UTF-8
-# Use the config.guess/config.sub shipped with the pinned libsodium source.
-ENV DO_NOT_UPDATE_CONFIG_SCRIPTS=1
-# libsodium's Erlang port uses strnlen while compiling its C sources as C17.
-ENV CPPFLAGS="-D_GNU_SOURCE -Derts_fprintf=fprintf"
-
 COPY --from=node-exporter-builder --chmod=0755 /bin/node_exporter /usr/local/bin/node_exporter
 
 # Use HTTP for Edge VPN API (local dev — no TLS certs)

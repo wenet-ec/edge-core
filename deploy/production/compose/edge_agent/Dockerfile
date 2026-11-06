@@ -13,18 +13,13 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     apt-get update -y && \
     apt-get install -y --no-install-recommends \
         build-essential git autoconf automake libtool libtool-bin \
-        sqlite3 libsqlite3-dev libsodium-dev ca-certificates
+        sqlite3 libsqlite3-dev ca-certificates
 
 WORKDIR /app
 
 ENV MIX_ENV=prod
 ENV ERL_MAX_PORTS=65536
 ENV ELIXIR_MAKE_PARALLEL=true
-# Use the config.guess/config.sub shipped with the pinned libsodium source.
-ENV DO_NOT_UPDATE_CONFIG_SCRIPTS=1
-# libsodium's Erlang port uses strnlen while compiling its C sources as C17.
-ENV CPPFLAGS="-D_GNU_SOURCE -Derts_fprintf=fprintf"
-
 # Keep Hex/Rebar archives in the same cache locations used by the build steps.
 RUN --mount=type=cache,target=/root/.mix \
     --mount=type=cache,target=/root/.hex \
@@ -82,8 +77,6 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     # Agent runtime
     # SQLite — agent's local store
     sqlite3 \
-    # libsodium — runtime library for the Erlang port driver
-    libsodium23 \
     # procps — pgrep/pkill used by /start netclient cleanup
     procps \
     # libcap2-bin — getcap/setcap, agent inspects its own capabilities

@@ -22,7 +22,6 @@ defmodule EdgeAgent.IngressTunneling.Derp.Crypto do
 
   def seal(_public_key, _private_key, _message), do: {:error, :invalid_key}
 
-  # The port driver allocates a plaintext buffer from ciphertext size minus the MAC.
   @spec open(binary(), binary(), binary()) :: {:ok, binary()} | {:error, :invalid_box}
   def open(public_key, private_key, <<nonce::binary-size(@nonce_size), ciphertext::binary>>)
       when is_binary(public_key) and byte_size(public_key) == @key_size and is_binary(private_key) and

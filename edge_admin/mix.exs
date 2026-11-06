@@ -98,7 +98,7 @@ defmodule EdgeAdmin.Mixfile do
       {:req, "~> 0.7"},
 
       # HTTP server
-      {:bandit, "~> 1.12"},
+      {:bandit, "~> 1.14"},
       {:corsica, "~> 2.1"},
       {:ranch, "~> 2.2"},
 
@@ -112,13 +112,13 @@ defmodule EdgeAdmin.Mixfile do
 
       # API and MCP
       {:open_api_spex, "~> 3.22"},
-      {:anubis_mcp, "~> 2.1"},
+      {:anubis_mcp, "~> 2.2"},
 
       # Database
       {:ecto_sql, "~> 3.14"},
       {:postgrex, "~> 0.22"},
-      {:ecto_sqlite3, "~> 0.25"},
-      {:uniq, "~> 0.6"},
+      {:ecto_sqlite3, "~> 0.26"},
+      {:uniq, "~> 0.7"},
       {:flop, "~> 0.29"},
       {:cloak, "~> 1.1"},
       {:cloak_ecto, "~> 1.3"},
@@ -143,7 +143,7 @@ defmodule EdgeAdmin.Mixfile do
       {:styler, "~> 1.12", only: [:dev, :test], runtime: false},
 
       # Security check
-      {:sobelow, "~> 0.16", only: [:dev, :test], runtime: true},
+      {:sobelow, "~> 0.18", only: [:dev, :test], runtime: true},
       {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false},
 
       # Health
@@ -164,10 +164,10 @@ defmodule EdgeAdmin.Mixfile do
       {:syn, "~> 3.4"},
 
       # Event Streaming
-      {:gnat, "~> 1.18"},
+      {:gnat, "~> 1.19"},
       {:brod, "~> 4.7"},
       {:amqp, "~> 4.3"},
-      {:redix, "~> 1.9"},
+      {:redix, "~> 1.10"},
       # Source build instead of Hex so emqtt's rebar.config.script runs on our
       # compile and honors BUILD_WITHOUT_QUIC=1 (set in the Dockerfiles). Hex
       # flattens dynamic deps at publish time, so the Hex package always lists

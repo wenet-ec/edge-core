@@ -96,7 +96,7 @@ defmodule EdgeAgent.Mixfile do
       {:req, "~> 0.7"},
 
       # HTTP server
-      {:bandit, "~> 1.12"},
+      {:bandit, "~> 1.14"},
       {:ranch, "~> 2.3"},
       {:phoenix, "~> 1.8"},
       {:phoenix_live_reload, "~> 1.7", only: :dev},
@@ -105,8 +105,8 @@ defmodule EdgeAgent.Mixfile do
       # Database
       {:phoenix_ecto, "~> 4.7"},
       {:ecto_sql, "~> 3.14"},
-      {:ecto_sqlite3, "~> 0.25"},
-      {:uniq, "~> 0.6"},
+      {:ecto_sqlite3, "~> 0.26"},
+      {:uniq, "~> 0.7"},
       {:excellent_migrations, "~> 0.1", only: [:dev, :test], runtime: false},
 
       # Background jobs
@@ -114,7 +114,7 @@ defmodule EdgeAgent.Mixfile do
       {:quantum, "~> 3.5"},
 
       # SSH server
-      {:erlexec, "~> 2.5", runtime: Mix.env() != :test},
+      {:erlexec, "~> 2.6", runtime: Mix.env() != :test},
 
       # Telemetry
       {:prom_ex, "~> 1.12"},
@@ -126,7 +126,7 @@ defmodule EdgeAgent.Mixfile do
       {:styler, "~> 1.12", only: [:dev, :test], runtime: false},
 
       # Security check
-      {:sobelow, "~> 0.16", only: [:dev, :test], runtime: true},
+      {:sobelow, "~> 0.18", only: [:dev, :test], runtime: true},
       {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false},
 
       # Testing
@@ -139,7 +139,7 @@ defmodule EdgeAgent.Mixfile do
       {:mdns_lite, "~> 0.9"},
 
       # NaCl-compatible authentication for DERP and peer candidate messages
-      {:libsodium, "~> 2.0"},
+      {:libsodium, "~> 3.0"},
 
       # Nexmaker library
       {:nexmaker, path: "../nexmaker"}

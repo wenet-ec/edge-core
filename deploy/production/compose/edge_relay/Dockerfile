@@ -3,10 +3,10 @@
 # -----------------------------------------------
 # Stage 1: Build derper from tailscale source
 # -----------------------------------------------
-FROM golang:1.26-alpine AS builder
+FROM golang:1.27-alpine AS builder
 
 ARG TAILSCALE_REPO=https://github.com/tailscale/tailscale.git
-ARG TAILSCALE_VERSION=v1.102.3
+ARG TAILSCALE_VERSION=v1.104.7
 
 WORKDIR /build
 

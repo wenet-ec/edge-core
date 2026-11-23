@@ -32,6 +32,10 @@ DERP_ACME_EMAIL=you@yourdomain.com
 # DERP_ACME_EAB_KID=
 # DERP_ACME_EAB_KEY=
 
+# Obtain short-lived Let's Encrypt certificates for the server's public IPs.
+# Requires certmode=letsencrypt and inbound HTTP-01 reachability on port 80.
+# DERP_ACME_IP_CERTS=false
+
 # --- Feature Toggles ---
 # Set to "false" to disable the STUN server. Default: true (enabled)
 # DERP_ENABLE_STUN=false
@@ -67,6 +71,10 @@ DERP_ACME_EMAIL=you@yourdomain.com
 # Comma-separated hostnames served at /bootstrap-dns but not published in the list.
 # DERP_UNPUBLISHED_DNS_NAMES=
 
+# Mesh pre-shared key for dev mode only. In non-dev mode, use DERP_MESH_PSK_FILE
+# or the optional SETEC settings above.
+# TAILSCALE_DERPER_MESH_KEY=
+
 # --- Client verification ---
 # Set to "true" to restrict relay to your tailnet only.
 # Requires a tailscaled running alongside derper.
@@ -82,11 +90,18 @@ DERP_ACME_EMAIL=you@yourdomain.com
 # Alternate path to tailscaled socket (only with DERP_VERIFY_CLIENTS=true).
 # DERP_SOCKET=
 
+# Comma-separated exact client-advertised app names to reject (no spaces).
+# Trusted mesh peers are exempt.
+# DERP_DISALLOW_APP_NAMES=
+
 # --- Rate limiting ---
 # Max new connections per second (float). Unset = unlimited.
 # DERP_ACCEPT_CONN_LIMIT=
 # Burst size for the connection rate limiter. Unset = unlimited.
 # DERP_ACCEPT_CONN_BURST=
+
+# Experimental JSON rate-limit configuration, reloaded on SIGHUP.
+# DERP_RATE_CONFIG=
 
 # --- TCP tuning ---
 # Go duration strings: e.g. "10m", "30s", "500ms"
@@ -96,3 +111,22 @@ DERP_ACME_EMAIL=you@yourdomain.com
 # DERP_TCP_USER_TIMEOUT=15s
 # Write timeout for client TCP connections. "0" = no timeout. Default: 5s
 # DERP_TCP_WRITE_TIMEOUT=5s
+
+# --- Diagnostics / experimental ---
+# Enable verbose DERP packet/drop logs.
+# DERP_DEBUG_LOGS=false
+# Enable verbose logs for connections from DERP probers.
+# DERP_PROBER_DEBUG_LOGS=false
+# Log verbose DERP drop reasons for the listed public keys (comma-separated).
+# TS_DEBUG_VERBOSE_DROPS=
+# Override per-client send queue depth for diagnostics; positive integer only.
+# TS_DEBUG_DERP_PER_CLIENT_SEND_QUEUE_DEPTH=
+# Track sender-key cardinality (diagnostic; adds overhead).
+# TS_DERP_SENDER_CARDINALITY=false
+# Disable DERP RTT statistics collection.
+# TS_DERP_DISABLE_RTT_STATS=false
+
+# Enable the experimental embedded ACE server.
+# DERP_ENABLE_ACE=false
+# Print derper's build version and exit instead of starting the server.
+# DERP_PRINT_VERSION=false

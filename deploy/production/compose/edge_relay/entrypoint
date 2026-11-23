@@ -127,6 +127,10 @@ ARGS=""
 # Only relevant when DERP_VERIFY_CLIENTS=true. Default: /var/run/tailscale/tailscaled.sock
 [ -n "${DERP_SOCKET:-}" ]           && ARGS="$ARGS -socket=${DERP_SOCKET}"
 
+# DERP_DISALLOW_APP_NAMES: Comma-separated exact app names to reject (no spaces).
+# Trusted DERP mesh peers are exempt. Unset means no app names are blocked.
+[ -n "${DERP_DISALLOW_APP_NAMES:-}" ] && ARGS="$ARGS -disallow-app-names=${DERP_DISALLOW_APP_NAMES}"
+
 # --- Rate limiting ---
 # DERP_ACCEPT_CONN_LIMIT: Max new connections per second (float). Default: unlimited
 [ -n "${DERP_ACCEPT_CONN_LIMIT:-}" ] && ARGS="$ARGS -accept-connection-limit=${DERP_ACCEPT_CONN_LIMIT}"
@@ -166,6 +170,5 @@ ARGS=""
 
 echo "Hostname: ${DERP_HOSTNAME:-<not set>}"
 echo "Cert mode: ${DERP_CERT_MODE:-letsencrypt (default)}"
-echo "Args: derper$ARGS"
 
 exec derper $ARGS

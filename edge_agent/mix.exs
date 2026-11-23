@@ -96,8 +96,8 @@ defmodule EdgeAgent.Mixfile do
       {:req, "~> 0.7"},
 
       # HTTP server
-      {:bandit, "~> 1.14"},
-      {:ranch, "~> 2.3"},
+      {:bandit, "~> 1.15"},
+      {:ranch, "~> 2.4"},
       {:phoenix, "~> 1.8"},
       {:phoenix_live_reload, "~> 1.7", only: :dev},
       {:plug_checkup, git: "https://github.com/voughtdq/plug_checkup.git", tag: "v1.0.0"},
@@ -126,7 +126,7 @@ defmodule EdgeAgent.Mixfile do
       {:styler, "~> 1.12", only: [:dev, :test], runtime: false},
 
       # Security check
-      {:sobelow, "~> 0.18", only: [:dev, :test], runtime: true},
+      {:sobelow, "~> 0.19", only: [:dev, :test], runtime: true},
       {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false},
 
       # Testing

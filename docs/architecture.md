@@ -141,7 +141,7 @@ HTTP client built on `Req`. All requests use MASTER_KEY bearer token auth. Cover
 | `Nexmaker.Api.Gateways.*`      | Ingress, egress, relay gateway management              |
 | `Nexmaker.Api.Acls`            | ACL policy management                                  |
 | `Nexmaker.Api.Gateways.AdvancedEgress`  | Advanced egress gateway configuration                  |
-| `Nexmaker.Api.Gateways.Internet` | Internet gateway management                            |
+| `Nexmaker.Api.Gateways.Internet` | Internet egress resource creation and deletion          |
 | `Nexmaker.Api.ExternalClients` | External (non-netclient) WireGuard client management   |
 | `Nexmaker.Api.EMQX`            | EMQX broker provisioning (Netmaker-internal use)       |
 

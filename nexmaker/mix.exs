@@ -5,7 +5,7 @@ defmodule Nexmaker.MixProject do
   def project do
     [
       app: :nexmaker,
-      version: "1.7.0",
+      version: "1.8.0",
       elixir: "~> 1.20",
       start_permanent: Mix.env() == :prod,
       deps: deps(),

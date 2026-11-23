@@ -21,8 +21,8 @@ end
 ```elixir
 # config/runtime.exs
 config :nexmaker,
-  base_url: System.get_env("NETMAKER_API_URL", "http://netmaker:8081"),
-  master_key: System.get_env("NETMAKER_MASTER_KEY")
+  base_url: System.fetch_env!("NETMAKER_BASE_URL"),
+  master_key: System.fetch_env!("NETMAKER_MASTER_KEY")
 ```
 
 ## Usage

@@ -16,19 +16,19 @@ services:
       - /dev/net/tun:/dev/net/tun
     environment:
       - MIX_ENV=test
-      - NETMAKER_BASE_URL=http://netmaker_proxy:80
+      - NETMAKER_BASE_URL=http://netmaker-proxy.test:80
       - NETMAKER_MASTER_KEY=supersecretkey123456789
     # Netclient rewrites /etc/resolv.conf on VPN join, breaking Docker DNS.
     # Pin all hostnames netclient needs post-join to static IPs via /etc/hosts,
     # which survives the resolv.conf rewrite (same pattern as edge_admin).
     extra_hosts:
-      - "netmaker_proxy:172.28.0.10"
-      - "netmaker_broker:172.28.0.11"
+      - "netmaker-proxy.test:172.28.0.10"
+      - "netmaker-broker.test:172.28.0.11"
     command: mix test --include integration
     depends_on:
       netmaker:
         condition: service_healthy
-      netmaker_proxy:
+      netmaker-proxy:
         condition: service_started
     networks:
       - test_network
@@ -47,7 +47,7 @@ services:
       timeout: 5s
       retries: 5
 
-  netmaker_broker:
+  netmaker-broker:
     image: emqx/emqx:5.8.9
     environment:
       - EMQX_NAME=emqx
@@ -61,6 +61,8 @@ services:
     networks:
       test_network:
         ipv4_address: 172.28.0.11
+        aliases:
+          - netmaker-broker.test
     healthcheck:
       test: ["CMD-SHELL", "emqx ctl status || exit 1"]
       interval: 10s
@@ -80,9 +82,9 @@ services:
       - netmaker_data:/root/data
     environment:
       - SERVER_NAME=netmaker
-      - SERVER_HOST=netmaker_proxy
-      - SERVER_HTTP_HOST=netmaker_proxy
-      - SERVER_API_CONN_STRING=netmaker_proxy
+      - SERVER_HOST=netmaker-proxy.test
+      - SERVER_HTTP_HOST=netmaker-proxy.test:80
+      - SERVER_API_CONN_STRING=netmaker-proxy.test:80
       - MASTER_KEY=supersecretkey123456789
       - CORS_ALLOWED_ORIGIN=*
       - DISPLAY_KEYS=on
@@ -97,10 +99,10 @@ services:
       - DNS_MODE=on
       - DISABLE_REMOTE_IP_CHECK=on
       - TELEMETRY=off
-      - SERVER_BROKER_ENDPOINT=ws://netmaker_broker:8083/mqtt
-      - BROKER_ENDPOINT=ws://netmaker_broker:8083/mqtt
+      - SERVER_BROKER_ENDPOINT=ws://netmaker-broker.test:8083/mqtt
+      - BROKER_ENDPOINT=ws://netmaker-broker.test:8083/mqtt
       - BROKER_TYPE=emqx
-      - EMQX_REST_ENDPOINT=http://netmaker_broker:18083
+      - EMQX_REST_ENDPOINT=http://netmaker-broker.test:18083
       - MQ_USERNAME=admin
       - MQ_PASSWORD=netmaker123
       - VERBOSITY=1
@@ -108,7 +110,7 @@ services:
     depends_on:
       netmaker_db:
         condition: service_healthy
-      netmaker_broker:
+      netmaker-broker:
         condition: service_healthy
     networks:
       - test_network
@@ -119,7 +121,7 @@ services:
       retries: 10
       start_period: 30s
 
-  netmaker_proxy:
+  netmaker-proxy:
     image: caddy:alpine
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile
@@ -129,6 +131,8 @@ services:
     networks:
       test_network:
         ipv4_address: 172.28.0.10
+        aliases:
+          - netmaker-proxy.test
     command: caddy run --config /etc/caddy/Caddyfile
 
 networks:

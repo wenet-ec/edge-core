@@ -36,8 +36,14 @@ defmodule Nexmaker.Api.Hosts do
     req_opts = if query_keys == [], do: api_opts, else: Keyword.put(api_opts, :query, query_keys)
 
     case Api.request(:get, "/api/v1/hosts", req_opts) do
-      {:ok, %{"Response" => paginated}} -> {:ok, paginated}
-      other -> other
+      {:ok, %{"Response" => %{"data" => nil} = paginated}} ->
+        {:ok, Map.put(paginated, "data", [])}
+
+      {:ok, %{"Response" => paginated}} ->
+        {:ok, paginated}
+
+      other ->
+        other
     end
   end
 

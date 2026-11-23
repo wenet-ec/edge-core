@@ -142,6 +142,20 @@ defmodule Nexmaker.Cli.ParserTest do
 
       assert {:ok, []} = CliParser.parse_list_output(output)
     end
+
+    test "handles missing server config as no joined networks" do
+      assert {:ok, []} = CliParser.parse_list_output("list failed: server config not found")
+    end
+
+    test "handles netclient's no-networks output" do
+      output = """
+      [netclient] list complete
+
+      no networks
+      """
+
+      assert {:ok, []} = CliParser.parse_list_output(output)
+    end
   end
 
   describe "parse_list_output/1 - error cases" do

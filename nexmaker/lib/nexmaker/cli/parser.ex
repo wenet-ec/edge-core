@@ -10,7 +10,7 @@ defmodule Nexmaker.Cli.Parser do
 
   ### `netclient list`
   - Success: JSON array `[{"network":"...","node_id":"...","connected":bool,...}]`
-  - No networks: Plain text `"\\nno such network"`
+  - No networks: Plain text `"\\nno such network"` or `"\\nno networks"`
   - Logs: `[netclient] YYYY-MM-DD HH:MM:SS <message>`
 
   ### `netclient ping -j`
@@ -33,7 +33,8 @@ defmodule Nexmaker.Cli.Parser do
   """
 
   # Known plain-text error/info patterns from netclient source
-  @no_network_pattern ~r/no such network/i
+  @no_network_pattern ~r/no such network|no networks/i
+  @no_server_config_pattern ~r/list failed:\s*server config not found/i
   @no_peers_patterns [
     ~r/No peers found/i,
     ~r/No peers matched/i
@@ -45,7 +46,7 @@ defmodule Nexmaker.Cli.Parser do
 
   ## Returns
   - `{:ok, networks}` - List of network maps
-  - `{:ok, []}` - No networks (plaintext "no such network")
+  - `{:ok, []}` - No networks (plaintext "no such network" or "no networks")
   - `{:error, reason}` - Parse failure
 
   ## Examples
@@ -55,11 +56,15 @@ defmodule Nexmaker.Cli.Parser do
 
       iex> parse_list_output("\\nno such network")
       {:ok, []}
+
+      iex> parse_list_output("\\nno networks")
+      {:ok, []}
   """
   @spec parse_list_output(String.t()) :: {:ok, list()} | {:error, term()}
   def parse_list_output(output) when is_binary(output) do
-    # Check for "no such network" pattern first
-    if Regex.match?(@no_network_pattern, output) do
+    # These Netclient responses mean there are no locally joined networks.
+    if Regex.match?(@no_network_pattern, output) or
+         Regex.match?(@no_server_config_pattern, output) do
       {:ok, []}
     else
       # Clean logs and extract JSON

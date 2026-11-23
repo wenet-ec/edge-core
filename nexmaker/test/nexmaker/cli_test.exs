@@ -8,8 +8,8 @@ defmodule Nexmaker.CliTest do
   # Config from environment (injected by docker-compose)
   # ---------------------------------------------------------------------------
 
-  @base_url System.get_env("NETMAKER_BASE_URL", "http://netmaker:8081")
-  @master_key System.get_env("NETMAKER_MASTER_KEY", "supersecretkey123456789")
+  @base_url System.fetch_env!("NETMAKER_BASE_URL")
+  @master_key System.fetch_env!("NETMAKER_MASTER_KEY")
 
   defp api_opts, do: [base_url: @base_url, master_key: @master_key]
 
@@ -333,7 +333,11 @@ defmodule Nexmaker.CliTest do
 
       # Create network via API
       {:ok, _network} =
-        Nexmaker.Api.Networks.create(network_name, %{addressrange: cidr}, api_opts())
+        Nexmaker.Api.Networks.create(
+          network_name,
+          %{addressrange: cidr, auto_join: true},
+          api_opts()
+        )
 
       # Always clean up the Netmaker-side network
       on_exit(fn -> Nexmaker.Api.Networks.delete(network_name, api_opts()) end)
@@ -348,6 +352,8 @@ defmodule Nexmaker.CliTest do
 
       enrollment_token = key["token"]
       assert is_binary(enrollment_token) and enrollment_token != ""
+      assert key["networks"] == [network_name]
+      assert {:ok, %{"auto_join" => true}} = Nexmaker.Api.Networks.get(network_name, api_opts())
 
       # Snapshot networks before join
       {:ok, before} = Nexmaker.Cli.list_networks()
@@ -379,15 +385,38 @@ defmodule Nexmaker.CliTest do
           flunk("Unexpected join result: #{inspect(other)}")
       end
 
-      # Give netclient time to write config files after join
-      Process.sleep(3_000)
+      # Netmaker creates the network node asynchronously after registration.
+      after_join =
+        Enum.reduce_while(1..30, [], fn _, _last_networks ->
+          case Nexmaker.Cli.list_networks() do
+            {:ok, networks} ->
+              if Enum.any?(networks, &(&1["network"] == network_name)) do
+                {:halt, networks}
+              else
+                Process.sleep(1_000)
+                {:cont, networks}
+              end
 
-      # Verify the network now appears in list
-      {:ok, after_join} = Nexmaker.Cli.list_networks()
+            {:error, reason} ->
+              {output, exit_code} = System.cmd("netclient", ["list"], stderr_to_stdout: true)
+
+              flunk(
+                "netclient list failed with #{inspect(reason)} (exit #{exit_code}): #{inspect(output)}"
+              )
+          end
+        end)
+
       after_names = Enum.map(after_join, & &1["network"])
+      {:ok, server_nodes} = Nexmaker.Api.Nodes.list(network_name, api_opts())
+      {raw_list_output, _exit_code} = System.cmd("netclient", ["list"], stderr_to_stdout: true)
+      host_id = Nexmaker.Cli.read_host_id()
+      local_nodes = Nexmaker.Cli.read_nodes()
 
       assert network_name in after_names,
-             "Expected #{network_name} in network list after join. Got: #{inspect(after_names)}"
+             "Expected #{network_name} in netclient list after join. " <>
+               "Got: #{inspect(after_names)}; server nodes: #{inspect(server_nodes)}; " <>
+               "host ID: #{inspect(host_id)}; local nodes: #{inspect(local_nodes)}; " <>
+               "raw list output: #{inspect(raw_list_output)}"
 
       # Verify connection state
       our_net = Enum.find(after_join, fn n -> n["network"] == network_name end)
@@ -424,7 +453,19 @@ defmodule Nexmaker.CliTest do
       Process.sleep(500)
 
       # Verify network is gone from list
-      {:ok, after_leave} = Nexmaker.Cli.list_networks()
+      after_leave =
+        case Nexmaker.Cli.list_networks() do
+          {:ok, networks} ->
+            networks
+
+          {:error, reason} ->
+            {output, exit_code} = System.cmd("netclient", ["list"], stderr_to_stdout: true)
+
+            flunk(
+              "netclient list after leave failed with #{inspect(reason)} (exit #{exit_code}): #{inspect(output)}"
+            )
+        end
+
       after_leave_names = Enum.map(after_leave, & &1["network"])
 
       refute network_name in after_leave_names,

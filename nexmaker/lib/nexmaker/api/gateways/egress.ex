@@ -138,15 +138,24 @@ defmodule Nexmaker.Api.Gateways.Egress do
       - `name` - Egress name
       - `range` - CIDR range (e.g. "192.168.1.0/24")
       - `domain` - FQDN (alternative to range)
+      - `type` - Set to `"internet"` for an Internet egress resource
       - `nat` - Boolean, enable NAT
       - `nodes` - Map of node_id => priority
       - `tags` - Map of tag_id => priority
-      - `is_internet_gateway` - Boolean
     - opts: Keyword - API options (base_url, master_key)
+
+  The network is also required as the `network` query parameter.
   """
   @spec create_v1(map(), keyword()) :: {:ok, map()} | {:error, any()}
   def create_v1(attrs, opts \\ []) do
-    case Api.request(:post, "/api/v1/egress", Keyword.put(opts, :body, attrs)) do
+    network = Map.get(attrs, :network) || Map.get(attrs, "network")
+
+    request_opts =
+      opts
+      |> Keyword.put(:query, network: network)
+      |> Keyword.put(:body, attrs)
+
+    case Api.request(:post, "/api/v1/egress", request_opts) do
       {:ok, %{"Response" => egress}} -> {:ok, egress}
       other -> other
     end
@@ -155,7 +164,8 @@ defmodule Nexmaker.Api.Gateways.Egress do
   @doc """
   Updates an egress resource.
 
-  Uses `PUT /api/v1/egress`. The `id` field must be included in attrs.
+  Uses `PUT /api/v1/egress?network={network}`. The `id` and `network` fields
+  must be included in attrs.
 
   ## Parameters
     - attrs: Map - EgressReq body with `id` field
@@ -163,7 +173,14 @@ defmodule Nexmaker.Api.Gateways.Egress do
   """
   @spec update_v1(map(), keyword()) :: {:ok, map()} | {:error, any()}
   def update_v1(attrs, opts \\ []) do
-    case Api.request(:put, "/api/v1/egress", Keyword.put(opts, :body, attrs)) do
+    network = Map.get(attrs, :network) || Map.get(attrs, "network")
+
+    request_opts =
+      opts
+      |> Keyword.put(:query, network: network)
+      |> Keyword.put(:body, attrs)
+
+    case Api.request(:put, "/api/v1/egress", request_opts) do
       {:ok, %{"Response" => egress}} -> {:ok, egress}
       other -> other
     end
@@ -172,14 +189,19 @@ defmodule Nexmaker.Api.Gateways.Egress do
   @doc """
   Deletes an egress resource by ID.
 
-  Uses `DELETE /api/v1/egress?id={id}`.
+  Uses `DELETE /api/v1/egress?network={network}&id={id}`.
 
   ## Parameters
     - id: String - Egress resource ID
+    - network_name: String - Network name
     - opts: Keyword - API options (base_url, master_key)
   """
-  @spec delete_v1(String.t(), keyword()) :: {:ok, any()} | {:error, any()}
-  def delete_v1(id, opts \\ []) do
-    Api.request(:delete, "/api/v1/egress", Keyword.put(opts, :query, id: id))
+  @spec delete_v1(String.t(), String.t(), keyword()) :: {:ok, any()} | {:error, any()}
+  def delete_v1(id, network_name, opts \\ []) do
+    Api.request(
+      :delete,
+      "/api/v1/egress",
+      Keyword.put(opts, :query, network: network_name, id: id)
+    )
   end
 end

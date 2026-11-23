@@ -10,15 +10,15 @@ defmodule Nexmaker.Api do
 
   API calls require base_url and master_key:
 
-      # Via Application config (recommended)
+      # In config/runtime.exs
       config :nexmaker,
-        base_url: "http://netmaker:8081",
-        master_key: System.get_env("NETMAKER_MASTER_KEY")
+        base_url: System.fetch_env!("NETMAKER_BASE_URL"),
+        master_key: System.fetch_env!("NETMAKER_MASTER_KEY")
 
       # Or pass directly to functions
       Nexmaker.Api.Networks.list(
-        base_url: "http://netmaker:8081",
-        master_key: "your-master-key"
+        base_url: System.fetch_env!("NETMAKER_BASE_URL"),
+        master_key: System.fetch_env!("NETMAKER_MASTER_KEY")
       )
 
   ## Authentication
@@ -46,7 +46,7 @@ defmodule Nexmaker.Api do
 
   ### Advanced Features
   - `Nexmaker.Api.Gateways.AdvancedEgress` - Advanced egress routes (4 endpoints)
-  - `Nexmaker.Api.Gateways.Internet` - Internet gateways (3 endpoints)
+  - `Nexmaker.Api.Gateways.Internet` - Internet egress resources (2 endpoints)
   - `Nexmaker.Api.ExternalClients` - Remote access clients (8 endpoints)
 
   ### Integration
@@ -166,8 +166,8 @@ defmodule Nexmaker.Api do
   ## Examples
 
       Nexmaker.Api.request(:get, "/api/networks",
-        base_url: "http://netmaker:8081",
-        master_key: "abc123"
+        base_url: System.fetch_env!("NETMAKER_BASE_URL"),
+        master_key: System.fetch_env!("NETMAKER_MASTER_KEY")
       )
   """
   @spec request(atom(), String.t(), keyword()) :: {:ok, any()} | {:error, any()}
@@ -183,13 +183,13 @@ defmodule Nexmaker.Api do
 
       Either configure them in config.exs:
         config :nexmaker,
-          base_url: "http://netmaker:8081",
-          master_key: System.get_env("NETMAKER_MASTER_KEY")
+          base_url: System.fetch_env!("NETMAKER_BASE_URL"),
+          master_key: System.fetch_env!("NETMAKER_MASTER_KEY")
 
       Or pass them as options:
         Nexmaker.Api.request(:get, "/api/networks",
-          base_url: "http://netmaker:8081",
-          master_key: "your-key"
+          base_url: System.fetch_env!("NETMAKER_BASE_URL"),
+          master_key: System.fetch_env!("NETMAKER_MASTER_KEY")
         )
       """
     end

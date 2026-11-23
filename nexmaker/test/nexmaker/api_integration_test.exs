@@ -8,8 +8,8 @@ defmodule Nexmaker.ApiIntegrationTest do
   # Shared config from environment (injected by docker-compose)
   # ---------------------------------------------------------------------------
 
-  @base_url System.get_env("NETMAKER_BASE_URL", "http://netmaker:8081")
-  @master_key System.get_env("NETMAKER_MASTER_KEY", "supersecretkey123456789")
+  @base_url System.fetch_env!("NETMAKER_BASE_URL")
+  @master_key System.fetch_env!("NETMAKER_MASTER_KEY")
 
   defp api_opts, do: [base_url: @base_url, master_key: @master_key]
 
@@ -704,28 +704,26 @@ defmodule Nexmaker.ApiIntegrationTest do
       assert is_list(egresses)
     end
 
-    test "ACLs.delete/2 returns {:error, {:bad_request, _}} for nonexistent ACL (not crash)" do
-      # If acl_id query param is malformed/missing, Netmaker crashes or returns 500.
-      # Getting a clean 400 here means the param was correctly sent as ?acl_id=.
+    test "ACLs.delete/2 returns :not_found for nonexistent ACL" do
       result = Nexmaker.Api.ACLs.delete("00000000-0000-0000-0000-000000000000", api_opts())
-      assert {:error, {:bad_request, _}} = result
+      assert {:error, :not_found} = result
     end
 
-    test "Gateways.AdvancedEgress.delete/2 returns {:error, {:bad_request, _}} for nonexistent ID" do
+    test "Gateways.AdvancedEgress.delete/2 returns :not_found for nonexistent ID" do
       result =
         Nexmaker.Api.Gateways.AdvancedEgress.delete(
           "00000000-0000-0000-0000-000000000000",
           api_opts()
         )
 
-      assert {:error, {:bad_request, _}} = result
+      assert {:error, :not_found} = result
     end
 
-    test "DNS.delete_nameserver/2 returns {:error, {:bad_request, _}} for nonexistent ID" do
+    test "DNS.delete_nameserver/2 returns :not_found for nonexistent ID" do
       result =
         Nexmaker.Api.DNS.delete_nameserver("00000000-0000-0000-0000-000000000000", api_opts())
 
-      assert {:error, {:bad_request, _}} = result
+      assert {:error, :not_found} = result
     end
   end
 end

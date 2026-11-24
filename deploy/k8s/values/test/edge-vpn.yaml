@@ -11,8 +11,8 @@ persistence:
   size: 128Mi
 config:
   baseDomain: "edge-vpn.localtest.me"
-  serverHttpHost: "edge-vpn.localtest.me"
-  serverApiConnString: "edge-vpn.localtest.me"
+  serverHttpHost: "edge-vpn.localtest.me:80"
+  serverApiConnString: "edge-vpn.localtest.me:80"
   brokerEndpoint: "ws://edge-vpn-broker.localtest.me/mqtt"
   serverBrokerEndpoint: "ws://edge-vpn-broker:8083/mqtt"
   emqxRestEndpoint: "http://edge-vpn-broker:18083"

@@ -188,9 +188,9 @@ services:
       - ./.envs/.edge_vpn
     environment:
       - SERVER_HOST=edge-vpn.localtest.me
-      - SERVER_HTTP_HOST=edge-vpn.localtest.me
+      - SERVER_HTTP_HOST=edge-vpn.localtest.me:80
       - BROKER_ENDPOINT=ws://edge-vpn-broker.localtest.me/mqtt
-      - SERVER_API_CONN_STRING=edge-vpn.localtest.me
+      - SERVER_API_CONN_STRING=edge-vpn.localtest.me:80
     depends_on:
       edge_vpn_db:
         condition: service_healthy

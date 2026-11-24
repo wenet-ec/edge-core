@@ -94,7 +94,7 @@ EDGE_VPN_API_SCHEME=http
 
 Set this on **both** the server (`.env` used by `cloud.yml`) and the agent (`.env` used by `edge.yml`). Without it, the Edge VPN CLI (netclient) will try HTTPS and fail even though the server is running plain HTTP.
 
-A plain IP address works fine for `SERVER_HOST`, `SERVER_HTTP_HOST`, and `SERVER_API_CONN_STRING` when using HTTP. If you're using HTTPS (Caddy with a TLS cert), these must be a proper hostname — the TLS cert won't match a bare IP.
+The example publishes the Edge VPN API on port `48081`, so include `:48081` in both `SERVER_HTTP_HOST` and `SERVER_API_CONN_STRING` when using plain HTTP. For HTTPS on port `443`, omit the port and use a hostname that matches the certificate.
 
 ## Event Broker (optional)
 
